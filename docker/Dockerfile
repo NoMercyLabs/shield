@@ -2,7 +2,7 @@
 
 # ---------- Stage 1: SPA build ----------
 # Vite writes to ../Shield.Api/wwwroot/, so both projects must be present.
-FROM node:22-alpine AS spa-build
+FROM node:26-alpine AS spa-build
 WORKDIR /work
 COPY src/Shield.Web/package.json src/Shield.Web/package-lock.json ./src/Shield.Web/
 WORKDIR /work/src/Shield.Web
