@@ -36,35 +36,27 @@ public sealed class FeedsController : ControllerBase
         Dictionary<Feed, FeedSyncState> stateByFeed = states.ToDictionary(state => state.Feed);
         HashSet<Feed> registered = _syncs.Select(sync => sync.Feed).ToHashSet();
 
+        Dictionary<Feed, int> advisoryCounts = await _db
+            .Advisories.GroupBy(advisory => advisory.Feed)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.Key, item => item.Count, ct);
+
         List<FeedStatusResponse> response = new();
         foreach (Feed feed in registered)
         {
-            if (stateByFeed.TryGetValue(feed, out FeedSyncState? state))
-            {
-                response.Add(
-                    new FeedStatusResponse(
-                        feed,
-                        state.LastSuccessAt,
-                        state.LastError,
-                        state.NextRunAt,
-                        state.Cursor,
-                        Registered: true
-                    )
-                );
-            }
-            else
-            {
-                response.Add(
-                    new FeedStatusResponse(
-                        feed,
-                        null,
-                        null,
-                        DateTime.UtcNow,
-                        null,
-                        Registered: true
-                    )
-                );
-            }
+            stateByFeed.TryGetValue(feed, out FeedSyncState? state);
+            advisoryCounts.TryGetValue(feed, out int count);
+            response.Add(
+                new FeedStatusResponse(
+                    feed,
+                    state?.LastSuccessAt,
+                    state?.LastError,
+                    state?.NextRunAt ?? DateTime.UtcNow,
+                    state?.Cursor,
+                    Registered: true,
+                    AdvisoryCount: count
+                )
+            );
         }
         return Ok(response);
     }

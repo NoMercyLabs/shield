@@ -8,5 +8,6 @@ public sealed record FeedStatusResponse(
     string? LastError,
     DateTime NextRunAt,
     string? Cursor,
-    bool Registered
+    bool Registered,
+    int AdvisoryCount
 );

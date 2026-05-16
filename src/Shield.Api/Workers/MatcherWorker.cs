@@ -76,19 +76,22 @@ public sealed class MatcherWorker : BackgroundService
                 now
             );
 
-            HashSet<string> existingKeys = existing.Select(finding => finding.DedupKey).ToHashSet();
+            Dictionary<string, Finding> existingByKey = existing.ToDictionary(
+                finding => finding.DedupKey,
+                finding => finding,
+                StringComparer.Ordinal
+            );
 
             foreach (Finding finding in matched)
             {
-                if (existingKeys.Contains(finding.DedupKey))
+                if (existingByKey.TryGetValue(finding.DedupKey, out Finding? tracked))
                 {
-                    Finding tracked = existing.First(item => item.DedupKey == finding.DedupKey);
                     tracked.LastSeenAt = now;
                 }
                 else
                 {
                     shieldDb.Findings.Add(finding);
-                    existingKeys.Add(finding.DedupKey);
+                    existingByKey[finding.DedupKey] = finding;
                 }
             }
         }

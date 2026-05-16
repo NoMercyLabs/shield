@@ -8,7 +8,8 @@ on:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    # Self-hosted to preserve free GitHub-hosted minutes.
+    runs-on: [self-hosted, beast-unit]
     steps:
       - uses: actions/checkout@v4
 
