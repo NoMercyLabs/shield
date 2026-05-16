@@ -169,8 +169,26 @@ if (enableOpenApi)
     app.UseSwaggerUI();
 }
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+// Resolve wwwroot defensively — prefer the configured WebRootPath, fall back to AppContext.BaseDirectory/wwwroot
+// then ContentRootPath/wwwroot. Necessary because `dotnet run`, `dotnet publish` output, and the Docker image
+// each leave wwwroot in a different spot, and a missing dir silently disables static-file serving.
+string[] candidateWebRoots =
+{
+    app.Environment.WebRootPath ?? string.Empty,
+    Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+    Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "wwwroot"),
+};
+string resolvedWebRoot = candidateWebRoots
+    .Where(path => !string.IsNullOrWhiteSpace(path))
+    .Select(Path.GetFullPath)
+    .FirstOrDefault(Directory.Exists) ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+
+Microsoft.Extensions.FileProviders.PhysicalFileProvider spaFileProvider = new(resolvedWebRoot);
+app.Logger.LogInformation("SPA file provider rooted at {ResolvedWebRoot}", resolvedWebRoot);
+
+app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = spaFileProvider });
+app.UseStaticFiles(new StaticFileOptions { FileProvider = spaFileProvider });
 
 app.UseRouting();
 
@@ -195,7 +213,7 @@ app.MapFallback(context =>
         return Task.CompletedTask;
     }
     context.Response.ContentType = "text/html";
-    string indexPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
+    string indexPath = Path.Combine(resolvedWebRoot, "index.html");
     if (File.Exists(indexPath))
         return context.Response.SendFileAsync(indexPath);
     context.Response.StatusCode = StatusCodes.Status404NotFound;
