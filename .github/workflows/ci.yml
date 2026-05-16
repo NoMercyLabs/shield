@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [master]
 
+# Cancel an older CI run on the same ref when a new push lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     # Self-hosted to preserve free GitHub-hosted minutes.

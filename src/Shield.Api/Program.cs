@@ -113,10 +113,10 @@ builder
             };
         }
     )
-    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, SingleUserAuthHandler>(
-        SingleUserAuthHandler.SchemeName,
-        configureOptions: null
-    );
+    .AddScheme<
+        Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+        SingleUserAuthHandler
+    >(SingleUserAuthHandler.SchemeName, configureOptions: null);
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -155,10 +155,10 @@ builder.Services.AddAuthorization(options =>
     // request matches its scheme; SingleUser only succeeds when Shield:SingleUser=true and
     // no real cookie is present.
     options.DefaultPolicy = new AuthorizationPolicyBuilder(
-            IdentityConstants.ApplicationScheme,
-            JwtBearerDefaults.AuthenticationScheme,
-            SingleUserAuthHandler.SchemeName
-        )
+        IdentityConstants.ApplicationScheme,
+        JwtBearerDefaults.AuthenticationScheme,
+        SingleUserAuthHandler.SchemeName
+    )
         .RequireAuthenticatedUser()
         .Build();
 });
@@ -239,10 +239,12 @@ string[] candidateWebRoots =
     Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
     Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "wwwroot"),
 };
-string resolvedWebRoot = candidateWebRoots
-    .Where(path => !string.IsNullOrWhiteSpace(path))
-    .Select(Path.GetFullPath)
-    .FirstOrDefault(Directory.Exists) ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+string resolvedWebRoot =
+    candidateWebRoots
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Select(Path.GetFullPath)
+        .FirstOrDefault(Directory.Exists)
+    ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 
 Microsoft.Extensions.FileProviders.PhysicalFileProvider spaFileProvider = new(resolvedWebRoot);
 app.Logger.LogInformation("SPA file provider rooted at {ResolvedWebRoot}", resolvedWebRoot);

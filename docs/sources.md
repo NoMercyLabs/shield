@@ -77,6 +77,12 @@ Then set `"path": "/data/myrepo"` in the source config. Read-only is fine — Sh
 
 `ignoreGlobs` is currently exact folder-name matching, not glob expansion. `node_modules` matches the folder name; `**/node_modules/**` is unnecessary (and won't do what you might think yet).
 
+### Auto-detected git remote
+
+When the configured `path` is a git working tree, Shield reads `<path>/.git/config` on every scan and records the `origin` remote on the source. The detected remote appears in the source detail view (`detectedRemote: { host, owner, repo, remoteUrl, branch }`). For sources whose origin lives on `github.com`, admins see a **Promote to GitHub source** action that creates a sibling `GithubRepo` source pointing at the same repo — so both filesystem scanning and GitHub-API scanning run side by side. The original LocalFolder source stays put.
+
+Hosts eligible for detection (and the Promote action) come from `Shield:Scanners:DetectedRemoteHosts` in configuration — a comma-separated string, defaulting to `github.com,gitlab.com,bitbucket.org`. Other hosts (Gitea, Forgejo, self-hosted GitLab) are parsed but only recorded if you add them here. Promote-to-GitHub still requires `host == github.com` regardless of the whitelist.
+
 ## Per-source scan interval
 
 `ScanInterval` is a .NET `TimeSpan`. Common values:

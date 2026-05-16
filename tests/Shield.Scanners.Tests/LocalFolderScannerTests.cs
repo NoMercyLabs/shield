@@ -32,7 +32,10 @@ public class LocalFolderScannerTests
     static string CopyFixtureTree()
     {
         string fixtureRoot = Path.Combine(AppContext.BaseDirectory, "Fixtures");
-        string tempRoot = Path.Combine(Path.GetTempPath(), "shield-scanner-tests-" + Guid.NewGuid().ToString("N"));
+        string tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "shield-scanner-tests-" + Guid.NewGuid().ToString("N")
+        );
         CopyDirectory(fixtureRoot, tempRoot);
         return tempRoot;
     }
@@ -78,9 +81,17 @@ public class LocalFolderScannerTests
             result.Snapshot!.SourceId.Should().Be(42);
             result.Snapshot.ItemCount.Should().Be(result.Items.Count);
 
-            result.Items.Should().Contain(item => item.Name == "lodash" && item.Ecosystem == Ecosystem.Npm);
-            result.Items.Should().Contain(item => item.Name == "monolog/monolog" && item.Ecosystem == Ecosystem.Composer);
-            result.Items.Should().Contain(item => item.Name == "psr/log" && item.Ecosystem == Ecosystem.Composer);
+            result
+                .Items.Should()
+                .Contain(item => item.Name == "lodash" && item.Ecosystem == Ecosystem.Npm);
+            result
+                .Items.Should()
+                .Contain(item =>
+                    item.Name == "monolog/monolog" && item.Ecosystem == Ecosystem.Composer
+                );
+            result
+                .Items.Should()
+                .Contain(item => item.Name == "psr/log" && item.Ecosystem == Ecosystem.Composer);
 
             result.Items.Should().NotContain(item => item.Name == "ghost");
 
@@ -133,11 +144,9 @@ public class LocalFolderScannerTests
             {
                 Id = 3,
                 Type = SourceType.LocalFolder,
-                ConfigJson = JsonSerializer.Serialize(new
-                {
-                    path = root,
-                    ignoreGlobs = new[] { ".git" },
-                }),
+                ConfigJson = JsonSerializer.Serialize(
+                    new { path = root, ignoreGlobs = new[] { ".git" } }
+                ),
             };
 
             ScanResult result = await scanner.ScanAsync(source, CancellationToken.None);
@@ -186,7 +195,9 @@ public class LocalFolderScannerTests
 
             result.Success.Should().BeTrue(result.Error);
             source.DetectedRemote.Should().NotBeNullOrEmpty();
-            DetectedRemote? parsed = JsonSerializer.Deserialize<DetectedRemote>(source.DetectedRemote!);
+            DetectedRemote? parsed = JsonSerializer.Deserialize<DetectedRemote>(
+                source.DetectedRemote!
+            );
             parsed.Should().NotBeNull();
             parsed!.Host.Should().Be("github.com");
             parsed.Owner.Should().Be("NoMercyLabs");

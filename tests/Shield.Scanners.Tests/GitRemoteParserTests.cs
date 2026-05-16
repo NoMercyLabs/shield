@@ -12,8 +12,18 @@ public class GitRemoteParserTests
     [InlineData("http://github.com/owner/repo", "github.com", "owner", "repo")]
     [InlineData("git@github.com:NoMercyLabs/shield.git", "github.com", "NoMercyLabs", "shield")]
     [InlineData("git@github.com:NoMercyLabs/shield", "github.com", "NoMercyLabs", "shield")]
-    [InlineData("ssh://git@github.com/NoMercyLabs/shield.git", "github.com", "NoMercyLabs", "shield")]
-    [InlineData("ssh://git@github.com:22/NoMercyLabs/shield.git", "github.com", "NoMercyLabs", "shield")]
+    [InlineData(
+        "ssh://git@github.com/NoMercyLabs/shield.git",
+        "github.com",
+        "NoMercyLabs",
+        "shield"
+    )]
+    [InlineData(
+        "ssh://git@github.com:22/NoMercyLabs/shield.git",
+        "github.com",
+        "NoMercyLabs",
+        "shield"
+    )]
     [InlineData("git://github.com/foo/bar.git", "github.com", "foo", "bar")]
     public void Parses_github_urls(string url, string host, string owner, string repo)
     {
@@ -26,7 +36,12 @@ public class GitRemoteParserTests
     }
 
     [Theory]
-    [InlineData("https://git.nomercy.tv/Fillz/nomercy-ffmpeg.git", "git.nomercy.tv", "Fillz", "nomercy-ffmpeg")]
+    [InlineData(
+        "https://git.nomercy.tv/Fillz/nomercy-ffmpeg.git",
+        "git.nomercy.tv",
+        "Fillz",
+        "nomercy-ffmpeg"
+    )]
     [InlineData("git@gitlab.com:group/sub/repo.git", "gitlab.com", "group/sub", "repo")]
     [InlineData("https://bitbucket.org/team/proj", "bitbucket.org", "team", "proj")]
     public void Parses_non_github_hosts(string url, string host, string owner, string repo)
@@ -55,7 +70,10 @@ public class GitRemoteParserTests
     [Fact]
     public void DetectFromWorkingTree_returns_null_when_no_dot_git()
     {
-        string root = Path.Combine(Path.GetTempPath(), "shield-git-test-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "shield-git-test-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(root);
         try
         {
@@ -70,12 +88,17 @@ public class GitRemoteParserTests
     [Fact]
     public void DetectFromWorkingTree_parses_origin_block()
     {
-        string root = Path.Combine(Path.GetTempPath(), "shield-git-test-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "shield-git-test-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(Path.Combine(root, ".git"));
         try
         {
-            File.WriteAllText(Path.Combine(root, ".git", "config"),
-                "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.com:NoMercyLabs/shield.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n");
+            File.WriteAllText(
+                Path.Combine(root, ".git", "config"),
+                "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.com:NoMercyLabs/shield.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n"
+            );
             File.WriteAllText(Path.Combine(root, ".git", "HEAD"), "ref: refs/heads/master\n");
 
             DetectedRemote? detected = GitRemoteParser.DetectFromWorkingTree(root);
@@ -94,12 +117,17 @@ public class GitRemoteParserTests
     [Fact]
     public void DetectFromWorkingTree_returns_null_when_no_origin_block()
     {
-        string root = Path.Combine(Path.GetTempPath(), "shield-git-test-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "shield-git-test-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(Path.Combine(root, ".git"));
         try
         {
-            File.WriteAllText(Path.Combine(root, ".git", "config"),
-                "[core]\n\trepositoryformatversion = 0\n[remote \"upstream\"]\n\turl = git@github.com:foo/bar.git\n");
+            File.WriteAllText(
+                Path.Combine(root, ".git", "config"),
+                "[core]\n\trepositoryformatversion = 0\n[remote \"upstream\"]\n\turl = git@github.com:foo/bar.git\n"
+            );
             GitRemoteParser.DetectFromWorkingTree(root).Should().BeNull();
         }
         finally

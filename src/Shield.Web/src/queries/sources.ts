@@ -3,7 +3,7 @@ import type { MaybeRef } from 'vue'
 import { unref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { InventoryItemResponse, PagedResponse, Source, SourceCreate, SourceDetail } from '@/types/api'
+import type { InventoryItemResponse, PagedResponse, Source, SourceCreate, SourceDetail, SourceUpdate } from '@/types/api'
 
 export const useSourcesQuery = () => useQuery({
   queryKey: ['sources'],
@@ -61,6 +61,47 @@ export const useScanNowMutation = () => {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
       queryClient.invalidateQueries({ queryKey: ['sources', id] })
       queryClient.invalidateQueries({ queryKey: ['findings'] })
+    },
+  })
+}
+
+export const useUpdateSourceMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: number, patch: SourceUpdate }): Promise<Source> => {
+      const { data } = await api.put<Source>(`/sources/${input.id}`, input.patch)
+      return data
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['sources', input.id] })
+    },
+  })
+}
+
+export const useDeleteSourceMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await api.delete(`/sources/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['findings'] })
+    },
+  })
+}
+
+export const useToggleSourceMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number): Promise<Source> => {
+      const { data } = await api.post<Source>(`/sources/${id}/toggle`)
+      return data
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['sources', id] })
     },
   })
 }

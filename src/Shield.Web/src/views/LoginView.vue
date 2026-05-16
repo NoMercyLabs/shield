@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { login } from '@/stores/auth'
+import { type AuthProvider, fetchAuthProviders, login, oauthSignin } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,6 +12,15 @@ const password = ref('')
 const totpCode = ref('')
 const error = ref<string | null>(null)
 const submitting = ref(false)
+const providers = ref<AuthProvider[]>([])
+
+onMounted(async () => {
+  providers.value = await fetchAuthProviders()
+  // Server may redirect back here with ?oauth_signin_rejected=<reason> when the callback
+  // refused to create a new user. Surface that as an inline error.
+  if (typeof route.query.oauth_signin_rejected === 'string')
+    error.value = `Sign-in rejected by server: ${route.query.oauth_signin_rejected}`
+})
 
 async function onSubmit(): Promise<void> {
   error.value = null
@@ -29,6 +38,17 @@ async function onSubmit(): Promise<void> {
     submitting.value = false
   }
 }
+
+async function onOauth(provider: string): Promise<void> {
+  error.value = null
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+  try {
+    await oauthSignin(provider, redirect)
+  }
+  catch (err) {
+    error.value = err instanceof Error ? err.message : `Failed to start ${provider} sign-in.`
+  }
+}
 </script>
 
 <template>
@@ -40,6 +60,23 @@ async function onSubmit(): Promise<void> {
       <div>
         <h1 class="text-2xl font-semibold">Shield</h1>
         <p class="text-sm text-slate-400">Sign in to continue.</p>
+      </div>
+
+      <div v-if="providers.length > 0" class="space-y-2">
+        <button
+          v-for="provider in providers"
+          :key="provider.provider"
+          type="button"
+          class="flex w-full items-center justify-center gap-2 rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+          @click="onOauth(provider.provider)"
+        >
+          <img :src="provider.iconUrl" :alt="provider.displayName" class="h-4 w-4" />
+          Sign in with {{ provider.displayName }}
+        </button>
+        <div class="relative pt-2">
+          <div class="absolute inset-0 flex items-center"><div class="h-px w-full bg-slate-800" /></div>
+          <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">or</span></div>
+        </div>
       </div>
 
       <label class="block">

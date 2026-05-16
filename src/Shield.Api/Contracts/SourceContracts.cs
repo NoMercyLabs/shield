@@ -60,13 +60,17 @@ public sealed record SourceResponse(
             ParseDetectedRemote(source.DetectedRemote)
         );
 
+    private static readonly JsonSerializerOptions DetectedRemoteOptions = new(
+        JsonSerializerDefaults.Web
+    );
+
     private static DetectedRemoteDto? ParseDetectedRemote(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
             return null;
         try
         {
-            return JsonSerializer.Deserialize<DetectedRemoteDto>(json);
+            return JsonSerializer.Deserialize<DetectedRemoteDto>(json, DetectedRemoteOptions);
         }
         catch (JsonException)
         {

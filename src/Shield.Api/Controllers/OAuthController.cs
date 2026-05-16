@@ -268,10 +268,15 @@ public sealed class OAuthController : ControllerBase
         if (!await _roleManager.RoleExistsAsync(role))
             await _roleManager.CreateAsync(new ShieldRole(role));
 
-        string username = $"{provider.ToString().ToLowerInvariant()}:{signin.Login}";
+        // Identity's default allowed-username set is alphanumeric, so flatten ":" and "-" out
+        // of `<provider>:<login>` rather than fight the policy at startup.
+        string rawUsername = $"{provider.ToString().ToLowerInvariant()}{signin.Login}";
+        string username = new(rawUsername.Where(char.IsLetterOrDigit).ToArray());
+        if (string.IsNullOrEmpty(username))
+            username = provider.ToString().ToLowerInvariant() + Guid.NewGuid().ToString("n")[..8];
         // Avoid clashing with an existing UserName (rare but possible on re-runs after a failed link).
         if (await _userManager.FindByNameAsync(username) is not null)
-            username += "-" + Guid.NewGuid().ToString("n")[..6];
+            username += Guid.NewGuid().ToString("n")[..6];
 
         ShieldUser user = new()
         {

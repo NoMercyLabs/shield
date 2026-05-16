@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { fetchRegistrationAllowed, register } from '@/stores/auth'
+import { type AuthProvider, fetchAuthProviders, fetchRegistrationAllowed, oauthSignin, register } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
 
 const router = useRouter()
@@ -15,22 +15,34 @@ const error = ref<string | null>(null)
 const submitting = ref(false)
 const allowed = ref<boolean | null>(null)
 const reason = ref<string | null>(null)
+const providers = ref<AuthProvider[]>([])
 
 const headline = computed(() =>
   reason.value === 'first-user' ? 'Create the first admin' : 'Create an account'
 )
 
 onMounted(async () => {
-  try {
-    const result = await fetchRegistrationAllowed()
-    allowed.value = result.allowed
-    reason.value = result.reason
-  }
-  catch {
-    allowed.value = false
-    reason.value = 'unavailable'
-  }
+  // Fetch providers in parallel — the OAuth row stays even when registration is closed because
+  // existing users can still sign in via OAuth from the same form.
+  const [registration, providersList] = await Promise.all([
+    fetchRegistrationAllowed().catch(() => ({ allowed: false, reason: 'unavailable' })),
+    fetchAuthProviders(),
+  ])
+  allowed.value = registration.allowed
+  reason.value = registration.reason
+  providers.value = providersList
 })
+
+async function onOauth(provider: string): Promise<void> {
+  try {
+    await oauthSignin(provider, '/')
+  }
+  catch (err) {
+    const message = err instanceof Error ? err.message : `Failed to start ${provider} sign-in.`
+    error.value = message
+    push('error', message)
+  }
+}
 
 async function onSubmit(): Promise<void> {
   error.value = null
@@ -70,6 +82,23 @@ async function onSubmit(): Promise<void> {
         <div>
           <h1 class="text-2xl font-semibold">{{ headline }}</h1>
           <p class="text-sm text-slate-400">Set a username and password to continue.</p>
+        </div>
+
+        <div v-if="providers.length > 0" class="space-y-2">
+          <button
+            v-for="provider in providers"
+            :key="provider.provider"
+            type="button"
+            class="flex w-full items-center justify-center gap-2 rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+            @click="onOauth(provider.provider)"
+          >
+            <img :src="provider.iconUrl" :alt="provider.displayName" class="h-4 w-4" />
+            Sign up with {{ provider.displayName }}
+          </button>
+          <div class="relative pt-2">
+            <div class="absolute inset-0 flex items-center"><div class="h-px w-full bg-slate-800" /></div>
+            <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">or</span></div>
+          </div>
         </div>
 
         <label class="block">

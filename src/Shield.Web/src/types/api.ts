@@ -203,6 +203,7 @@ export interface Advisory {
 export interface Finding {
   id: string
   sourceId: number
+  sourceName: string | null
   inventoryItemId: number
   advisoryRefId: string
   severity: Severity
@@ -211,6 +212,23 @@ export interface Finding {
   state: FindingState
   dedupKey: string
   notes: string | null
+  packageName: string | null
+  packageVersion: string | null
+  ecosystem: Ecosystem | null
+  advisoryExternalId: string | null
+  advisorySummary: string | null
+}
+
+export interface AdvisoryReference {
+  type?: string
+  url: string
+}
+
+export interface SourceUpdate {
+  name: string
+  configJson: string
+  scanInterval: string
+  enabled: boolean
 }
 
 export interface FindingDetail {
@@ -315,6 +333,35 @@ export interface DashboardResponse {
   sourcesHealthy: number
   sourcesStale: number
   recentFindings: Finding[]
+}
+
+// ---------- auth + oauth ----------
+
+export interface RegistrationAllowed {
+  allowed: boolean
+  reason: string | null
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+export type OAuthProviderName = 'Github' | 'Slack' | 'Google'
+
+export interface OAuthStartResponse {
+  authorizationUrl: string
+}
+
+export interface OAuthStatus {
+  connected: boolean
+  scopes: string[]
+  accountLogin: string | null
+  expiresAt: string | null
+}
+
+export interface SlackChannelsResponse {
+  channels: Array<{ id: string, name: string }>
 }
 
 // ---------- settings ----------

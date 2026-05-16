@@ -9,6 +9,11 @@ permissions:
   packages: write
   id-token: write
 
+# A re-tag of the same version cancels the previous still-running build.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     # Multi-arch builds are slow on GitHub-hosted; use the beast.

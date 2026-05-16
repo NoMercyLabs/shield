@@ -336,10 +336,10 @@ public sealed class OAuthTests
         using IServiceScope scope = factory.Services.CreateScope();
         Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> users =
             scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
-        // Existing user found by email — no synthetic provider:login duplicate.
+        // Existing user found by email — no synthetic provider+login duplicate created.
         Shield.Data.Identity.ShieldUser? seeded = await users.FindByNameAsync("seed-admin");
         seeded.Should().NotBeNull();
-        Shield.Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync("github:seed-admin-external");
+        Shield.Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync("githubseedadminexternal");
         duplicate.Should().BeNull();
     }
 
