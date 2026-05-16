@@ -29,7 +29,7 @@ RUN dotnet publish src/Shield.Api/Shield.Api.csproj \
     /p:UseAppHost=false
 
 # ---------- Stage 3: Runtime ----------
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 RUN apk add --no-cache wget icu-libs \
  && addgroup -S shield \
  && adduser -S -G shield -h /app -s /sbin/nologin shield \
