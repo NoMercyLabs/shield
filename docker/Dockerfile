@@ -33,20 +33,22 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
 RUN apk add --no-cache wget icu-libs \
  && addgroup -S shield \
  && adduser -S -G shield -h /app -s /sbin/nologin shield \
- && mkdir -p /data \
+ && mkdir -p /data /data/keys \
  && chown -R shield:shield /data /app
 WORKDIR /app
 COPY --from=dotnet-build --chown=shield:shield /publish/ ./
 USER shield
-VOLUME ["/data"]
-ENV ASPNETCORE_URLS=http://+:8080 \
+VOLUME ["/data", "/data/keys"]
+ENV ASPNETCORE_URLS=http://+:8842 \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     Shield__Db__Shield="Data Source=/data/shield.db" \
     Shield__Db__Feeds="Data Source=/data/feeds.db" \
     Shield__SingleUser=true \
-    Shield__Auth__JwtSigningKey=CHANGE_ME_must_be_set_to_a_real_secret_in_production
-EXPOSE 8080
+    Shield__Auth__JwtSigningKey=CHANGE_ME_must_be_set_to_a_real_secret_in_production \
+    Shield__Auth__DataProtectionKeysPath=/data/keys \
+    Shield__Auth__DataProtectionMasterKey=CHANGE_ME_set_a_real_secret_or_secrets_die_on_recreate
+EXPOSE 8842
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -qO- http://localhost:8080/healthz || exit 1
+    CMD wget -qO- http://localhost:8842/healthz || exit 1
 ENTRYPOINT ["dotnet", "Shield.Api.dll"]

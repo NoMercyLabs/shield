@@ -68,3 +68,9 @@ public enum OAuthProvider
     Slack = 1,
     Google = 2,
 }
+
+public enum SourceAccessLevel
+{
+    Read = 0,
+    Triage = 1,
+}

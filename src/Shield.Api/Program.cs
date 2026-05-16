@@ -1,13 +1,20 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Shield.Alerter.Extensions;
 using Shield.Api.Auth;
 using Shield.Api.Auth.OAuthProviders;
+using Shield.Api.Hardening;
+using Shield.Api.Hubs;
+using Shield.Api.Middleware;
 using Shield.Api.Persistence;
 using Shield.Api.Services;
 using Shield.Api.Services.ManifestEditors;
@@ -75,14 +82,77 @@ builder.Services.AddHostedService<FeedSyncWorker>();
 builder.Services.AddHostedService<MatcherWorker>();
 builder.Services.AddHostedService<AlertDispatchWorker>();
 
-// Identity — cookies for the SPA, JWT bearer for API clients.
+// DataProtection — persistent keyring + master-key envelope. MUST be registered before
+// AddIdentity so Identity's cookie protector latches onto our configured keyring instead
+// of the ephemeral Linux container default (wiped on every recreate). The master key is
+// hashed to 32 bytes (AES-256) and wraps every keyring XML entry written to disk.
+string keysPath =
+    configuration["Shield:Auth:DataProtectionKeysPath"]
+    ?? Path.Combine(AppContext.BaseDirectory, "data", "keys");
+Directory.CreateDirectory(keysPath);
+
+IDataProtectionBuilder dataProtection = builder
+    .Services.AddDataProtection()
+    .SetApplicationName("Shield")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
+string? masterKey = configuration["Shield:Auth:DataProtectionMasterKey"];
+if (!string.IsNullOrEmpty(masterKey))
+{
+    byte[] keyBytes = System.Security.Cryptography.SHA256.HashData(
+        Encoding.UTF8.GetBytes(masterKey)
+    );
+    dataProtection.ProtectKeysWithMasterKey(keyBytes);
+}
+else if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+{
+    // Testing skipped too: WebApplicationFactory layers config AFTER this gate runs, so
+    // even though the test factory provides a master key the value isn't visible here yet.
+    throw new InvalidOperationException(
+        "Shield:Auth:DataProtectionMasterKey is required in non-Development environments — "
+            + "stored secrets would be lost on container recreate without it."
+    );
+}
+
+// Production-safety gate — refuses to start when public-exposure config is half-secured.
+// Skipped in Development + Testing. See Hardening/ProductionSafetyGate.cs for the failure list.
+ProductionSafetyGate.Validate(configuration, builder.Environment);
+
+// Identity — cookies for the SPA, JWT bearer for API clients. Password policy + lockout
+// tighten automatically when Shield:Public=true; otherwise dev-friendly defaults stay.
+bool shieldPublicMode = configuration.GetValue("Shield:Public", false);
+bool shieldSingleUserMode = configuration.GetValue("Shield:SingleUser", false);
 builder
     .Services.AddIdentity<ShieldUser, ShieldRole>(options =>
     {
         options.User.RequireUniqueEmail = false;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequireUppercase = false;
         options.SignIn.RequireConfirmedAccount = false;
+
+        if (shieldPublicMode)
+        {
+            // Public hosts get NIST-flavoured strict policy + 5-strike lockout.
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredLength = 12;
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        }
+        else
+        {
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = false;
+            // Multi-user mode (not single-user) still wants lockout-on-failure even off the
+            // public internet — brute force from a LAN host is still brute force.
+            if (!shieldSingleUserMode)
+            {
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            }
+        }
     })
     .AddEntityFrameworkStores<ShieldDbContext>()
     .AddDefaultTokenProviders();
@@ -118,11 +188,19 @@ builder
         SingleUserAuthHandler
     >(SingleUserAuthHandler.SchemeName, configureOptions: null);
 
+bool requireHttpsForCookies = configuration.GetValue("Shield:Auth:RequireHttps", false);
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "shield.auth";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    // SameSite=Strict + Secure when behind TLS — the SPA + API share an origin so Strict
+    // doesn't break OAuth (callbacks land on /api/oauth/<provider>/callback same-origin).
+    options.Cookie.SameSite = requireHttpsForCookies
+        ? SameSiteMode.Strict
+        : SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = requireHttpsForCookies
+        ? CookieSecurePolicy.Always
+        : CookieSecurePolicy.SameAsRequest;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
     options.LoginPath = "/login";
@@ -161,10 +239,75 @@ builder.Services.AddAuthorization(options =>
     )
         .RequireAuthenticatedUser()
         .Build();
+
+    // Maintainer-or-higher policy — Admin always qualifies because Admin owns every source.
+    options.AddPolicy(
+        "MaintainerOrAdmin",
+        policy =>
+            policy.RequireRole(ShieldRoles.Admin, ShieldRoles.Maintainer).RequireAuthenticatedUser()
+    );
 });
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IFindingsBroadcaster, FindingsBroadcaster>();
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
+
+// Security headers middleware — registered transient so each request gets a fresh instance
+// that reads RequireHttps from configuration (avoids capturing a stale snapshot at boot).
+builder.Services.AddTransient<SecurityHeadersMiddleware>();
+
+// Forwarded headers — required when behind a reverse proxy that terminates TLS so
+// HttpsRedirection sees the original https:// scheme instead of the proxy's http:// hop,
+// which would cause a redirect loop. Trust only KnownNetworks=loopback by default; operators
+// running on a real cluster network add their proxy subnet via Shield:ForwardedHeaders.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Empty = trust all proxies. Operators on multi-hop networks tighten via KnownProxies/Networks
+    // — for the single-container + sidecar Caddy reference deploy, all hops are loopback.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Rate limiter — token-bucket per IP on login/register/OAuth callbacks. 10 reqs/min/IP.
+// BCL Microsoft.AspNetCore.RateLimiting (no NuGet add). Rejected requests get a 429.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(
+        "auth-burst",
+        context =>
+        {
+            string partitionKey =
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown-remote";
+            return RateLimitPartition.GetTokenBucketLimiter(
+                partitionKey,
+                _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 10,
+                    TokensPerPeriod = 10,
+                    ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+});
+
+// Audit log: HttpContext access for the AuditLogger (actor + remote IP); scoped logger
+// rides the request DbContext; middleware is transient and resolved per-request.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditLogger, AuditLogger>();
+builder.Services.AddTransient<AuditMiddleware>();
+
+// Per-source ACL resolver — scoped because it reads ShieldDbContext (scoped) and memoises
+// results onto HttpContext.Items so List + per-row CanRead checks within one request only
+// hit the DB once.
+builder.Services.AddScoped<IAccessResolver, AccessResolver>();
 
 // Runtime-mutable settings cache. Singleton so Current is shared across requests and
 // SingleUserAuthHandler sees the new snapshot the instant SettingsController writes.
@@ -197,8 +340,29 @@ builder.Services.AddSingleton<IManifestEditor, GoManifestEditor>();
 builder.Services.AddSingleton<IManifestEditor, RustManifestEditor>();
 builder.Services.AddSingleton<IFixApplier, FixApplier>();
 
+// Webhooks + badge endpoints. Validator + renderer + GitHub client factory are pure singletons;
+// SecretProvider holds a DataProtector singleton; PrCommentService is scoped because it
+// touches both DbContexts.
+builder.Services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
+builder.Services.AddSingleton<IBadgeRenderer, BadgeRenderer>();
+builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+builder.Services.AddSingleton<IWebhookSecretProvider, WebhookSecretProvider>();
+builder.Services.AddScoped<IPrCommentService, PrCommentService>();
+
+// Snapshot-to-snapshot supply-chain anomaly detector. Scoped because it writes to
+// FeedsDbContext (advisories) + reads ShieldDbContext (snapshots/items); a Singleton
+// would capture both contexts and trip the captive-dep trap CLAUDE.md warns about.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IAnomalyDetector, AnomalyDetector>();
+
+// Swagger is off unconditionally when Shield:Public=true — even if the operator forgot to
+// flip Shield:OpenApi:Enabled, internet exposure must not advertise the API surface.
 bool enableOpenApi =
-    builder.Environment.IsDevelopment() || configuration.GetValue("Shield:OpenApi:Enabled", false);
+    !configuration.GetValue("Shield:Public", false)
+    && (
+        builder.Environment.IsDevelopment()
+        || configuration.GetValue("Shield:OpenApi:Enabled", false)
+    );
 if (enableOpenApi)
 {
     builder.Services.AddEndpointsApiExplorer();
@@ -222,6 +386,25 @@ using (IServiceScope scope = app.Services.CreateScope())
 
 // Seed Admin/Viewer roles and (in single-user mode) the synthetic operator account.
 await IdentitySeeder.SeedAsync(app.Services);
+
+// Detect public-posture transition: when Shield:Public flips false→true, revoke OAuth
+// integration tokens and bump SecurityStamp on every user so cached creds from the
+// LAN-only era can't surface on the public host.
+await PublicPostureTransition.RunAsync(app.Services, app.Logger);
+
+// Boot banner so operators see the chosen posture immediately in logs.
+ProductionSafetyGate.LogPostureBanner(app.Logger, configuration, app.Environment);
+
+// Forwarded headers MUST run before HttpsRedirection so X-Forwarded-Proto is honoured by
+// the redirect logic — otherwise we bounce-loop between the proxy and the app.
+app.UseForwardedHeaders();
+
+if (configuration.GetValue("Shield:Auth:RequireHttps", false))
+    app.UseHttpsRedirection();
+
+// SecurityHeaders runs early so static files, SPA fallback, controllers, and SignalR all
+// pick up the same hardened header set.
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (enableOpenApi)
 {
@@ -257,7 +440,19 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Rate limiter — runs after auth so 429s are attributable in audit, before controllers so
+// the limiter sees the inbound path. The auth-burst policy is opted-in per route below via
+// RequireRateLimiting on the controller routes that accept anonymous credentials.
+app.UseRateLimiter();
+
+// Audit log middleware — runs AFTER auth so it can read the actor claims, and BEFORE
+// MapControllers so the controller pipeline executes within its scope. Records 2xx writes
+// for whitelisted admin actions (finding transitions, source/channel mutations, settings,
+// OAuth connect/disconnect). See AuditMiddleware.Classify for the whitelist.
+app.UseMiddleware<AuditMiddleware>();
+
 app.MapControllers();
+app.MapHub<FindingsHub>("/hubs/findings");
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 
 // SPA fallback — serve index.html for non-API GETs.

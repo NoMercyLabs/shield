@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Services;
 using Shield.Core.Domain;
 using Shield.Data;
 using Shield.Matcher;
@@ -9,16 +10,19 @@ public sealed class MatcherWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly MatchQueue _matchQueue;
+    private readonly IFindingsBroadcaster _broadcaster;
     private readonly ILogger<MatcherWorker> _log;
 
     public MatcherWorker(
         IServiceScopeFactory scopeFactory,
         MatchQueue matchQueue,
+        IFindingsBroadcaster broadcaster,
         ILogger<MatcherWorker> log
     )
     {
         _scopeFactory = scopeFactory;
         _matchQueue = matchQueue;
+        _broadcaster = broadcaster;
         _log = log;
     }
 
@@ -57,6 +61,7 @@ public sealed class MatcherWorker : BackgroundService
             return;
 
         DateTime now = DateTime.UtcNow;
+        List<Finding> newlyInserted = new();
 
         foreach (InventorySnapshot snapshot in snapshots)
         {
@@ -92,11 +97,47 @@ public sealed class MatcherWorker : BackgroundService
                 {
                     shieldDb.Findings.Add(finding);
                     existingByKey[finding.DedupKey] = finding;
+                    newlyInserted.Add(finding);
                 }
             }
         }
 
         await shieldDb.SaveChangesAsync(ct);
+
+        if (newlyInserted.Count == 0)
+            return;
+
+        try
+        {
+            await _broadcaster.PublishNewAsync(newlyInserted, ct);
+
+            // Same scope — re-tally open counts cheaply now that the insert committed.
+            // Piggybacking on the matcher tick is cheaper than a polling watcher: counts
+            // only change when findings change, and the matcher is the only path that adds them.
+            int low = await shieldDb.Findings.CountAsync(
+                finding => finding.State == FindingState.Open && finding.Severity == Severity.Low,
+                ct
+            );
+            int medium = await shieldDb.Findings.CountAsync(
+                finding =>
+                    finding.State == FindingState.Open && finding.Severity == Severity.Medium,
+                ct
+            );
+            int high = await shieldDb.Findings.CountAsync(
+                finding => finding.State == FindingState.Open && finding.Severity == Severity.High,
+                ct
+            );
+            int critical = await shieldDb.Findings.CountAsync(
+                finding =>
+                    finding.State == FindingState.Open && finding.Severity == Severity.Critical,
+                ct
+            );
+            await _broadcaster.PublishCountsAsync(low, medium, high, critical, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to broadcast {Count} new findings", newlyInserted.Count);
+        }
     }
 
     private static async Task<List<InventorySnapshot>> LoadSnapshotsAsync(

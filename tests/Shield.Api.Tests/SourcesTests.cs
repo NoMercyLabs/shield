@@ -263,6 +263,151 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
         promote.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task Bulk_local_folders_creates_and_skips_existing()
+    {
+        HttpClient client = _factory.CreateClient();
+
+        string tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "shield-bulk-tests",
+            Guid.NewGuid().ToString("n")
+        );
+        Directory.CreateDirectory(tempRoot);
+        string folderA = Path.Combine(tempRoot, "alpha");
+        string folderB = Path.Combine(tempRoot, "bravo");
+        Directory.CreateDirectory(folderA);
+        Directory.CreateDirectory(folderB);
+
+        try
+        {
+            // Pre-create one source for folderA so the bulk call must dedupe it.
+            object preExisting = new
+            {
+                type = (int)SourceType.LocalFolder,
+                name = "alpha-existing",
+                configJson = new { path = folderA },
+                scanInterval = "01:00:00",
+            };
+            HttpResponseMessage seed = await client.PostAsJsonAsync("/api/sources", preExisting);
+            seed.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            object bulk = new
+            {
+                paths = new[] { folderA, folderB, "/this/does/not/exist/anywhere" },
+                defaultScanInterval = "06:00:00",
+            };
+            HttpResponseMessage response = await client.PostAsJsonAsync(
+                "/api/sources/bulk-local-folders",
+                bulk
+            );
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
+            body.GetProperty("created").GetInt32().Should().Be(1);
+            body.GetProperty("skippedExisting").GetInt32().Should().Be(2);
+            body.GetProperty("sources").GetArrayLength().Should().Be(1);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // best-effort.
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Bulk_from_github_creates_sources_and_skips_existing()
+    {
+        HttpClient client = _factory.CreateClient();
+
+        // Pre-seed an existing GithubRepo source with the same name we'll try to add — must be skipped.
+        object existing = new
+        {
+            type = (int)SourceType.GithubRepo,
+            name = "octocat/dup",
+            configJson = new { owner = "octocat", repo = "dup" },
+            scanInterval = "01:00:00",
+        };
+        HttpResponseMessage seed = await client.PostAsJsonAsync("/api/sources", existing);
+        seed.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        object request = new
+        {
+            selections = new[]
+            {
+                new
+                {
+                    owner = "octocat",
+                    name = "hello-world",
+                    branch = (string?)"main",
+                },
+                new
+                {
+                    owner = "octocat",
+                    name = "spoon-knife",
+                    branch = (string?)null,
+                },
+                new
+                {
+                    owner = "octocat",
+                    name = "dup",
+                    branch = (string?)null,
+                },
+            },
+            defaultScanInterval = "06:00:00",
+        };
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/sources/bulk-from-github",
+            request
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        BulkFromGithubResponse? body =
+            await response.Content.ReadFromJsonAsync<BulkFromGithubResponse>();
+        body.Should().NotBeNull();
+        body!.Created.Should().Be(2);
+        body.SkippedExisting.Should().Be(1);
+        body.Sources.Should().HaveCount(2);
+        body.Sources.Select(source => source.Name)
+            .Should()
+            .BeEquivalentTo(new[] { "octocat/hello-world", "octocat/spoon-knife" });
+        body.Sources.Should().OnlyContain(source => source.Type == SourceType.GithubRepo);
+        body.Sources.Should().OnlyContain(source => source.ScanInterval == TimeSpan.FromHours(6));
+
+        // ConfigJson must NOT contain a token — only owner/repo/branch.
+        body.Sources.Should()
+            .OnlyContain(source =>
+                !source.ConfigJson.Contains("token", StringComparison.OrdinalIgnoreCase)
+            );
+
+        // Listing reflects 3 GithubRepo sources total (1 seeded + 2 bulk-added).
+        HttpResponseMessage list = await client.GetAsync("/api/sources");
+        List<SourceResponse>? all = await list.Content.ReadFromJsonAsync<List<SourceResponse>>();
+        all!
+            .Count(source => source.Type == SourceType.GithubRepo)
+            .Should()
+            .BeGreaterThanOrEqualTo(3);
+    }
+
+    [Fact]
+    public async Task Bulk_from_github_rejects_empty_selections()
+    {
+        HttpClient client = _factory.CreateClient();
+        object request = new { selections = Array.Empty<object>() };
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/sources/bulk-from-github",
+            request
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private async Task<bool> WaitForSnapshotAsync(int sourceId, TimeSpan timeout)
     {
         DateTime deadline = DateTime.UtcNow + timeout;

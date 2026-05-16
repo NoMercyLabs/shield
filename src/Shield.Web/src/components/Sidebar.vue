@@ -1,30 +1,44 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import {
   Bell,
   LayoutDashboard,
   Plug,
   Radio,
+  ScrollText,
   Settings,
   ShieldAlert,
   Sliders,
 } from 'lucide-vue-next'
 
+import { useAuth } from '@/stores/auth'
+
 interface NavItem {
   name: string
   to: string
-  label: string
+  labelKey: string
   icon: typeof LayoutDashboard
+  adminOnly?: boolean
 }
 
-const items: NavItem[] = [
-  { name: 'dashboard', to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { name: 'sources', to: '/sources', label: 'Sources', icon: Plug },
-  { name: 'findings', to: '/findings', label: 'Findings', icon: ShieldAlert },
-  { name: 'channels', to: '/channels', label: 'Channels', icon: Bell },
-  { name: 'feeds', to: '/feeds', label: 'Feeds', icon: Radio },
-  { name: 'settings', to: '/settings', label: 'Settings', icon: Settings },
+const { isAdmin } = useAuth()
+const { t } = useI18n()
+
+const allItems: NavItem[] = [
+  { name: 'dashboard', to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { name: 'sources', to: '/sources', labelKey: 'nav.sources', icon: Plug },
+  { name: 'findings', to: '/findings', labelKey: 'nav.findings', icon: ShieldAlert },
+  { name: 'channels', to: '/channels', labelKey: 'nav.channels', icon: Bell },
+  { name: 'feeds', to: '/feeds', labelKey: 'nav.feeds', icon: Radio },
+  { name: 'settings', to: '/settings', labelKey: 'nav.settings', icon: Settings },
+  { name: 'audit', to: '/audit', labelKey: 'nav.audit', icon: ScrollText, adminOnly: true },
 ]
+
+const items = computed(() =>
+  allItems.filter(item => !item.adminOnly || isAdmin.value),
+)
 </script>
 
 <template>
@@ -42,7 +56,7 @@ const items: NavItem[] = [
         active-class="bg-slate-800 text-white"
       >
         <component :is="item.icon" class="h-4 w-4" />
-        <span>{{ item.label }}</span>
+        <span>{{ t(item.labelKey) }}</span>
       </RouterLink>
     </nav>
   </aside>

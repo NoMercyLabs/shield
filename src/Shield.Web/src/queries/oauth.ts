@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import type { MaybeRefOrGetter } from 'vue'
+import { toValue } from 'vue'
 
 import { api } from '@/lib/api'
-import type { OAuthProviderName, OAuthStartResponse, OAuthStatus, SlackChannelsResponse } from '@/types/api'
+import type {
+  GitHubRepoListResponse,
+  OAuthProviderName,
+  OAuthStartResponse,
+  OAuthStatus,
+  SlackChannelsResponse,
+} from '@/types/api'
 
 const STATUS_KEY = (provider: OAuthProviderName) => ['oauth', provider, 'status']
 
@@ -46,3 +54,17 @@ export function useSlackChannels(enabled = true) {
     },
   })
 }
+
+// Disabled by default; the picker dialog opts in when it opens so we don't hammer
+// GitHub on every Sources page view. Server caches the response 5 min/user anyway.
+export function useGitHubReposQuery(enabled: MaybeRefOrGetter<boolean> = false) {
+  return useQuery({
+    queryKey: ['oauth', 'github', 'repos'],
+    enabled: () => toValue(enabled),
+    queryFn: async (): Promise<GitHubRepoListResponse> => {
+      const { data } = await api.get<GitHubRepoListResponse>('/oauth/github/repos')
+      return data
+    },
+  })
+}
+

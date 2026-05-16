@@ -83,3 +83,9 @@ public sealed record FindingsPage(
     int Page,
     int PageSize
 );
+
+public sealed record BulkFindingsRequest(IReadOnlyList<Guid> FindingIds);
+
+public sealed record BulkSuppressRequest(IReadOnlyList<Guid> FindingIds, string Reason);
+
+public sealed record BulkFindingsResponse(int Updated, IReadOnlyList<Guid> NotFound);

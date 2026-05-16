@@ -24,6 +24,40 @@ export const useCreateChannelMutation = () => {
   })
 }
 
+export interface ChannelUpdate {
+  id: string
+  name: string
+  configJson: string
+  minSeverity: number
+  enabled: boolean
+}
+
+export const useUpdateChannelMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: ChannelUpdate): Promise<AlertChannel> => {
+      const { id, ...body } = payload
+      const { data } = await api.put<AlertChannel>(`/channels/${id}`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    },
+  })
+}
+
+export const useDeleteChannelMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      await api.delete(`/channels/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['channels'] })
+    },
+  })
+}
+
 export const useTestSendMutation = () => useMutation({
   mutationFn: async (id: string): Promise<void> => {
     await api.post(`/channels/${id}/test-send`)

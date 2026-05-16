@@ -7,16 +7,40 @@ import type {
   ApplyFixRequest,
   ApplyFixResponse,
   ApplyFixStrategy,
+  BulkFindingsResponse,
   Finding,
   FindingDetail,
   FindingFilter,
   FindingsPage,
 } from '@/types/api'
 
+// Serialize `?severity=2&severity=3` (repeat-key) rather than axios default `severity[]=…`.
+// .NET model binding accepts both, but the contract documented for clients is repeat-key.
+const serializeFindingFilter = (filter: FindingFilter): URLSearchParams => {
+  const params = new URLSearchParams()
+  for (const value of filter.severity ?? [])
+    params.append('severity', String(value))
+  for (const value of filter.sourceId ?? [])
+    params.append('sourceId', String(value))
+  for (const value of filter.ecosystem ?? [])
+    params.append('ecosystem', String(value))
+  for (const value of filter.state ?? [])
+    params.append('state', String(value))
+  for (const value of filter.packageName ?? [])
+    params.append('packageName', value)
+  if (filter.page !== undefined)
+    params.append('page', String(filter.page))
+  if (filter.pageSize !== undefined)
+    params.append('pageSize', String(filter.pageSize))
+  return params
+}
+
 export const useFindingsQuery = (filter: MaybeRef<FindingFilter>) => useQuery({
   queryKey: ['findings', filter],
   queryFn: async (): Promise<FindingsPage> => {
-    const { data } = await api.get<FindingsPage>('/findings', { params: unref(filter) })
+    const { data } = await api.get<FindingsPage>('/findings', {
+      params: serializeFindingFilter(unref(filter)),
+    })
     return data
   },
 })
@@ -52,6 +76,31 @@ const transition = (verb: 'ack' | 'suppress' | 'resolve') => {
 export const useAckFindingMutation = () => transition('ack')
 export const useSuppressFindingMutation = () => transition('suppress')
 export const useResolveFindingMutation = () => transition('resolve')
+
+interface BulkPayload {
+  findingIds: string[]
+  reason?: string
+}
+
+const bulkTransition = (verb: 'ack' | 'resolve' | 'suppress') => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ findingIds, reason }: BulkPayload): Promise<BulkFindingsResponse> => {
+      const body = verb === 'suppress'
+        ? { findingIds, reason: reason ?? '' }
+        : { findingIds }
+      const { data } = await api.post<BulkFindingsResponse>(`/findings/bulk-${verb}`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['findings'] })
+    },
+  })
+}
+
+export const useBulkAckFindingsMutation = () => bulkTransition('ack')
+export const useBulkResolveFindingsMutation = () => bulkTransition('resolve')
+export const useBulkSuppressFindingsMutation = () => bulkTransition('suppress')
 
 interface ApplyFixPayload {
   id: string

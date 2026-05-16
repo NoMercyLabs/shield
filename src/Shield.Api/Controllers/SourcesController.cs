@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
+using Shield.Api.Services;
 using Shield.Api.Workers;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -21,25 +22,47 @@ public sealed class SourcesController : ControllerBase
 
     private readonly ShieldDbContext _db;
     private readonly ScanQueue _scanQueue;
+    private readonly FeedsDbContext _feedsDb;
+    private readonly IAnomalyDetector _anomalyDetector;
+    private readonly IAccessResolver _access;
 
-    public SourcesController(ShieldDbContext db, ScanQueue scanQueue)
+    public SourcesController(
+        ShieldDbContext db,
+        ScanQueue scanQueue,
+        FeedsDbContext feedsDb,
+        IAnomalyDetector anomalyDetector,
+        IAccessResolver access
+    )
     {
         _db = db;
         _scanQueue = scanQueue;
+        _feedsDb = feedsDb;
+        _anomalyDetector = anomalyDetector;
+        _access = access;
     }
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<SourceResponse>>> List(CancellationToken ct)
     {
-        List<Source> sources = await _db
-            .Sources.OrderByDescending(source => source.UpdatedAt)
-            .ToListAsync(ct);
+        bool isAdmin = User.IsInRole(ShieldRoles.Admin);
+        IQueryable<Source> query = _db.Sources;
+        if (!isAdmin)
+        {
+            IReadOnlyList<int> visible = await _access.GetVisibleSourceIdsAsync(User, ct);
+            if (visible.Count == 0)
+                return Ok(Array.Empty<SourceResponse>());
+            query = query.Where(source => visible.Contains(source.Id));
+        }
+        List<Source> sources = await query.OrderByDescending(source => source.UpdatedAt).ToListAsync(ct);
         return Ok(sources.Select(SourceResponse.From).ToList());
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<SourceDetailResponse>> Get(int id, CancellationToken ct)
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+
         Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (source is null)
             return NotFound();
@@ -71,6 +94,7 @@ public sealed class SourcesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = ShieldRoles.Admin)]
     public async Task<ActionResult<SourceResponse>> Create(
         [FromBody] CreateSourceRequest request,
         CancellationToken ct
@@ -105,6 +129,113 @@ public sealed class SourcesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = source.Id }, SourceResponse.From(source));
     }
 
+    // Bulk-create LocalFolder sources from a list of absolute paths. Admin only.
+    // Dedupes against existing LocalFolder sources that already reference the same path.
+    [HttpPost("bulk-local-folders")]
+    [Authorize(Roles = ShieldRoles.Admin)]
+    public async Task<ActionResult<BulkLocalFoldersResponse>> BulkLocalFolders(
+        [FromBody] BulkLocalFoldersRequest request,
+        CancellationToken ct
+    )
+    {
+        if (request.Paths is null || request.Paths.Count == 0)
+            return ValidationProblem("paths is required.");
+
+        if (!TimeSpan.TryParse(request.DefaultScanInterval, out TimeSpan scanInterval))
+            scanInterval = DefaultScanInterval;
+
+        List<Source> existing = await _db
+            .Sources.Where(source => source.Type == SourceType.LocalFolder)
+            .ToListAsync(ct);
+
+        HashSet<string> existingPaths = new(StringComparer.OrdinalIgnoreCase);
+        foreach (Source source in existing)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(source.ConfigJson);
+                if (
+                    doc.RootElement.ValueKind == JsonValueKind.Object
+                    && doc.RootElement.TryGetProperty("path", out JsonElement pathProp)
+                    && pathProp.ValueKind == JsonValueKind.String
+                )
+                {
+                    string? path = pathProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(path))
+                        existingPaths.Add(Path.GetFullPath(path));
+                }
+            }
+            catch (JsonException)
+            {
+                // ignore malformed legacy rows.
+            }
+        }
+
+        DateTime now = DateTime.UtcNow;
+        int created = 0;
+        int skipped = 0;
+        List<Source> newSources = new();
+
+        foreach (string rawPath in request.Paths)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(rawPath);
+            }
+            catch
+            {
+                skipped++;
+                continue;
+            }
+
+            if (!Directory.Exists(fullPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            if (!existingPaths.Add(fullPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            string configJson = JsonSerializer.Serialize(new { path = fullPath });
+            Source source = new()
+            {
+                Type = SourceType.LocalFolder,
+                Name =
+                    $"folder:{Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))}",
+                ConfigJson = configJson,
+                ScanInterval = scanInterval,
+                Enabled = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            _db.Sources.Add(source);
+            newSources.Add(source);
+            created++;
+        }
+
+        if (created > 0)
+            await _db.SaveChangesAsync(ct);
+
+        return Ok(
+            new BulkLocalFoldersResponse(
+                Created: created,
+                SkippedExisting: skipped,
+                Sources: newSources.Select(SourceResponse.From).ToList()
+            )
+        );
+    }
+
     [HttpPut("{id:int}")]
     public async Task<ActionResult<SourceResponse>> Update(
         int id,
@@ -112,6 +243,11 @@ public sealed class SourcesController : ControllerBase
         CancellationToken ct
     )
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+        if (!await _access.CanTriageAsync(User, id, ct))
+            return Forbid();
+
         Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (source is null)
             return NotFound();
@@ -141,6 +277,11 @@ public sealed class SourcesController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+        if (!await _access.CanTriageAsync(User, id, ct))
+            return Forbid();
+
         Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (source is null)
             return NotFound();
@@ -197,9 +338,92 @@ public sealed class SourcesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = sibling.Id }, SourceResponse.From(sibling));
     }
 
+    // Pick-from-GitHub: take a list of {owner, name, branch?} and materialise GithubRepo sources
+    // in one transaction. Idempotent — a selection whose `owner/name` already exists is skipped.
+    // Token is read server-side from the OAuth IntegrationToken; never stored in ConfigJson.
+    [HttpPost("bulk-from-github")]
+    [Authorize(Roles = ShieldRoles.Admin)]
+    public async Task<ActionResult<BulkFromGithubResponse>> BulkFromGithub(
+        [FromBody] BulkFromGithubRequest request,
+        CancellationToken ct
+    )
+    {
+        if (request is null || request.Selections is null || request.Selections.Count == 0)
+            return ValidationProblem("At least one selection is required.");
+
+        TimeSpan scanInterval = request.DefaultScanInterval ?? TimeSpan.FromHours(6);
+        if (scanInterval <= TimeSpan.Zero)
+            scanInterval = TimeSpan.FromHours(6);
+
+        // Pull existing GithubRepo names once so we can skip duplicates inside the loop without N round-trips.
+        HashSet<string> existingNames = (
+            await _db
+                .Sources.Where(source => source.Type == SourceType.GithubRepo)
+                .Select(source => source.Name)
+                .ToListAsync(ct)
+        ).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        DateTime now = DateTime.UtcNow;
+        List<Source> toInsert = new();
+        int skipped = 0;
+
+        foreach (BulkSelection selection in request.Selections)
+        {
+            if (
+                selection is null
+                || string.IsNullOrWhiteSpace(selection.Owner)
+                || string.IsNullOrWhiteSpace(selection.Name)
+            )
+            {
+                skipped++;
+                continue;
+            }
+            string name = $"{selection.Owner}/{selection.Name}";
+            if (!existingNames.Add(name))
+            {
+                skipped++;
+                continue;
+            }
+            string configJson = JsonSerializer.Serialize(
+                new
+                {
+                    owner = selection.Owner,
+                    repo = selection.Name,
+                    branch = string.IsNullOrWhiteSpace(selection.Branch) ? null : selection.Branch,
+                }
+            );
+            toInsert.Add(
+                new Source
+                {
+                    Type = SourceType.GithubRepo,
+                    Name = name,
+                    ConfigJson = configJson,
+                    ScanInterval = scanInterval,
+                    Enabled = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                }
+            );
+        }
+
+        if (toInsert.Count > 0)
+        {
+            _db.Sources.AddRange(toInsert);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        List<SourceResponse> created = toInsert.Select(SourceResponse.From).ToList();
+        return Ok(new BulkFromGithubResponse(created.Count, skipped, created));
+    }
+
     [HttpPost("{id:int}/scan-now")]
     public async Task<ActionResult<ScanQueuedResponse>> ScanNow(int id, CancellationToken ct)
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+        if (!await _access.CanTriageAsync(User, id, ct))
+            return Forbid();
+
         bool exists = await _db.Sources.AnyAsync(source => source.Id == id, ct);
         if (!exists)
             return NotFound();
@@ -217,23 +441,191 @@ public sealed class SourcesController : ControllerBase
         CancellationToken ct
     )
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+
         bool exists = await _db.Sources.AnyAsync(source => source.Id == id, ct);
         if (!exists)
             return NotFound();
 
-        List<SnapshotListItem> snapshots = await _db
+        List<InventorySnapshot> rawSnapshots = await _db
             .InventorySnapshots.Where(snapshot => snapshot.SourceId == id)
             .OrderByDescending(snapshot => snapshot.TakenAt)
-            .Select(snapshot => new SnapshotListItem(
-                snapshot.Id,
-                snapshot.TakenAt,
-                snapshot.ContentsSha,
-                snapshot.ItemCount
-            ))
             .ToListAsync(ct);
+
+        // Pair each snapshot with the one immediately older so the UI can render
+        // "Compare with previous" links without a second round-trip.
+        List<SnapshotListItem> snapshots = rawSnapshots
+            .Select(
+                (snapshot, index) =>
+                    new SnapshotListItem(
+                        snapshot.Id,
+                        snapshot.TakenAt,
+                        snapshot.ContentsSha,
+                        snapshot.ItemCount,
+                        index + 1 < rawSnapshots.Count ? rawSnapshots[index + 1].Id : null
+                    )
+            )
+            .ToList();
 
         return Ok(snapshots);
     }
+
+    // Snapshot-to-snapshot diff with supply-chain anomaly flags on added items.
+    // Path order /{olderId}/diff/{newerId} keeps the older snapshot adjacent to the
+    // resource it's already namespaced under and avoids a {guid}/{guid} ambiguity.
+    [HttpGet("{id:int}/snapshots/{olderId:guid}/diff/{newerId:guid}")]
+    public async Task<ActionResult<SnapshotDiffResponse>> Diff(
+        int id,
+        Guid olderId,
+        Guid newerId,
+        CancellationToken ct
+    )
+    {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
+        if (olderId == newerId)
+            return ValidationProblem("olderId and newerId must differ.");
+
+        InventorySnapshot? older = await _db
+            .InventorySnapshots.AsNoTracking()
+            .FirstOrDefaultAsync(snapshot => snapshot.Id == olderId && snapshot.SourceId == id, ct);
+        InventorySnapshot? newer = await _db
+            .InventorySnapshots.AsNoTracking()
+            .FirstOrDefaultAsync(snapshot => snapshot.Id == newerId && snapshot.SourceId == id, ct);
+        if (older is null || newer is null)
+            return NotFound();
+
+        List<InventoryItem> olderItems = await _db
+            .InventoryItems.AsNoTracking()
+            .Where(item => item.SnapshotId == olderId)
+            .ToListAsync(ct);
+        List<InventoryItem> newerItems = await _db
+            .InventoryItems.AsNoTracking()
+            .Where(item => item.SnapshotId == newerId)
+            .ToListAsync(ct);
+
+        Dictionary<(Ecosystem, string), InventoryItem> olderIndex = olderItems
+            .GroupBy(item => (item.Ecosystem, NormalizeDiffName(item.Name)))
+            .ToDictionary(group => group.Key, group => group.First());
+        Dictionary<(Ecosystem, string), InventoryItem> newerIndex = newerItems
+            .GroupBy(item => (item.Ecosystem, NormalizeDiffName(item.Name)))
+            .ToDictionary(group => group.Key, group => group.First());
+
+        List<InventoryItem> addedRaw = newerItems
+            .Where(item => !olderIndex.ContainsKey((item.Ecosystem, NormalizeDiffName(item.Name))))
+            .ToList();
+        List<InventoryItem> removedRaw = olderItems
+            .Where(item => !newerIndex.ContainsKey((item.Ecosystem, NormalizeDiffName(item.Name))))
+            .ToList();
+
+        List<InventoryDiffChange> versionChanged = new();
+        foreach (InventoryItem newerItem in newerItems)
+        {
+            if (
+                olderIndex.TryGetValue(
+                    (newerItem.Ecosystem, NormalizeDiffName(newerItem.Name)),
+                    out InventoryItem? olderItem
+                ) && !string.Equals(olderItem.Version, newerItem.Version, StringComparison.Ordinal)
+            )
+            {
+                versionChanged.Add(
+                    new InventoryDiffChange(
+                        newerItem.Ecosystem,
+                        newerItem.Name,
+                        olderItem.Version,
+                        newerItem.Version,
+                        newerItem.IsDirect
+                    )
+                );
+            }
+        }
+
+        DateTime nowUtc = DateTime.UtcNow;
+        List<InventoryDiffEntry> added = new(addedRaw.Count);
+        foreach (InventoryItem item in addedRaw)
+        {
+            PackageMeta? current = await _feedsDb
+                .PackageMetas.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    meta =>
+                        meta.Ecosystem == item.Ecosystem
+                        && meta.Name == item.Name
+                        && meta.Version == item.Version,
+                    ct
+                );
+            PackageMeta? prior = await _feedsDb
+                .PackageMetas.AsNoTracking()
+                .Where(meta =>
+                    meta.Ecosystem == item.Ecosystem
+                    && meta.Name == item.Name
+                    && meta.Version != item.Version
+                )
+                .OrderByDescending(meta => meta.PublishedAt ?? meta.FetchedAt)
+                .FirstOrDefaultAsync(ct);
+
+            AnomalyFlags flags = _anomalyDetector.Evaluate(
+                item.Ecosystem,
+                item.Name,
+                item.Version,
+                current,
+                prior,
+                nowUtc
+            );
+
+            added.Add(
+                new InventoryDiffEntry(
+                    item.Ecosystem,
+                    item.Name,
+                    item.Version,
+                    item.IsDirect,
+                    item.ParentChain,
+                    flags
+                )
+            );
+        }
+
+        List<InventoryDiffEntry> removed = removedRaw
+            .Select(item => new InventoryDiffEntry(
+                item.Ecosystem,
+                item.Name,
+                item.Version,
+                item.IsDirect,
+                item.ParentChain,
+                AnomalyFlags.None
+            ))
+            .ToList();
+
+        SnapshotSummary olderSummary = await BuildSnapshotSummaryAsync(older, ct);
+        SnapshotSummary newerSummary = await BuildSnapshotSummaryAsync(newer, ct);
+
+        return Ok(
+            new SnapshotDiffResponse(olderSummary, newerSummary, added, removed, versionChanged)
+        );
+    }
+
+    private async Task<SnapshotSummary> BuildSnapshotSummaryAsync(
+        InventorySnapshot snapshot,
+        CancellationToken ct
+    )
+    {
+        Dictionary<Ecosystem, int> ecosystems = await _db
+            .InventoryItems.AsNoTracking()
+            .Where(item => item.SnapshotId == snapshot.Id)
+            .GroupBy(item => item.Ecosystem)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(entry => entry.Key, entry => entry.Count, ct);
+
+        return new SnapshotSummary(
+            snapshot.Id,
+            snapshot.TakenAt,
+            snapshot.ContentsSha,
+            snapshot.ItemCount,
+            ecosystems
+        );
+    }
+
+    private static string NormalizeDiffName(string name) => name.Trim().ToLowerInvariant();
 
     [HttpGet("{id:int}/snapshots/{snapshotId:guid}/items")]
     public async Task<ActionResult<PagedResponse<InventoryItemResponse>>> SnapshotItems(
@@ -246,6 +638,8 @@ public sealed class SourcesController : ControllerBase
         CancellationToken ct = default
     )
     {
+        if (!await _access.CanReadAsync(User, id, ct))
+            return NotFound();
         if (page < 1)
             page = 1;
         if (pageSize < 1)

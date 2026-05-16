@@ -8,7 +8,11 @@ public sealed class GoManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Go;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion) =>
+    public ManifestEditOutcome Apply(
+        string rootPath,
+        string packageName,
+        string suggestedVersion
+    ) =>
         new(
             ChangedFiles: Array.Empty<string>(),
             FollowUpCommand: $"go get {packageName}@v{suggestedVersion}",

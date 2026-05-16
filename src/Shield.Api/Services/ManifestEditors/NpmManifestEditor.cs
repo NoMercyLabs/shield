@@ -26,10 +26,7 @@ public sealed class NpmManifestEditor : IManifestEditor
         string escaped = Regex.Escape(packageName);
         // Match the dependency line inside any deps block — capture the JSON key/value
         // pair so we can rewrite just the version literal.
-        Regex pattern = new(
-            $"(\"{escaped}\"\\s*:\\s*\")([^\"]+)(\")",
-            RegexOptions.Compiled
-        );
+        Regex pattern = new($"(\"{escaped}\"\\s*:\\s*\")([^\"]+)(\")", RegexOptions.Compiled);
 
         Match match = pattern.Match(source);
         if (!match.Success)

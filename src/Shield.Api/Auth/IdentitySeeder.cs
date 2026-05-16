@@ -14,12 +14,19 @@ public static class IdentitySeeder
     public const string SingleUserEmail = "single-user@shield.local";
     public const string SingleUserName = "single-user";
 
-    public static async Task SeedAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken = default
+    )
     {
         await using AsyncServiceScope scope = services.CreateAsyncScope();
-        RoleManager<ShieldRole> roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ShieldRole>>();
+        RoleManager<ShieldRole> roleManager = scope.ServiceProvider.GetRequiredService<
+            RoleManager<ShieldRole>
+        >();
 
-        foreach (string roleName in new[] { ShieldRoles.Admin, ShieldRoles.Viewer })
+        foreach (
+            string roleName in new[] { ShieldRoles.Admin, ShieldRoles.Maintainer, ShieldRoles.Viewer }
+        )
         {
             if (!await roleManager.RoleExistsAsync(roleName))
             {
@@ -31,13 +38,17 @@ public static class IdentitySeeder
             }
         }
 
-        IOptions<ShieldOptions> shieldOptions = scope.ServiceProvider.GetRequiredService<IOptions<ShieldOptions>>();
+        IOptions<ShieldOptions> shieldOptions = scope.ServiceProvider.GetRequiredService<
+            IOptions<ShieldOptions>
+        >();
         if (!shieldOptions.Value.SingleUser)
             return;
 
-        UserManager<ShieldUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<ShieldUser>>();
-        ILogger logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
+        UserManager<ShieldUser> userManager = scope.ServiceProvider.GetRequiredService<
+            UserManager<ShieldUser>
+        >();
+        ILogger logger = scope
+            .ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("Shield.Api.Auth.IdentitySeeder");
 
         ShieldUser? existing = await userManager.FindByNameAsync(SingleUserName);

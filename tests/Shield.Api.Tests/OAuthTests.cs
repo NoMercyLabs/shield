@@ -228,7 +228,8 @@ public sealed class OAuthTests
 
         HttpResponseMessage response = await client.GetAsync("/api/auth/providers");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        AuthProvidersResponse? body = await response.Content.ReadFromJsonAsync<AuthProvidersResponse>();
+        AuthProvidersResponse? body =
+            await response.Content.ReadFromJsonAsync<AuthProvidersResponse>();
         body.Should().NotBeNull();
         body!.Providers.Should().HaveCount(1);
         body.Providers[0].Provider.Should().Be("github");
@@ -238,21 +239,31 @@ public sealed class OAuthTests
     [Fact]
     public async Task Signin_creates_first_user_as_admin()
     {
-        using SigninFactory factory = new(github: true, slack: false, google: false, singleUser: false);
-        HttpClient client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-        });
+        using SigninFactory factory = new(
+            github: true,
+            slack: false,
+            google: false,
+            singleUser: false
+        );
+        HttpClient client = factory.CreateClient(
+            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+            }
+        );
 
         IOAuthStateStore stateStore = factory.Services.GetRequiredService<IOAuthStateStore>();
         const string state = "test-state-first";
-        stateStore.Save(state, new OAuthStateEntry(
-            OAuthProvider.Github,
-            CodeVerifier: "v",
-            ReturnUrl: "/",
-            ExpiresAt: DateTime.UtcNow.AddMinutes(5),
-            Intent: OAuthIntent.Signin
-        ));
+        stateStore.Save(
+            state,
+            new OAuthStateEntry(
+                OAuthProvider.Github,
+                CodeVerifier: "v",
+                ReturnUrl: "/",
+                ExpiresAt: DateTime.UtcNow.AddMinutes(5),
+                Intent: OAuthIntent.Signin
+            )
+        );
         FakeOAuthProvider.NextResult = new OAuthSigninResult(
             Subject: "github-id-1001",
             Login: "first-admin",
@@ -269,7 +280,9 @@ public sealed class OAuthTests
             )
         );
 
-        HttpResponseMessage response = await client.GetAsync($"/api/oauth/github/callback?code=abc&state={state}");
+        HttpResponseMessage response = await client.GetAsync(
+            $"/api/oauth/github/callback?code=abc&state={state}"
+        );
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
         // Verify the user was created with Admin role.
@@ -292,11 +305,18 @@ public sealed class OAuthTests
     [Fact]
     public async Task Signin_finds_existing_user_by_email()
     {
-        using SigninFactory factory = new(github: true, slack: false, google: false, singleUser: false);
-        HttpClient client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-        });
+        using SigninFactory factory = new(
+            github: true,
+            slack: false,
+            google: false,
+            singleUser: false
+        );
+        HttpClient client = factory.CreateClient(
+            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+            }
+        );
 
         // Seed a real user via the registration endpoint (first-user bootstrap path).
         await client.PostAsJsonAsync(
@@ -307,13 +327,16 @@ public sealed class OAuthTests
 
         IOAuthStateStore stateStore = factory.Services.GetRequiredService<IOAuthStateStore>();
         const string state = "test-state-link";
-        stateStore.Save(state, new OAuthStateEntry(
-            OAuthProvider.Github,
-            CodeVerifier: "v",
-            ReturnUrl: "/",
-            ExpiresAt: DateTime.UtcNow.AddMinutes(5),
-            Intent: OAuthIntent.Signin
-        ));
+        stateStore.Save(
+            state,
+            new OAuthStateEntry(
+                OAuthProvider.Github,
+                CodeVerifier: "v",
+                ReturnUrl: "/",
+                ExpiresAt: DateTime.UtcNow.AddMinutes(5),
+                Intent: OAuthIntent.Signin
+            )
+        );
         FakeOAuthProvider.NextResult = new OAuthSigninResult(
             Subject: "github-id-link",
             Login: "seed-admin-external",
@@ -330,7 +353,9 @@ public sealed class OAuthTests
             )
         );
 
-        HttpResponseMessage response = await client.GetAsync($"/api/oauth/github/callback?code=abc&state={state}");
+        HttpResponseMessage response = await client.GetAsync(
+            $"/api/oauth/github/callback?code=abc&state={state}"
+        );
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
         using IServiceScope scope = factory.Services.CreateScope();
@@ -339,18 +364,27 @@ public sealed class OAuthTests
         // Existing user found by email — no synthetic provider+login duplicate created.
         Shield.Data.Identity.ShieldUser? seeded = await users.FindByNameAsync("seed-admin");
         seeded.Should().NotBeNull();
-        Shield.Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync("githubseedadminexternal");
+        Shield.Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync(
+            "githubseedadminexternal"
+        );
         duplicate.Should().BeNull();
     }
 
     [Fact]
     public async Task Signin_rejected_when_registration_closed_and_no_match()
     {
-        using SigninFactory factory = new(github: true, slack: false, google: false, singleUser: false);
-        HttpClient client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-        });
+        using SigninFactory factory = new(
+            github: true,
+            slack: false,
+            google: false,
+            singleUser: false
+        );
+        HttpClient client = factory.CreateClient(
+            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+            }
+        );
 
         // Bootstrap an admin so we're past the "first user" branch; RegistrationOpen stays false.
         await client.PostAsJsonAsync(
@@ -361,13 +395,16 @@ public sealed class OAuthTests
 
         IOAuthStateStore stateStore = factory.Services.GetRequiredService<IOAuthStateStore>();
         const string state = "test-state-rejected";
-        stateStore.Save(state, new OAuthStateEntry(
-            OAuthProvider.Github,
-            CodeVerifier: "v",
-            ReturnUrl: "/login",
-            ExpiresAt: DateTime.UtcNow.AddMinutes(5),
-            Intent: OAuthIntent.Signin
-        ));
+        stateStore.Save(
+            state,
+            new OAuthStateEntry(
+                OAuthProvider.Github,
+                CodeVerifier: "v",
+                ReturnUrl: "/login",
+                ExpiresAt: DateTime.UtcNow.AddMinutes(5),
+                Intent: OAuthIntent.Signin
+            )
+        );
         FakeOAuthProvider.NextResult = new OAuthSigninResult(
             Subject: "github-id-reject",
             Login: "stranger",
@@ -384,15 +421,21 @@ public sealed class OAuthTests
             )
         );
 
-        HttpResponseMessage response = await client.GetAsync($"/api/oauth/github/callback?code=abc&state={state}");
+        HttpResponseMessage response = await client.GetAsync(
+            $"/api/oauth/github/callback?code=abc&state={state}"
+        );
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
         response.Headers.Location!.OriginalString.Should().Contain("/login");
-        response.Headers.Location.OriginalString.Should().Contain("oauth_signin_rejected=oauth_signin_rejected");
+        response
+            .Headers.Location.OriginalString.Should()
+            .Contain("oauth_signin_rejected=oauth_signin_rejected");
 
         using IServiceScope scope = factory.Services.CreateScope();
         Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> users =
             scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
-        Shield.Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync("stranger@example.com");
+        Shield.Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync(
+            "stranger@example.com"
+        );
         rejected.Should().BeNull();
     }
 
@@ -415,36 +458,40 @@ public sealed class OAuthTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration((_, config) =>
-            {
-                Dictionary<string, string?> overrides = new()
+            builder.ConfigureAppConfiguration(
+                (_, config) =>
                 {
-                    ["Shield:SingleUser"] = _singleUser ? "true" : "false",
-                    ["Shield:OAuth:RedirectBase"] = "http://localhost:8080",
-                };
-                if (_github)
-                {
-                    overrides["Shield:OAuth:Github:ClientId"] = "test-github-id";
-                    overrides["Shield:OAuth:Github:ClientSecret"] = "test-github-secret";
+                    Dictionary<string, string?> overrides = new()
+                    {
+                        ["Shield:SingleUser"] = _singleUser ? "true" : "false",
+                        ["Shield:OAuth:RedirectBase"] = "http://localhost:8080",
+                    };
+                    if (_github)
+                    {
+                        overrides["Shield:OAuth:Github:ClientId"] = "test-github-id";
+                        overrides["Shield:OAuth:Github:ClientSecret"] = "test-github-secret";
+                    }
+                    if (_slack)
+                    {
+                        overrides["Shield:OAuth:Slack:ClientId"] = "test-slack-id";
+                        overrides["Shield:OAuth:Slack:ClientSecret"] = "test-slack-secret";
+                    }
+                    if (_google)
+                    {
+                        overrides["Shield:OAuth:Google:ClientId"] = "test-google-id";
+                        overrides["Shield:OAuth:Google:ClientSecret"] = "test-google-secret";
+                    }
+                    config.AddInMemoryCollection(overrides);
                 }
-                if (_slack)
-                {
-                    overrides["Shield:OAuth:Slack:ClientId"] = "test-slack-id";
-                    overrides["Shield:OAuth:Slack:ClientSecret"] = "test-slack-secret";
-                }
-                if (_google)
-                {
-                    overrides["Shield:OAuth:Google:ClientId"] = "test-google-id";
-                    overrides["Shield:OAuth:Google:ClientSecret"] = "test-google-secret";
-                }
-                config.AddInMemoryCollection(overrides);
-            });
+            );
 
             builder.ConfigureServices(services =>
             {
                 ServiceDescriptor[] real = services
-                    .Where(descriptor => descriptor.ServiceType == typeof(IOAuthProvider)
-                        && descriptor.ImplementationType == typeof(GitHubProvider))
+                    .Where(descriptor =>
+                        descriptor.ServiceType == typeof(IOAuthProvider)
+                        && descriptor.ImplementationType == typeof(GitHubProvider)
+                    )
                     .ToArray();
                 foreach (ServiceDescriptor descriptor in real)
                     services.Remove(descriptor);
@@ -463,29 +510,63 @@ public sealed class OAuthTests
         public string SigninDefaultScopes => "read:user user:email";
         public bool SupportsPkce => true;
 
-        public string BuildAuthorizationUrl(OAuthClientConfig config, string state, string codeChallenge, string scopes)
-            => "https://example.com/auth?state=" + state;
+        public string BuildAuthorizationUrl(
+            OAuthClientConfig config,
+            string state,
+            string codeChallenge,
+            string scopes
+        ) => "https://example.com/auth?state=" + state;
 
-        public string BuildSigninAuthorizationUrl(OAuthClientConfig config, string state, string codeChallenge, string scopes)
-            => "https://example.com/auth?state=" + state;
+        public string BuildSigninAuthorizationUrl(
+            OAuthClientConfig config,
+            string state,
+            string codeChallenge,
+            string scopes
+        ) => "https://example.com/auth?state=" + state;
 
-        public Task<OAuthTokenSnapshot> ExchangeCodeAsync(OAuthClientConfig config, string code, string codeVerifier, CancellationToken ct)
-            => Task.FromResult(new OAuthTokenSnapshot(
-                OAuthProvider.Github, "fake", null, null, "read:user", "fake", "1", null
-            ));
+        public Task<OAuthTokenSnapshot> ExchangeCodeAsync(
+            OAuthClientConfig config,
+            string code,
+            string codeVerifier,
+            CancellationToken ct
+        ) =>
+            Task.FromResult(
+                new OAuthTokenSnapshot(
+                    OAuthProvider.Github,
+                    "fake",
+                    null,
+                    null,
+                    "read:user",
+                    "fake",
+                    "1",
+                    null
+                )
+            );
 
-        public Task<OAuthSigninResult> ExchangeCodeForSigninAsync(OAuthClientConfig config, string code, string codeVerifier, CancellationToken ct)
+        public Task<OAuthSigninResult> ExchangeCodeForSigninAsync(
+            OAuthClientConfig config,
+            string code,
+            string codeVerifier,
+            CancellationToken ct
+        )
         {
-            OAuthSigninResult? result = NextResult
+            OAuthSigninResult? result =
+                NextResult
                 ?? throw new InvalidOperationException("FakeOAuthProvider.NextResult was not set");
             NextResult = null;
             return Task.FromResult(result);
         }
 
-        public Task<OAuthTokenSnapshot?> RefreshAsync(OAuthClientConfig config, OAuthTokenSnapshot current, CancellationToken ct)
-            => Task.FromResult<OAuthTokenSnapshot?>(null);
+        public Task<OAuthTokenSnapshot?> RefreshAsync(
+            OAuthClientConfig config,
+            OAuthTokenSnapshot current,
+            CancellationToken ct
+        ) => Task.FromResult<OAuthTokenSnapshot?>(null);
 
-        public Task RevokeAsync(OAuthClientConfig config, OAuthTokenSnapshot token, CancellationToken ct)
-            => Task.CompletedTask;
+        public Task RevokeAsync(
+            OAuthClientConfig config,
+            OAuthTokenSnapshot token,
+            CancellationToken ct
+        ) => Task.CompletedTask;
     }
 }

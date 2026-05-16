@@ -11,5 +11,6 @@ public static class SingleUserMiddleware
 public static class ShieldRoles
 {
     public const string Admin = "Admin";
+    public const string Maintainer = "Maintainer";
     public const string Viewer = "Viewer";
 }

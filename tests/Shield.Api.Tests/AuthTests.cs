@@ -60,7 +60,10 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
-        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest("user-a", "Correct1!"));
+        await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterRequest("user-a", "Correct1!")
+        );
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/auth/login",
@@ -75,7 +78,10 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
-        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest("logged-in", "Correct1!"));
+        await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterRequest("logged-in", "Correct1!")
+        );
 
         HttpResponseMessage login = await client.PostAsJsonAsync(
             "/api/auth/login",
@@ -96,8 +102,14 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
-        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest("logout-user", "Correct1!"));
-        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("logout-user", "Correct1!"));
+        await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterRequest("logout-user", "Correct1!")
+        );
+        await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest("logout-user", "Correct1!")
+        );
 
         HttpResponseMessage logout = await client.PostAsync("/api/auth/logout", content: null);
         logout.StatusCode.Should().Be(HttpStatusCode.NoContent);

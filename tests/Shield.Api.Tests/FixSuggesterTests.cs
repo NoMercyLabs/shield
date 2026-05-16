@@ -39,7 +39,7 @@ public sealed class FixSuggesterTests
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
             "[{\"events\":[{\"introduced\":\"0\"},{\"fixed\":\"4.17.21\"}]},"
-            + "{\"events\":[{\"introduced\":\"4.17.0\"},{\"fixed\":\"5.0.0\"}]}]"
+                + "{\"events\":[{\"introduced\":\"4.17.0\"},{\"fixed\":\"5.0.0\"}]}]"
         );
         InventoryItem item = MakeItem("lodash", "4.17.20");
 
@@ -57,7 +57,7 @@ public sealed class FixSuggesterTests
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
             "[{\"events\":[{\"introduced\":\"0\"},{\"fixed\":\"4.17.10\"}]},"
-            + "{\"events\":[{\"introduced\":\"4.17.0\"},{\"fixed\":\"4.17.21\"}]}]"
+                + "{\"events\":[{\"introduced\":\"4.17.0\"},{\"fixed\":\"4.17.21\"}]}]"
         );
         InventoryItem item = MakeItem("lodash", "4.17.20");
 
@@ -123,7 +123,11 @@ public sealed class FixSuggesterTests
             ReferencesJson = "[]",
         };
 
-    private static InventoryItem MakeItem(string name, string version, Ecosystem ecosystem = Ecosystem.Npm) =>
+    private static InventoryItem MakeItem(
+        string name,
+        string version,
+        Ecosystem ecosystem = Ecosystem.Npm
+    ) =>
         new()
         {
             Id = 1,

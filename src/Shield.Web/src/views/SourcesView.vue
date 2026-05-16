@@ -1,22 +1,55 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { GitBranch, Plus } from 'lucide-vue-next'
+import { FolderOpen, Github, GitBranch, Plus } from 'lucide-vue-next'
 
-import { useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
+import FolderPickerDialog from '@/components/FolderPickerDialog.vue'
+import RepoPickerDialog from '@/components/RepoPickerDialog.vue'
+import { useOAuthStatus } from '@/queries/oauth'
+import { useBulkFromGithubMutation, useBulkLocalFoldersMutation, useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
+import type { BulkSelection } from '@/types/api'
 import { SourceType, SourceTypeNames } from '@/types/api'
 
 const { data, isLoading, isError } = useSourcesQuery()
 const create = useCreateSourceMutation()
+const bulkLocalFolders = useBulkLocalFoldersMutation()
+const bulkFromGithub = useBulkFromGithubMutation()
+const githubStatus = useOAuthStatus('Github')
 const { push } = useToasts()
 
 const showForm = ref(false)
+const showFolderPicker = ref(false)
+const showRepoPicker = ref(false)
 const name = ref('')
 const type = ref<SourceType>(SourceType.GithubRepo)
 const configJson = ref('{}')
 const scanInterval = ref('01:00:00')
+
+const githubConnected = computed(() => githubStatus.data.value?.connected ?? false)
+
+async function onFolderPickerSubmit(paths: string[]): Promise<void> {
+  try {
+    const result = await bulkLocalFolders.mutateAsync({ paths })
+    push('success', `Created ${result.created} folder source(s), skipped ${result.skippedExisting} existing.`)
+    showFolderPicker.value = false
+  }
+  catch {
+    push('error', 'Failed to add folder sources.')
+  }
+}
+
+async function onRepoPickerSubmit(selections: BulkSelection[]): Promise<void> {
+  try {
+    const result = await bulkFromGithub.mutateAsync({ selections })
+    push('success', `Created ${result.created} sources, skipped ${result.skippedExisting} existing`)
+    showRepoPicker.value = false
+  }
+  catch {
+    push('error', 'Failed to add GitHub repo sources.')
+  }
+}
 
 async function onSubmit(): Promise<void> {
   try {
@@ -43,15 +76,48 @@ async function onSubmit(): Promise<void> {
   <div class="space-y-6">
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-semibold">Sources</h1>
-      <button
-        type="button"
-        class="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-        @click="showForm = !showForm"
-      >
-        <Plus class="h-4 w-4" />
-        Add source
-      </button>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
+          @click="showFolderPicker = true"
+        >
+          <FolderOpen class="h-4 w-4" />
+          Pick folder
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="!githubConnected"
+          :title="githubConnected ? 'Pick repos from your connected GitHub account' : 'Connect GitHub in Settings → Integrations first'"
+          @click="showRepoPicker = true"
+        >
+          <Github class="h-4 w-4" />
+          Pick from GitHub
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
+          @click="showForm = !showForm"
+        >
+          <Plus class="h-4 w-4" />
+          Add source
+        </button>
+      </div>
     </header>
+
+    <FolderPickerDialog
+      :open="showFolderPicker"
+      @close="showFolderPicker = false"
+      @submit="onFolderPickerSubmit"
+    />
+
+    <RepoPickerDialog
+      :open="showRepoPicker"
+      provider="github"
+      @close="showRepoPicker = false"
+      @submit="onRepoPickerSubmit"
+    />
 
     <form
       v-if="showForm"

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Services;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
@@ -148,5 +149,9 @@ public sealed class SourceScanWorker : BackgroundService
             new MatchRequest(result.Snapshot.Id, source.Id, MatchAll: false),
             ct
         );
+
+        IAnomalyDetector anomalyDetector =
+            scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
+        await anomalyDetector.AnalyzeNewSnapshotAsync(source.Id, result.Snapshot.Id, ct);
     }
 }

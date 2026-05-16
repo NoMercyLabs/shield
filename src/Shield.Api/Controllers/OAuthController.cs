@@ -5,7 +5,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Shield.Api.Auth;
 using Shield.Api.Auth.OAuthProviders;
 using Shield.Api.Contracts;
@@ -28,7 +30,10 @@ public sealed class OAuthController : ControllerBase
     private readonly UserManager<ShieldUser> _userManager;
     private readonly SignInManager<ShieldUser> _signInManager;
     private readonly RoleManager<ShieldRole> _roleManager;
+    private readonly IMemoryCache _memoryCache;
     private readonly ILogger<OAuthController> _logger;
+
+    private static readonly TimeSpan GithubReposCacheTtl = TimeSpan.FromMinutes(5);
 
     public OAuthController(
         IAppSettingsService settings,
@@ -39,6 +44,7 @@ public sealed class OAuthController : ControllerBase
         UserManager<ShieldUser> userManager,
         SignInManager<ShieldUser> signInManager,
         RoleManager<ShieldRole> roleManager,
+        IMemoryCache memoryCache,
         ILogger<OAuthController> logger
     )
     {
@@ -50,6 +56,7 @@ public sealed class OAuthController : ControllerBase
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
+        _memoryCache = memoryCache;
         _logger = logger;
     }
 
@@ -117,6 +124,7 @@ public sealed class OAuthController : ControllerBase
 
     [HttpGet("{provider}/callback")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-burst")]
     public async Task<IActionResult> Callback(
         string provider,
         [FromQuery] string? code,
@@ -424,6 +432,60 @@ public sealed class OAuthController : ControllerBase
             }
         }
         return Ok(new SlackChannelsResponse(channels));
+    }
+
+    // GitHub-specific: list the connected user's repos for the "Pick from GitHub" Sources picker.
+    // Cached 5min per (user, affiliation) so the modal can be reopened cheaply.
+    [HttpGet("github/repos")]
+    [Authorize(Roles = ShieldRoles.Admin)]
+    public async Task<ActionResult<GitHubRepoListResponse>> GitHubRepos(
+        [FromQuery] string? affiliation,
+        [FromQuery] int perPage,
+        CancellationToken ct
+    )
+    {
+        OAuthTokenSnapshot? token = await _tokenStore.GetAsync(OAuthProvider.Github, ct);
+        if (token is null)
+            return BadRequest(new { error = "github_not_connected" });
+
+        if (
+            !_registry.TryResolve(OAuthProvider.Github, out IOAuthProvider adapter)
+            || adapter is not GitHubProvider githubAdapter
+        )
+        {
+            return StatusCode(500, new { error = "github_adapter_unavailable" });
+        }
+
+        string normalisedAffiliation = string.IsNullOrWhiteSpace(affiliation)
+            ? "owner,collaborator,organization_member"
+            : affiliation!;
+        string userKey = User?.Identity?.Name ?? "anon";
+        string cacheKey = $"github-repos::{userKey}::{normalisedAffiliation}";
+
+        if (
+            _memoryCache.TryGetValue(cacheKey, out GitHubRepoListResponse? cached)
+            && cached is not null
+        )
+            return Ok(cached);
+
+        try
+        {
+            IReadOnlyList<GitHubRepoEntry> repos = await githubAdapter.ListReposAsync(
+                token.AccessToken,
+                normalisedAffiliation,
+                perPage <= 0 ? 100 : Math.Min(perPage, 100),
+                maxRepos: 1000,
+                ct
+            );
+            GitHubRepoListResponse response = new(repos, repos.Count);
+            _memoryCache.Set(cacheKey, response, GithubReposCacheTtl);
+            return Ok(response);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "GitHub repo list failed");
+            return StatusCode(502, new { error = "github_api_failed" });
+        }
     }
 
     private static bool TryParseProvider(string raw, out OAuthProvider provider)

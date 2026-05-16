@@ -8,7 +8,11 @@ public sealed class PythonManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Python;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion) =>
+    public ManifestEditOutcome Apply(
+        string rootPath,
+        string packageName,
+        string suggestedVersion
+    ) =>
         new(
             ChangedFiles: Array.Empty<string>(),
             FollowUpCommand: null,

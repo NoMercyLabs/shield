@@ -22,19 +22,13 @@ public sealed class GradleManifestEditor : IManifestEditor
         }
 
         string coords = $"{Regex.Escape(packageName)}:";
-        Regex pattern = new(
-            $"({coords})([\\w\\d.\\-+]+)",
-            RegexOptions.Compiled
-        );
+        Regex pattern = new($"({coords})([\\w\\d.\\-+]+)", RegexOptions.Compiled);
 
         List<string> changed = new();
         foreach (string candidate in EnumerateBuildFiles(rootPath))
         {
             string source = File.ReadAllText(candidate);
-            string updated = pattern.Replace(
-                source,
-                m => $"{m.Groups[1].Value}{suggestedVersion}"
-            );
+            string updated = pattern.Replace(source, m => $"{m.Groups[1].Value}{suggestedVersion}");
             if (!string.Equals(updated, source, StringComparison.Ordinal))
             {
                 File.WriteAllText(candidate, updated);

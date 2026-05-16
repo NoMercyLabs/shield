@@ -9,9 +9,12 @@ services:
     container_name: shield
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8842:8842"
     volumes:
       - shield-data:/data
+      # Separate volume so the keyring can be backed up / replicated with different cadence
+      # than the SQLite files (the keyring rarely changes; the DB changes constantly).
+      - shield-keys:/data/keys
     environment:
       # Single-user mode auto-authenticates the lone Admin. Flip to false to require login.
       Shield__SingleUser: "true"
@@ -20,10 +23,17 @@ services:
       Shield__Db__Feeds: "Data Source=/data/feeds.db"
       # MUST be replaced with a real >=32 char secret in production. Anything weaker is unsafe.
       Shield__Auth__JwtSigningKey: "CHANGE_ME_to_a_real_secret_with_at_least_32_chars"
+      # REQUIRED — set this to a random 32+ char string, identical across restarts.
+      # The DataProtection keyring under /data/keys is encrypted with this key; recreate
+      # the container without it and every IDataProtector-protected secret (Discord webhooks,
+      # OAuth client secrets, OIDC client secret) becomes permanently unreadable.
+      # Generate one: `openssl rand -base64 48`
+      Shield__Auth__DataProtectionMasterKey: "CHANGE_ME_or_secrets_die_on_first_container_recreate"
+      Shield__Auth__DataProtectionKeysPath: "/data/keys"
       # Optional: GitHub PAT for higher-fidelity GHSA + private repo scanning.
       # Shield__Feeds__Ghsa__Token: ""
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8842/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -45,5 +55,6 @@ services:
 
 volumes:
   shield-data:
+  shield-keys:
   caddy-data:
   caddy-config:

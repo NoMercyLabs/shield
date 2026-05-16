@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
@@ -298,6 +299,103 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         await db.SaveChangesAsync();
         return finding.Id;
     }
+
+    [Fact]
+    public async Task Bulk_ack_flips_multiple_findings_in_one_call()
+    {
+        Guid first = await SeedFindingAsync();
+        Guid second = await SeedFindingAsync();
+        Guid third = await SeedFindingAsync();
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/findings/bulk-ack",
+            new BulkFindingsRequest(new[] { first, second, third })
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        BulkFindingsResponse? body =
+            await response.Content.ReadFromJsonAsync<BulkFindingsResponse>();
+        body.Should().NotBeNull();
+        body!.Updated.Should().Be(3);
+        body.NotFound.Should().BeEmpty();
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+        Guid[] ids = new[] { first, second, third };
+        List<Finding> after = await db
+            .Findings.Where(finding => ids.Contains(finding.Id))
+            .ToListAsync();
+        after.Should().HaveCount(3);
+        after.Should().OnlyContain(finding => finding.State == FindingState.Acked);
+    }
+
+    [Fact]
+    public async Task Bulk_resolve_returns_notFound_for_missing_id()
+    {
+        Guid real = await SeedFindingAsync();
+        Guid missing = Guid.NewGuid();
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/findings/bulk-resolve",
+            new BulkFindingsRequest(new[] { real, missing })
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        BulkFindingsResponse? body =
+            await response.Content.ReadFromJsonAsync<BulkFindingsResponse>();
+        body.Should().NotBeNull();
+        body!.Updated.Should().Be(1);
+        body.NotFound.Should().ContainSingle(id => id == missing);
+    }
+
+    [Fact]
+    public async Task Multi_severity_filter_returns_high_and_critical_only()
+    {
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            string keyPrefix = "multi-sev-" + Guid.NewGuid().ToString("n") + "-";
+            DateTime baseTime = DateTime.UtcNow;
+            db.Findings.Add(MakeFinding(Severity.Low, keyPrefix + "low", baseTime));
+            db.Findings.Add(MakeFinding(Severity.Medium, keyPrefix + "med", baseTime));
+            db.Findings.Add(MakeFinding(Severity.High, keyPrefix + "high", baseTime));
+            db.Findings.Add(MakeFinding(Severity.Critical, keyPrefix + "crit", baseTime));
+            await db.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        // ?severity=2&severity=3 = High + Critical
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/findings?severity=2&severity=3&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+        page!.Items.Should().NotBeEmpty();
+        page.Items.Should()
+            .OnlyContain(finding =>
+                finding.Severity == Severity.High || finding.Severity == Severity.Critical
+            );
+        page.Items.Should().Contain(finding => finding.Severity == Severity.High);
+        page.Items.Should().Contain(finding => finding.Severity == Severity.Critical);
+    }
+
+    private static Finding MakeFinding(Severity severity, string dedupKey, DateTime baseTime) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            SourceId = 9999,
+            InventoryItemId = 1,
+            AdvisoryRefId = Guid.NewGuid(),
+            Severity = severity,
+            FirstSeenAt = baseTime,
+            LastSeenAt = baseTime,
+            State = FindingState.Open,
+            DedupKey = dedupKey,
+        };
 
     private async Task<(Guid FindingId, int SourceId)> SeedFixScenarioAsync(
         string fixtureDir,

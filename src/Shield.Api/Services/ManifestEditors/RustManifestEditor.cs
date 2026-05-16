@@ -8,7 +8,11 @@ public sealed class RustManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Rust;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion) =>
+    public ManifestEditOutcome Apply(
+        string rootPath,
+        string packageName,
+        string suggestedVersion
+    ) =>
         new(
             ChangedFiles: Array.Empty<string>(),
             FollowUpCommand: $"cargo update -p {packageName} --precise {suggestedVersion}",

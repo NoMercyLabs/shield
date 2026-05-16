@@ -28,7 +28,132 @@ public sealed class SettingsTests
         settings.OidcClientSecretMasked.Should().BeNull();
         settings.AlertSeverityFloor.Should().Be(Severity.Low);
         settings.RetentionDays.Should().Be(90);
+        settings.Github.Should().NotBeNull();
+        settings.Github.ClientId.Should().BeNull();
+        settings.Github.ClientSecretMasked.Should().BeNull();
+        settings.Github.Scopes.Should().BeNull();
+        settings.Github.Configured.Should().BeFalse();
+        settings.Slack.Configured.Should().BeFalse();
+        settings.Google.Configured.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task GetSettings_returns_oauth_provider_config_masked()
+    {
+        using SettingsFactory factory = new();
+        HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-get");
+
+        UpdateSettingsRequest seed = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch(
+                ClientId: "gh-client-id",
+                ClientSecret: "ghp_supersecret_abcd",
+                Scopes: "read:user repo"
+            ),
+        };
+        HttpResponseMessage putResponse = await client.PutAsJsonAsync("/api/settings", seed);
+        putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        SettingsResponse? reread = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        reread.Should().NotBeNull();
+        reread!.Github.ClientId.Should().Be("gh-client-id");
+        reread.Github.ClientSecretMasked.Should().Be("****abcd");
+        reread.Github.Scopes.Should().Be("read:user repo");
+        reread.Github.Configured.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PutSettings_persists_provider_credentials_and_masks_on_read_back()
+    {
+        using SettingsFactory factory = new();
+        HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-put");
+
+        UpdateSettingsRequest request = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch("gh-id", "ghs_supersecret_wxyz", "read:user"),
+            Slack = new OAuthProviderConfigPatch("slack-id", "xoxa-1234abcd", "chat:write"),
+            Google = new OAuthProviderConfigPatch("g-id", "google-secret-mnop", "openid email"),
+        };
+
+        HttpResponseMessage putResponse = await client.PutAsJsonAsync("/api/settings", request);
+        putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        UpdateSettingsResponse? body =
+            await putResponse.Content.ReadFromJsonAsync<UpdateSettingsResponse>();
+        body.Should().NotBeNull();
+        body!.Settings.Github.Configured.Should().BeTrue();
+        body.Settings.Github.ClientSecretMasked.Should().Be("****wxyz");
+        body.Settings.Slack.ClientSecretMasked.Should().Be("****abcd");
+        body.Settings.Google.ClientSecretMasked.Should().Be("****mnop");
+
+        SettingsResponse? reread = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        reread!.Github.ClientId.Should().Be("gh-id");
+        reread.Slack.ClientId.Should().Be("slack-id");
+        reread.Google.ClientId.Should().Be("g-id");
+        reread.Github.ClientSecretMasked.Should().NotContain("supersecret");
+    }
+
+    [Fact]
+    public async Task PutSettings_with_null_clientSecret_keeps_existing()
+    {
+        using SettingsFactory factory = new();
+        HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-keep");
+
+        UpdateSettingsRequest seed = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch("gh-id", "original-secret-1234", "read:user"),
+        };
+        await client.PutAsJsonAsync("/api/settings", seed);
+
+        // Second PUT with null secret — should preserve original.
+        UpdateSettingsRequest update = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch("gh-id-updated", null, "read:user repo"),
+        };
+        await client.PutAsJsonAsync("/api/settings", update);
+
+        SettingsResponse? reread = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        reread!.Github.ClientId.Should().Be("gh-id-updated");
+        reread.Github.ClientSecretMasked.Should().Be("****1234");
+        reread.Github.Configured.Should().BeTrue();
+        reread.Github.Scopes.Should().Be("read:user repo");
+    }
+
+    [Fact]
+    public async Task PutSettings_with_empty_clientSecret_clears()
+    {
+        using SettingsFactory factory = new();
+        HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-clear");
+
+        UpdateSettingsRequest seed = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch("gh-id", "original-secret-1234", "read:user"),
+        };
+        await client.PutAsJsonAsync("/api/settings", seed);
+
+        UpdateSettingsRequest clear = BaselineRequest() with
+        {
+            Github = new OAuthProviderConfigPatch("gh-id", "", "read:user"),
+        };
+        await client.PutAsJsonAsync("/api/settings", clear);
+
+        SettingsResponse? reread = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        reread!.Github.ClientId.Should().Be("gh-id");
+        reread.Github.ClientSecretMasked.Should().BeNull();
+        reread.Github.Configured.Should().BeFalse();
+    }
+
+    private static UpdateSettingsRequest BaselineRequest() =>
+        new(
+            SingleUserMode: false,
+            OpenApiEnabled: false,
+            OidcEnabled: false,
+            OidcIssuer: null,
+            OidcClientId: null,
+            OidcClientSecret: null,
+            AlertSeverityFloor: Severity.Low,
+            RetentionDays: 90
+        );
 
     [Fact]
     public async Task Put_persists_values_and_masks_secret_on_read_back()
@@ -50,7 +175,8 @@ public sealed class SettingsTests
         HttpResponseMessage putResponse = await client.PutAsJsonAsync("/api/settings", request);
         putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        UpdateSettingsResponse? updated = await putResponse.Content.ReadFromJsonAsync<UpdateSettingsResponse>();
+        UpdateSettingsResponse? updated =
+            await putResponse.Content.ReadFromJsonAsync<UpdateSettingsResponse>();
         updated.Should().NotBeNull();
         updated!.RequiresRestart.Should().BeTrue();
         updated.RestartKeys.Should().Contain("openApiEnabled");
@@ -78,18 +204,25 @@ public sealed class SettingsTests
         HttpResponseMessage response = await client.GetAsync("/api/settings/runtime");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        RuntimeInfoResponse? runtime = await response.Content.ReadFromJsonAsync<RuntimeInfoResponse>();
+        RuntimeInfoResponse? runtime =
+            await response.Content.ReadFromJsonAsync<RuntimeInfoResponse>();
         runtime.Should().NotBeNull();
         runtime!.Environment.Should().Be("Testing");
         runtime.ContentRoot.Should().NotBeNullOrEmpty();
         runtime.Version.Should().NotBeNullOrEmpty();
     }
 
-    private static async Task<HttpClient> LoginAsAdminAsync(SettingsFactory factory, string username)
+    private static async Task<HttpClient> LoginAsAdminAsync(
+        SettingsFactory factory,
+        string username
+    )
     {
         HttpClient client = factory.CreateClient();
         // First registration becomes Admin per AuthController logic.
-        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(username, "Correct1!"));
+        await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterRequest(username, "Correct1!")
+        );
         HttpResponseMessage login = await client.PostAsJsonAsync(
             "/api/auth/login",
             new LoginRequest(username, "Correct1!")

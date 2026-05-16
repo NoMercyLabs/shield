@@ -11,6 +11,13 @@ export function severityName(severity: Severity): string {
   return SeverityNames[severity] ?? String(severity)
 }
 
+// i18n key for vue-i18n lookups (e.g. `severity.critical`). Falls back to the English name
+// when the severity is out of range, so the missing-key warning surfaces instead of crashing.
+export function severityI18nKey(severity: Severity): string {
+  const name = SeverityNames[severity]
+  return name ? `severity.${name.toLowerCase()}` : 'severity.low'
+}
+
 export function severityClass(severity: Severity): string {
   switch (severity) {
     case Severity.Critical: return 'bg-red-600/20 text-red-300 border-red-700/50'

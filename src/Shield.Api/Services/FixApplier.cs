@@ -39,10 +39,7 @@ public sealed class FixApplier : IFixApplier
     private readonly IOAuthTokenAccessor _tokenAccessor;
     private readonly ProductHeaderValue _productHeader = new("Shield");
 
-    public FixApplier(
-        IEnumerable<IManifestEditor> editors,
-        IOAuthTokenAccessor tokenAccessor
-    )
+    public FixApplier(IEnumerable<IManifestEditor> editors, IOAuthTokenAccessor tokenAccessor)
     {
         _editors = editors.ToDictionary(editor => editor.Ecosystem);
         _tokenAccessor = tokenAccessor;
@@ -70,19 +67,27 @@ public sealed class FixApplier : IFixApplier
             return Task.FromResult(Failure($"Path does not exist: {config.Path}"));
 
         if (!_editors.TryGetValue(item.Ecosystem, out IManifestEditor? editor))
-            return Task.FromResult(Failure($"No manifest editor registered for ecosystem '{item.Ecosystem}'."));
+            return Task.FromResult(
+                Failure($"No manifest editor registered for ecosystem '{item.Ecosystem}'.")
+            );
 
-        ManifestEditOutcome outcome = editor.Apply(config.Path, item.Name, suggestion.SuggestedVersion);
+        ManifestEditOutcome outcome = editor.Apply(
+            config.Path,
+            item.Name,
+            suggestion.SuggestedVersion
+        );
         if (outcome.UnsupportedReason is not null)
             return Task.FromResult(Failure(outcome.UnsupportedReason));
 
-        return Task.FromResult(new ApplyFixResult(
-            Success: true,
-            ChangedFiles: outcome.ChangedFiles,
-            FollowUpCommand: outcome.FollowUpCommand,
-            PullRequestUrl: null,
-            Reason: null
-        ));
+        return Task.FromResult(
+            new ApplyFixResult(
+                Success: true,
+                ChangedFiles: outcome.ChangedFiles,
+                FollowUpCommand: outcome.FollowUpCommand,
+                PullRequestUrl: null,
+                Reason: null
+            )
+        );
     }
 
     public async Task<ApplyFixResult> ApplyPullRequestAsync(
@@ -102,7 +107,11 @@ public sealed class FixApplier : IFixApplier
         {
             return Failure($"Invalid GithubRepo config: {ex.Message}");
         }
-        if (config is null || string.IsNullOrWhiteSpace(config.Owner) || string.IsNullOrWhiteSpace(config.Repo))
+        if (
+            config is null
+            || string.IsNullOrWhiteSpace(config.Owner)
+            || string.IsNullOrWhiteSpace(config.Repo)
+        )
             return Failure("GithubRepo config missing 'owner' or 'repo'.");
 
         if (!_editors.TryGetValue(item.Ecosystem, out IManifestEditor? editor))
@@ -112,7 +121,9 @@ public sealed class FixApplier : IFixApplier
         if (string.IsNullOrEmpty(token) && !string.IsNullOrWhiteSpace(config.Token))
             token = config.Token;
         if (string.IsNullOrEmpty(token))
-            return Failure("No GitHub OAuth token available. Connect GitHub in Settings or provide a per-source PAT.");
+            return Failure(
+                "No GitHub OAuth token available. Connect GitHub in Settings or provide a per-source PAT."
+            );
 
         GitHubClient client = new(_productHeader) { Credentials = new Credentials(token) };
 
@@ -130,7 +141,11 @@ public sealed class FixApplier : IFixApplier
             : config.Branch!;
 
         // Stage manifest edits into a temp working dir mirroring the source root.
-        string workRoot = Path.Combine(Path.GetTempPath(), "shield-apply", Guid.NewGuid().ToString("n"));
+        string workRoot = Path.Combine(
+            Path.GetTempPath(),
+            "shield-apply",
+            Guid.NewGuid().ToString("n")
+        );
         Directory.CreateDirectory(workRoot);
         try
         {
@@ -158,7 +173,11 @@ public sealed class FixApplier : IFixApplier
                 try
                 {
                     IReadOnlyList<RepositoryContent> contents =
-                        await client.Repository.Content.GetAllContentsByRef(repo.Id, relative, defaultBranch);
+                        await client.Repository.Content.GetAllContentsByRef(
+                            repo.Id,
+                            relative,
+                            defaultBranch
+                        );
                     if (contents.Count == 0)
                         continue;
                     File.WriteAllText(localPath, contents[0].Content);
@@ -169,7 +188,11 @@ public sealed class FixApplier : IFixApplier
                 }
             }
 
-            ManifestEditOutcome outcome = editor.Apply(workRoot, item.Name, suggestion.SuggestedVersion);
+            ManifestEditOutcome outcome = editor.Apply(
+                workRoot,
+                item.Name,
+                suggestion.SuggestedVersion
+            );
             if (outcome.UnsupportedReason is not null)
                 return Failure(outcome.UnsupportedReason);
             if (outcome.ChangedFiles.Count == 0)
@@ -179,18 +202,19 @@ public sealed class FixApplier : IFixApplier
             {
                 string relative = Path.GetRelativePath(workRoot, changed).Replace('\\', '/');
                 string content = File.ReadAllText(changed);
-                BlobReference blob = await client.Git.Blob.Create(repo.Id, new NewBlob
-                {
-                    Content = content,
-                    Encoding = EncodingType.Utf8,
-                });
-                treeItems.Add(new NewTreeItem
-                {
-                    Path = relative,
-                    Mode = "100644",
-                    Type = TreeType.Blob,
-                    Sha = blob.Sha,
-                });
+                BlobReference blob = await client.Git.Blob.Create(
+                    repo.Id,
+                    new NewBlob { Content = content, Encoding = EncodingType.Utf8 }
+                );
+                treeItems.Add(
+                    new NewTreeItem
+                    {
+                        Path = relative,
+                        Mode = "100644",
+                        Type = TreeType.Blob,
+                        Sha = blob.Sha,
+                    }
+                );
             }
 
             NewTree newTree = new() { BaseTree = baseRef.Object.Sha };
@@ -198,31 +222,41 @@ public sealed class FixApplier : IFixApplier
                 newTree.Tree.Add(entry);
             TreeResponse tree = await client.Git.Tree.Create(repo.Id, newTree);
 
-            string commitMessage = $"chore(deps): bump {item.Name} to {suggestion.SuggestedVersion} (fixes {advisory.ExternalId})";
+            string commitMessage =
+                $"chore(deps): bump {item.Name} to {suggestion.SuggestedVersion} (fixes {advisory.ExternalId})";
             NewCommit commit = new(commitMessage, tree.Sha, baseRef.Object.Sha);
             Commit created = await client.Git.Commit.Create(repo.Id, commit);
 
             string branchName = $"shield/fix-{Slug(item.Name)}-{suggestion.SuggestedVersion}";
             try
             {
-                await client.Git.Reference.Create(repo.Id, new NewReference($"refs/heads/{branchName}", created.Sha));
+                await client.Git.Reference.Create(
+                    repo.Id,
+                    new NewReference($"refs/heads/{branchName}", created.Sha)
+                );
             }
             catch (ApiValidationException)
             {
                 // Branch already exists — fast-forward it to the new commit.
-                await client.Git.Reference.Update(repo.Id, $"heads/{branchName}", new ReferenceUpdate(created.Sha, force: true));
+                await client.Git.Reference.Update(
+                    repo.Id,
+                    $"heads/{branchName}",
+                    new ReferenceUpdate(created.Sha, force: true)
+                );
             }
 
             string body = BuildPullRequestBody(advisory, item, suggestion);
-            PullRequest pr = await client.PullRequest.Create(repo.Id, new NewPullRequest(commitMessage, branchName, defaultBranch)
-            {
-                Body = body,
-            });
+            PullRequest pr = await client.PullRequest.Create(
+                repo.Id,
+                new NewPullRequest(commitMessage, branchName, defaultBranch) { Body = body }
+            );
 
             return new ApplyFixResult(
                 Success: true,
-                ChangedFiles: outcome.ChangedFiles
-                    .Select(file => Path.GetRelativePath(workRoot, file).Replace('\\', '/'))
+                ChangedFiles: outcome
+                    .ChangedFiles.Select(file =>
+                        Path.GetRelativePath(workRoot, file).Replace('\\', '/')
+                    )
                     .ToArray(),
                 FollowUpCommand: null,
                 PullRequestUrl: pr.HtmlUrl,
@@ -231,11 +265,20 @@ public sealed class FixApplier : IFixApplier
         }
         finally
         {
-            try { Directory.Delete(workRoot, recursive: true); } catch { /* best effort */ }
+            try
+            {
+                Directory.Delete(workRoot, recursive: true);
+            }
+            catch
+            { /* best effort */
+            }
         }
     }
 
-    private static IReadOnlyList<string> ManifestFilesFor(Ecosystem ecosystem, string packageName) =>
+    private static IReadOnlyList<string> ManifestFilesFor(
+        Ecosystem ecosystem,
+        string packageName
+    ) =>
         ecosystem switch
         {
             Ecosystem.Npm => new[] { "package.json" },
@@ -245,14 +288,19 @@ public sealed class FixApplier : IFixApplier
             _ => Array.Empty<string>(),
         };
 
-    private static string BuildPullRequestBody(Advisory advisory, InventoryItem item, FixSuggestion suggestion)
+    private static string BuildPullRequestBody(
+        Advisory advisory,
+        InventoryItem item,
+        FixSuggestion suggestion
+    )
     {
-        string summary = string.IsNullOrWhiteSpace(advisory.Summary) ? advisory.ExternalId : advisory.Summary;
-        return
-            $"Bumps `{item.Name}` from `{suggestion.CurrentVersion}` to `{suggestion.SuggestedVersion}` " +
-            $"to address {advisory.ExternalId}.\n\n" +
-            $"{summary}\n\n" +
-            $"Suggested by Shield. Severity: {advisory.Severity}.";
+        string summary = string.IsNullOrWhiteSpace(advisory.Summary)
+            ? advisory.ExternalId
+            : advisory.Summary;
+        return $"Bumps `{item.Name}` from `{suggestion.CurrentVersion}` to `{suggestion.SuggestedVersion}` "
+            + $"to address {advisory.ExternalId}.\n\n"
+            + $"{summary}\n\n"
+            + $"Suggested by Shield. Severity: {advisory.Severity}.";
     }
 
     private static string Slug(string raw)

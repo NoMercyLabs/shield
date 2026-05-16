@@ -1,0 +1,101 @@
+{
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "register": "Register"
+  },
+  "state": {
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "saving": "Saving…"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "sources": "Sources",
+    "findings": "Findings",
+    "channels": "Channels",
+    "feeds": "Feeds",
+    "settings": "Settings",
+    "audit": "Audit",
+    "account": "Account",
+    "sign_in": "Sign in",
+    "sign_out": "Sign out"
+  },
+  "field": {
+    "username": "Username",
+    "password": "Password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "confirm_password": "Confirm password",
+    "confirm_new_password": "Confirm new password",
+    "two_factor_code": "Two-factor code",
+    "two_factor_code_optional": "2FA code (optional)",
+    "language": "Language"
+  },
+  "auth": {
+    "or": "or"
+  },
+  "screen": {
+    "signin": {
+      "title": "Sign in to Shield",
+      "subtitle": "Use your Shield credentials.",
+      "submit_btn": "Sign in",
+      "submitting": "Signing in…",
+      "with_provider": "Sign in with {provider}",
+      "no_account_prompt": "Don't have an account?"
+    },
+    "register": {
+      "title": "Create the first admin",
+      "title_secondary": "Create an account",
+      "subtitle": "Set a username and password to continue.",
+      "submit_btn": "Create account",
+      "submitting": "Creating…",
+      "with_provider": "Sign up with {provider}",
+      "have_account_prompt": "Already have an account?",
+      "closed_title": "Registration closed",
+      "closed_body": "New accounts are disabled on this instance. Ask an admin to invite you, or sign in below.",
+      "back_btn": "Back to sign in",
+      "checking": "Checking registration status…"
+    },
+    "account": {
+      "title": "Account",
+      "signed_in_as": "Signed in as {user}",
+      "change_password_title": "Change password",
+      "update_password_btn": "Update password"
+    }
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "banner": {
+    "single_user_mode": "Single-user mode"
+  },
+  "toast": {
+    "signout_success": "Signed out.",
+    "password_updated": "Password updated.",
+    "account_created": "Account created."
+  },
+  "error": {
+    "passwords_mismatch": "Passwords do not match.",
+    "new_passwords_mismatch": "New passwords do not match.",
+    "signin_failed": "Sign-in failed.",
+    "register_failed": "Registration failed.",
+    "password_update_failed": "Failed to change password.",
+    "oauth_rejected": "Sign-in rejected by server: {reason}",
+    "oauth_start_failed": "Failed to start {provider} sign-in."
+  }
+}

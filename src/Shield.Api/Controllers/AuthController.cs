@@ -4,6 +4,7 @@ using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Shield.Api.Auth;
@@ -42,6 +43,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-burst")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
         SignInResult result = await _signInManager.PasswordSignInAsync(
@@ -111,6 +113,7 @@ public sealed class AuthController : ControllerBase
     // auto-creates the Admin role if missing. Subsequent registrations land in Viewer.
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-burst")]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
     {
         if (

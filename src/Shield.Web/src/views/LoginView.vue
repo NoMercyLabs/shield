@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import { type AuthProvider, fetchAuthProviders, login, oauthSignin } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const username = ref('')
 const password = ref('')
@@ -19,7 +21,7 @@ onMounted(async () => {
   // Server may redirect back here with ?oauth_signin_rejected=<reason> when the callback
   // refused to create a new user. Surface that as an inline error.
   if (typeof route.query.oauth_signin_rejected === 'string')
-    error.value = `Sign-in rejected by server: ${route.query.oauth_signin_rejected}`
+    error.value = t('error.oauth_rejected', { reason: route.query.oauth_signin_rejected })
 })
 
 async function onSubmit(): Promise<void> {
@@ -31,8 +33,7 @@ async function onSubmit(): Promise<void> {
     router.replace(redirect)
   }
   catch (err) {
-    const message = err instanceof Error ? err.message : 'Sign-in failed.'
-    error.value = message
+    error.value = err instanceof Error ? err.message : t('error.signin_failed')
   }
   finally {
     submitting.value = false
@@ -46,7 +47,7 @@ async function onOauth(provider: string): Promise<void> {
     await oauthSignin(provider, redirect)
   }
   catch (err) {
-    error.value = err instanceof Error ? err.message : `Failed to start ${provider} sign-in.`
+    error.value = err instanceof Error ? err.message : t('error.oauth_start_failed', { provider })
   }
 }
 </script>
@@ -59,7 +60,7 @@ async function onOauth(provider: string): Promise<void> {
     >
       <div>
         <h1 class="text-2xl font-semibold">Shield</h1>
-        <p class="text-sm text-slate-400">Sign in to continue.</p>
+        <p class="text-sm text-slate-400">{{ t('screen.signin.subtitle') }}</p>
       </div>
 
       <div v-if="providers.length > 0" class="space-y-2">
@@ -71,16 +72,16 @@ async function onOauth(provider: string): Promise<void> {
           @click="onOauth(provider.provider)"
         >
           <img :src="provider.iconUrl" :alt="provider.displayName" class="h-4 w-4" />
-          Sign in with {{ provider.displayName }}
+          {{ t('screen.signin.with_provider', { provider: provider.displayName }) }}
         </button>
         <div class="relative pt-2">
           <div class="absolute inset-0 flex items-center"><div class="h-px w-full bg-slate-800" /></div>
-          <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">or</span></div>
+          <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">{{ t('auth.or') }}</span></div>
         </div>
       </div>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Username</span>
+        <span class="text-sm text-slate-300">{{ t('field.username') }}</span>
         <input
           v-model="username"
           type="text"
@@ -91,7 +92,7 @@ async function onOauth(provider: string): Promise<void> {
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Password</span>
+        <span class="text-sm text-slate-300">{{ t('field.password') }}</span>
         <input
           v-model="password"
           type="password"
@@ -102,7 +103,7 @@ async function onOauth(provider: string): Promise<void> {
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">2FA code (optional)</span>
+        <span class="text-sm text-slate-300">{{ t('field.two_factor_code_optional') }}</span>
         <input
           v-model="totpCode"
           type="text"
@@ -121,7 +122,7 @@ async function onOauth(provider: string): Promise<void> {
         :disabled="submitting"
         class="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900"
       >
-        {{ submitting ? 'Signing in…' : 'Sign in' }}
+        {{ submitting ? t('screen.signin.submitting') : t('screen.signin.submit_btn') }}
       </button>
     </form>
   </div>

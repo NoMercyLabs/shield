@@ -77,6 +77,8 @@ export const ChannelType = {
   Ntfy: 1,
   Smtp: 2,
   Inbox: 3,
+  Slack: 4,
+  Webhook: 5,
 } as const
 export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType]
 export type ChannelTypeName = keyof typeof ChannelType
@@ -85,6 +87,8 @@ export const ChannelTypeNames: Record<ChannelType, ChannelTypeName> = {
   1: 'Ntfy',
   2: 'Smtp',
   3: 'Inbox',
+  4: 'Slack',
+  5: 'Webhook',
 }
 
 export const Feed = {
@@ -160,6 +164,35 @@ export interface SourceCreate {
   enabled?: boolean
 }
 
+export interface FsEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  hasLockfiles: boolean
+  hasGitRepo: boolean
+  lockfileCount: number | null
+  size: number | null
+}
+
+export interface FsBrowseResponse {
+  path: string
+  parent: string | null
+  entries: FsEntry[]
+  roots: string[]
+  hasLockfiles: boolean
+}
+
+export interface BulkLocalFoldersRequest {
+  paths: string[]
+  defaultScanInterval?: string
+}
+
+export interface BulkLocalFoldersResponse {
+  created: number
+  skippedExisting: number
+  sources: Source[]
+}
+
 export interface SnapshotSummary {
   id: string
   takenAt: string
@@ -180,6 +213,51 @@ export interface InventoryItemResponse {
   version: string
   isDirect: boolean
   parentChain: string
+}
+
+export interface SnapshotListItem {
+  id: string
+  takenAt: string
+  contentsSha: string
+  itemCount: number
+  prevSnapshotId: string | null
+}
+
+// Mirrors Shield.Api.Contracts.AnomalyFlags ([Flags] enum). Bitmask — combine via |.
+export const AnomalyFlags = {
+  None: 0,
+  BrandNew: 1,
+  SingleMaintainer: 2,
+  NewMaintainerThisVersion: 4,
+  Typosquat: 8,
+  Deprecated: 16,
+  HighScopeMismatch: 32,
+} as const
+export type AnomalyFlags = number
+
+export interface InventoryDiffEntry {
+  ecosystem: Ecosystem
+  name: string
+  version: string
+  isDirect: boolean
+  parentChain: string | null
+  anomaly: AnomalyFlags
+}
+
+export interface InventoryDiffChange {
+  ecosystem: Ecosystem
+  name: string
+  fromVersion: string
+  toVersion: string
+  isDirect: boolean
+}
+
+export interface SnapshotDiffResponse {
+  older: SnapshotSummary
+  newer: SnapshotSummary
+  added: InventoryDiffEntry[]
+  removed: InventoryDiffEntry[]
+  versionChanged: InventoryDiffChange[]
 }
 
 // ---------- advisories + findings ----------
@@ -261,12 +339,27 @@ export interface ApplyFixResponse {
 }
 
 export interface FindingFilter {
-  severity?: Severity
-  sourceId?: number
-  ecosystem?: Ecosystem
-  state?: FindingState
+  severity?: Severity[]
+  sourceId?: number[]
+  ecosystem?: Ecosystem[]
+  state?: FindingState[]
+  packageName?: string[]
   page?: number
   pageSize?: number
+}
+
+export interface BulkFindingsRequest {
+  findingIds: string[]
+}
+
+export interface BulkSuppressRequest {
+  findingIds: string[]
+  reason: string
+}
+
+export interface BulkFindingsResponse {
+  updated: number
+  notFound: string[]
 }
 
 export interface FindingsPage {
@@ -290,6 +383,9 @@ export interface AlertChannel {
   type: ChannelType
   name: string
   configJson: string
+  // Server-side parsed view with secret fields masked as "****".
+  // Null when the stored JSON couldn't be parsed (fall back to configJson).
+  parsedConfig: Record<string, unknown> | null
   minSeverity: Severity
   enabled: boolean
 }
@@ -360,11 +456,66 @@ export interface OAuthStatus {
   expiresAt: string | null
 }
 
+export interface SlackChannelInfo {
+  id: string
+  name: string
+  isPrivate: boolean
+}
+
 export interface SlackChannelsResponse {
-  channels: Array<{ id: string, name: string }>
+  channels: SlackChannelInfo[]
+}
+
+export interface GitHubRepoEntry {
+  id: number
+  owner: string
+  name: string
+  fullName: string
+  description: string | null
+  defaultBranch: string | null
+  private: boolean
+  archived: boolean
+  fork: boolean
+  language: string | null
+}
+
+export interface GitHubRepoListResponse {
+  repos: GitHubRepoEntry[]
+  total: number
+}
+
+export interface BulkSelection {
+  owner: string
+  name: string
+  branch?: string | null
+}
+
+export interface BulkFromGithubRequest {
+  selections: BulkSelection[]
+  defaultScanInterval?: string | null
+}
+
+export interface BulkFromGithubResponse {
+  created: number
+  skippedExisting: number
+  sources: Source[]
 }
 
 // ---------- settings ----------
+
+export interface OAuthProviderConfig {
+  clientId: string | null
+  clientSecretMasked: string | null
+  scopes: string | null
+  configured: boolean
+}
+
+// ClientSecret semantics: null = preserve existing, "" = clear, non-empty = overwrite.
+export interface OAuthProviderConfigPatch {
+  clientId: string | null
+  clientSecret: string | null
+  scopes: string | null
+}
 
 export interface Settings {
   singleUserMode: boolean
@@ -375,6 +526,9 @@ export interface Settings {
   oidcClientSecretMasked: string | null
   alertSeverityFloor: Severity
   retentionDays: number
+  github: OAuthProviderConfig
+  slack: OAuthProviderConfig
+  google: OAuthProviderConfig
 }
 
 export interface SettingsUpdate {
@@ -386,6 +540,9 @@ export interface SettingsUpdate {
   oidcClientSecret: string | null
   alertSeverityFloor: Severity
   retentionDays: number
+  github?: OAuthProviderConfigPatch | null
+  slack?: OAuthProviderConfigPatch | null
+  google?: OAuthProviderConfigPatch | null
 }
 
 export interface SettingsUpdateResponse {
@@ -410,4 +567,42 @@ export interface RuntimeInfo {
   environment: string
   contentRoot: string
   webRoot: string
+}
+
+// ---------- audit ----------
+
+export interface AuditEntry {
+  id: string
+  at: string
+  actorUserId: string | null
+  actorName: string
+  action: string
+  targetType: string
+  targetId: string
+  detailsJson: string | null
+  remoteIp: string | null
+}
+
+export interface AuditPage {
+  items: AuditEntry[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface AuditFilter {
+  page?: number
+  pageSize?: number
+  action?: string | null
+  targetType?: string | null
+}
+
+// ---------- onboarding ----------
+
+export interface OnboardingStatusResponse {
+  completed: boolean
+  sourceCount: number
+  channelCount: number
+  githubConnected: boolean
+  anyOauthConfigured: boolean
 }

@@ -80,8 +80,16 @@ public sealed class NugetManifestEditor : IManifestEditor
         foreach (string file in hits)
         {
             string relative = Path.GetRelativePath(root, file);
-            if (relative.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-                || relative.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            if (
+                relative.Contains(
+                    Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal
+                )
+                || relative.Contains(
+                    Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal
+                )
+            )
                 continue;
             yield return file;
         }

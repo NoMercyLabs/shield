@@ -19,6 +19,10 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
     public DbSet<AgentToken> AgentTokens => Set<AgentToken>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
     public DbSet<IntegrationToken> IntegrationTokens => Set<IntegrationToken>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<SourceGroup> SourceGroups => Set<SourceGroup>();
+    public DbSet<SourceAccess> SourceAccesses => Set<SourceAccess>();
+    public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,5 +36,9 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
         modelBuilder.ApplyConfiguration(new Configurations.AgentTokenConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.AppSettingConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.IntegrationTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.AuditEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.SourceGroupConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.SourceAccessConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.GroupMembershipConfiguration());
     }
 }

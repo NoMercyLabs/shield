@@ -229,6 +229,52 @@ namespace Shield.Data.Migrations.Shield
                     b.ToTable("AppSettings", (string)null);
                 });
 
+            modelBuilder.Entity("Shield.Core.Domain.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetailsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RemoteIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("At", "Action", "TargetType");
+
+                    b.ToTable("AuditEntries", (string)null);
+                });
+
             modelBuilder.Entity("Shield.Core.Domain.Finding", b =>
                 {
                     b.Property<Guid>("Id")

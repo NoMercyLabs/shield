@@ -75,11 +75,16 @@ public sealed class FixSuggester : IFixSuggester
     // suggester useful for exotic version strings without throwing.
     private static int Compare(Ecosystem ecosystem, string left, string right)
     {
-        if (TryParseSemver(left, out SemVersion? leftSem) && TryParseSemver(right, out SemVersion? rightSem))
+        if (
+            TryParseSemver(left, out SemVersion? leftSem)
+            && TryParseSemver(right, out SemVersion? rightSem)
+        )
             return leftSem!.ComparePrecedenceTo(rightSem);
 
-        if (NuGetVersion.TryParse(left, out NuGetVersion? leftNuget)
-            && NuGetVersion.TryParse(right, out NuGetVersion? rightNuget))
+        if (
+            NuGetVersion.TryParse(left, out NuGetVersion? leftNuget)
+            && NuGetVersion.TryParse(right, out NuGetVersion? rightNuget)
+        )
             return leftNuget.CompareTo(rightNuget);
 
         return string.CompareOrdinal(left, right);
@@ -110,7 +115,10 @@ public sealed class FixSuggester : IFixSuggester
             {
                 if (range.ValueKind != JsonValueKind.Object)
                     continue;
-                if (!range.TryGetProperty("events", out JsonElement events) || events.ValueKind != JsonValueKind.Array)
+                if (
+                    !range.TryGetProperty("events", out JsonElement events)
+                    || events.ValueKind != JsonValueKind.Array
+                )
                     continue;
 
                 string? introduced = null;
@@ -161,12 +169,17 @@ public sealed class FixSuggester : IFixSuggester
     private sealed class EcosystemVersionComparer : IComparer<string>
     {
         private readonly Ecosystem _ecosystem;
+
         public EcosystemVersionComparer(Ecosystem ecosystem) => _ecosystem = ecosystem;
+
         public int Compare(string? left, string? right)
         {
-            if (left is null && right is null) return 0;
-            if (left is null) return -1;
-            if (right is null) return 1;
+            if (left is null && right is null)
+                return 0;
+            if (left is null)
+                return -1;
+            if (right is null)
+                return 1;
             return FixSuggester.Compare(_ecosystem, left, right);
         }
     }

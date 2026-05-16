@@ -16,31 +16,36 @@ public sealed class FindingsController : ControllerBase
 {
     private const int MaxPageSize = 200;
     private const int DefaultPageSize = 50;
+    private const int MaxBulkSize = 500;
 
     private readonly ShieldDbContext _shieldDb;
     private readonly FeedsDbContext _feedsDb;
     private readonly IFixSuggester _fixSuggester;
     private readonly IFixApplier _fixApplier;
+    private readonly IAccessResolver _access;
 
     public FindingsController(
         ShieldDbContext shieldDb,
         FeedsDbContext feedsDb,
         IFixSuggester fixSuggester,
-        IFixApplier fixApplier
+        IFixApplier fixApplier,
+        IAccessResolver access
     )
     {
         _shieldDb = shieldDb;
         _feedsDb = feedsDb;
         _fixSuggester = fixSuggester;
         _fixApplier = fixApplier;
+        _access = access;
     }
 
     [HttpGet]
     public async Task<ActionResult<FindingsPage>> List(
-        [FromQuery] Severity? severity,
-        [FromQuery] int? sourceId,
-        [FromQuery] Ecosystem? ecosystem,
-        [FromQuery] FindingState? state,
+        [FromQuery] List<Severity>? severity,
+        [FromQuery] List<int>? sourceId,
+        [FromQuery] List<Ecosystem>? ecosystem,
+        [FromQuery] List<FindingState>? state,
+        [FromQuery] List<string>? packageName,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = DefaultPageSize,
         CancellationToken ct = default
@@ -54,19 +59,44 @@ public sealed class FindingsController : ControllerBase
             pageSize = MaxPageSize;
 
         IQueryable<Finding> query = _shieldDb.Findings.AsQueryable();
-        if (severity.HasValue)
-            query = query.Where(finding => finding.Severity == severity.Value);
-        if (sourceId.HasValue)
-            query = query.Where(finding => finding.SourceId == sourceId.Value);
-        if (state.HasValue)
-            query = query.Where(finding => finding.State == state.Value);
 
-        if (ecosystem.HasValue)
+        // Per-source ACL — non-Admins only see findings on sources they were granted.
+        if (!User.IsInRole(ShieldRoles.Admin))
+        {
+            IReadOnlyList<int> visible = await _access.GetVisibleSourceIdsAsync(User, ct);
+            if (visible.Count == 0)
+                return Ok(new FindingsPage(Array.Empty<FindingResponse>(), 0, page, pageSize));
+            query = query.Where(finding => visible.Contains(finding.SourceId));
+        }
+
+        if (severity is { Count: > 0 })
+            query = query.Where(finding => severity.Contains(finding.Severity));
+        if (sourceId is { Count: > 0 })
+            query = query.Where(finding => sourceId.Contains(finding.SourceId));
+        if (state is { Count: > 0 })
+            query = query.Where(finding => state.Contains(finding.State));
+
+        if (ecosystem is { Count: > 0 })
         {
             IQueryable<int> itemIds = _shieldDb
-                .InventoryItems.Where(item => item.Ecosystem == ecosystem.Value)
+                .InventoryItems.Where(item => ecosystem.Contains(item.Ecosystem))
                 .Select(item => item.Id);
             query = query.Where(finding => itemIds.Contains(finding.InventoryItemId));
+        }
+
+        if (packageName is { Count: > 0 })
+        {
+            List<string> names = packageName
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.Trim())
+                .ToList();
+            if (names.Count > 0)
+            {
+                IQueryable<int> itemIds = _shieldDb
+                    .InventoryItems.Where(item => names.Contains(item.Name))
+                    .Select(item => item.Id);
+                query = query.Where(finding => itemIds.Contains(finding.InventoryItemId));
+            }
         }
 
         int total = await query.CountAsync(ct);
@@ -131,6 +161,9 @@ public sealed class FindingsController : ControllerBase
         Finding? finding = await _shieldDb.Findings.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (finding is null)
             return NotFound();
+        // 404 not 403 so source existence isn't leaked to maintainers without the grant.
+        if (!await _access.CanReadAsync(User, finding.SourceId, ct))
+            return NotFound();
 
         Advisory? advisory = await _feedsDb.Advisories.FirstOrDefaultAsync(
             item => item.Id == finding.AdvisoryRefId,
@@ -172,11 +205,11 @@ public sealed class FindingsController : ControllerBase
         return Ok(new FindingDetailResponse(findingResponse, advisory, item, sourceType, fix));
     }
 
-    // POST /api/findings/{id}/apply-fix — Admin only. Body: { strategy: "auto" | "pr" }.
+    // POST /api/findings/{id}/apply-fix — Body: { strategy: "auto" | "pr" }.
     // auto = manifest edit in place for LocalFolder sources; pr = open a GitHub PR for
     // GithubRepo sources. Mismatched strategy/source pairings return 400.
+    // Authorization: Triage on the finding's source (Admin always qualifies).
     [HttpPost("{id:guid}/apply-fix")]
-    [Authorize(Roles = ShieldRoles.Admin)]
     public async Task<ActionResult<ApplyFixResponse>> ApplyFix(
         Guid id,
         [FromBody] ApplyFixRequest request,
@@ -189,6 +222,10 @@ public sealed class FindingsController : ControllerBase
         );
         if (finding is null)
             return NotFound();
+        if (!await _access.CanReadAsync(User, finding.SourceId, ct))
+            return NotFound();
+        if (!await _access.CanTriageAsync(User, finding.SourceId, ct))
+            return Forbid();
 
         Source? source = await _shieldDb.Sources.FirstOrDefaultAsync(
             entry => entry.Id == finding.SourceId,
@@ -325,5 +362,58 @@ public sealed class FindingsController : ControllerBase
             finding.Notes = notes;
         await _shieldDb.SaveChangesAsync(ct);
         return Ok(FindingResponse.From(finding));
+    }
+
+    [HttpPost("bulk-ack")]
+    public Task<ActionResult<BulkFindingsResponse>> BulkAck(
+        [FromBody] BulkFindingsRequest request,
+        CancellationToken ct
+    ) => BulkUpdateStateAsync(request.FindingIds, FindingState.Acked, notes: null, ct);
+
+    [HttpPost("bulk-resolve")]
+    public Task<ActionResult<BulkFindingsResponse>> BulkResolve(
+        [FromBody] BulkFindingsRequest request,
+        CancellationToken ct
+    ) => BulkUpdateStateAsync(request.FindingIds, FindingState.Resolved, notes: null, ct);
+
+    [HttpPost("bulk-suppress")]
+    public Task<ActionResult<BulkFindingsResponse>> BulkSuppress(
+        [FromBody] BulkSuppressRequest request,
+        CancellationToken ct
+    ) => BulkUpdateStateAsync(request.FindingIds, FindingState.Suppressed, request.Reason, ct);
+
+    private async Task<ActionResult<BulkFindingsResponse>> BulkUpdateStateAsync(
+        IReadOnlyList<Guid>? ids,
+        FindingState state,
+        string? notes,
+        CancellationToken ct
+    )
+    {
+        if (ids is null || ids.Count == 0)
+            return BadRequest(new { error = "findingIds must be non-empty." });
+        if (ids.Count > MaxBulkSize)
+            return BadRequest(new { error = $"findingIds exceeds maximum of {MaxBulkSize}." });
+
+        // Dedup while preserving the caller's order for the notFound diff below.
+        List<Guid> distinctIds = ids.Distinct().ToList();
+
+        List<Finding> matched = await _shieldDb
+            .Findings.Where(finding => distinctIds.Contains(finding.Id))
+            .ToListAsync(ct);
+
+        HashSet<Guid> foundIds = matched.Select(finding => finding.Id).ToHashSet();
+        List<Guid> notFound = distinctIds.Where(id => !foundIds.Contains(id)).ToList();
+
+        foreach (Finding finding in matched)
+        {
+            finding.State = state;
+            if (notes is not null)
+                finding.Notes = notes;
+        }
+
+        if (matched.Count > 0)
+            await _shieldDb.SaveChangesAsync(ct);
+
+        return Ok(new BulkFindingsResponse(matched.Count, notFound));
     }
 }

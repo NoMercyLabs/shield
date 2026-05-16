@@ -11,10 +11,12 @@
     "types:gen": "openapi-typescript http://localhost:5099/swagger/v1/swagger.json -o src/types/api.ts"
   },
   "dependencies": {
+    "@microsoft/signalr": "^8.0.17",
     "@tanstack/vue-query": "^5.62.7",
     "axios": "^1.7.9",
     "lucide-vue-next": "^0.469.0",
     "vue": "^3.5.13",
+    "vue-i18n": "^11.4.2",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {

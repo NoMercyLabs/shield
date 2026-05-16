@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { changePassword, useAuth } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
@@ -7,6 +8,7 @@ import axios from 'axios'
 
 const { user } = useAuth()
 const { push } = useToasts()
+const { t } = useI18n()
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -17,21 +19,21 @@ const submitting = ref(false)
 async function onSubmit(): Promise<void> {
   error.value = null
   if (newPassword.value !== confirm.value) {
-    error.value = 'New passwords do not match.'
+    error.value = t('error.new_passwords_mismatch')
     return
   }
   submitting.value = true
   try {
     await changePassword(currentPassword.value, newPassword.value)
-    push('success', 'Password updated.')
+    push('success', t('toast.password_updated'))
     currentPassword.value = ''
     newPassword.value = ''
     confirm.value = ''
   }
   catch (err) {
     const message = axios.isAxiosError(err)
-      ? (err.response?.data?.error ?? 'Failed to change password.')
-      : (err instanceof Error ? err.message : 'Failed to change password.')
+      ? (err.response?.data?.error ?? t('error.password_update_failed'))
+      : (err instanceof Error ? err.message : t('error.password_update_failed'))
     error.value = message
     push('error', message)
   }
@@ -44,16 +46,16 @@ async function onSubmit(): Promise<void> {
 <template>
   <div class="space-y-6">
     <header>
-      <h1 class="text-2xl font-semibold">Account</h1>
-      <p class="text-sm text-slate-400">Signed in as <span class="font-mono">{{ user?.username ?? '—' }}</span></p>
+      <h1 class="text-2xl font-semibold">{{ t('screen.account.title') }}</h1>
+      <p class="text-sm text-slate-400">{{ t('screen.account.signed_in_as', { user: user?.username ?? '—' }) }}</p>
     </header>
 
     <section class="max-w-md space-y-3 rounded-lg border border-slate-800 bg-slate-900 p-4">
-      <h2 class="text-sm font-medium text-slate-300">Change password</h2>
+      <h2 class="text-sm font-medium text-slate-300">{{ t('screen.account.change_password_title') }}</h2>
 
       <form class="space-y-3" @submit.prevent="onSubmit">
         <label class="block">
-          <span class="text-sm text-slate-300">Current password</span>
+          <span class="text-sm text-slate-300">{{ t('field.current_password') }}</span>
           <input
             v-model="currentPassword"
             type="password"
@@ -64,7 +66,7 @@ async function onSubmit(): Promise<void> {
         </label>
 
         <label class="block">
-          <span class="text-sm text-slate-300">New password</span>
+          <span class="text-sm text-slate-300">{{ t('field.new_password') }}</span>
           <input
             v-model="newPassword"
             type="password"
@@ -76,7 +78,7 @@ async function onSubmit(): Promise<void> {
         </label>
 
         <label class="block">
-          <span class="text-sm text-slate-300">Confirm new password</span>
+          <span class="text-sm text-slate-300">{{ t('field.confirm_new_password') }}</span>
           <input
             v-model="confirm"
             type="password"
@@ -96,7 +98,7 @@ async function onSubmit(): Promise<void> {
           :disabled="submitting"
           class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900"
         >
-          {{ submitting ? 'Saving…' : 'Update password' }}
+          {{ submitting ? t('state.saving') : t('screen.account.update_password_btn') }}
         </button>
       </form>
     </section>

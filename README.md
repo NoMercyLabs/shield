@@ -5,6 +5,7 @@ Cross-ecosystem dependency vulnerability warning system. Self-hosted. Headless A
 [![CI](https://github.com/nomercylabs/shield/actions/workflows/ci.yml/badge.svg)](https://github.com/nomercylabs/shield/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker pulls](https://img.shields.io/docker/pulls/nomercylabs/shield?logo=docker)](https://github.com/nomercylabs/shield/pkgs/container/shield)
+[![Shield](https://your-shield.example.com/api/badge/NoMercyLabs/shield.svg)](docs/sources.md#health-badge)
 
 ## What it does
 
@@ -16,10 +17,14 @@ Shield watches the lockfiles in your code — every `package-lock.json`, `yarn.l
 docker run -d --name shield \
   -p 8080:8080 \
   -v shield-data:/data \
+  -v shield-keys:/data/keys \
   -e Shield__Auth__JwtSigningKey="$(openssl rand -base64 48)" \
+  -e Shield__Auth__DataProtectionMasterKey="$(openssl rand -base64 48)" \
   ghcr.io/nomercylabs/shield:latest
-# Open http://localhost:8080 — single-user mode is on by default
+# Open http://localhost:8842 — single-user mode is on by default
 ```
+
+**Save both secrets somewhere safe.** `Shield__Auth__DataProtectionMasterKey` encrypts the keyring under `/data/keys` and must be supplied on every container restart — recreate the container without it and every Discord webhook, OAuth token, and OIDC client secret becomes permanently unreadable.
 
 The first request lands you straight in the dashboard. Add a source from **Sources -> New**, configure a Discord webhook from **Channels**, and the next scan tick will start populating findings.
 

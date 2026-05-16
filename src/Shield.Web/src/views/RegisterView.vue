@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { type AuthProvider, fetchAuthProviders, fetchRegistrationAllowed, oauthSignin, register } from '@/stores/auth'
@@ -7,6 +8,7 @@ import { useToasts } from '@/stores/toast'
 
 const router = useRouter()
 const { push } = useToasts()
+const { t } = useI18n()
 
 const username = ref('')
 const password = ref('')
@@ -18,7 +20,7 @@ const reason = ref<string | null>(null)
 const providers = ref<AuthProvider[]>([])
 
 const headline = computed(() =>
-  reason.value === 'first-user' ? 'Create the first admin' : 'Create an account'
+  reason.value === 'first-user' ? t('screen.register.title') : t('screen.register.title_secondary'),
 )
 
 onMounted(async () => {
@@ -38,7 +40,7 @@ async function onOauth(provider: string): Promise<void> {
     await oauthSignin(provider, '/')
   }
   catch (err) {
-    const message = err instanceof Error ? err.message : `Failed to start ${provider} sign-in.`
+    const message = err instanceof Error ? err.message : t('error.oauth_start_failed', { provider })
     error.value = message
     push('error', message)
   }
@@ -47,17 +49,17 @@ async function onOauth(provider: string): Promise<void> {
 async function onSubmit(): Promise<void> {
   error.value = null
   if (password.value !== confirm.value) {
-    error.value = 'Passwords do not match.'
+    error.value = t('error.passwords_mismatch')
     return
   }
   submitting.value = true
   try {
     await register(username.value, password.value)
-    push('success', 'Account created.')
+    push('success', t('toast.account_created'))
     router.replace('/')
   }
   catch (err) {
-    const message = err instanceof Error ? err.message : 'Registration failed.'
+    const message = err instanceof Error ? err.message : t('error.register_failed')
     error.value = message
     push('error', message)
   }
@@ -71,17 +73,17 @@ async function onSubmit(): Promise<void> {
   <div class="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-slate-100">
     <div class="w-full max-w-sm rounded-lg border border-slate-800 bg-slate-900 p-6 shadow-xl">
       <div v-if="allowed === false" class="space-y-3">
-        <h1 class="text-2xl font-semibold">Registration closed</h1>
+        <h1 class="text-2xl font-semibold">{{ t('screen.register.closed_title') }}</h1>
         <p class="text-sm text-slate-400">
-          New accounts are disabled on this instance. Ask an admin to invite you, or sign in below.
+          {{ t('screen.register.closed_body') }}
         </p>
-        <RouterLink to="/login" class="block text-sm text-blue-400 hover:text-blue-300">Back to sign in</RouterLink>
+        <RouterLink to="/login" class="block text-sm text-blue-400 hover:text-blue-300">{{ t('screen.register.back_btn') }}</RouterLink>
       </div>
 
       <form v-else-if="allowed === true" class="space-y-4" @submit.prevent="onSubmit">
         <div>
           <h1 class="text-2xl font-semibold">{{ headline }}</h1>
-          <p class="text-sm text-slate-400">Set a username and password to continue.</p>
+          <p class="text-sm text-slate-400">{{ t('screen.register.subtitle') }}</p>
         </div>
 
         <div v-if="providers.length > 0" class="space-y-2">
@@ -93,16 +95,16 @@ async function onSubmit(): Promise<void> {
             @click="onOauth(provider.provider)"
           >
             <img :src="provider.iconUrl" :alt="provider.displayName" class="h-4 w-4" />
-            Sign up with {{ provider.displayName }}
+            {{ t('screen.register.with_provider', { provider: provider.displayName }) }}
           </button>
           <div class="relative pt-2">
             <div class="absolute inset-0 flex items-center"><div class="h-px w-full bg-slate-800" /></div>
-            <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">or</span></div>
+            <div class="relative flex justify-center"><span class="bg-slate-900 px-2 text-xs text-slate-500">{{ t('auth.or') }}</span></div>
           </div>
         </div>
 
         <label class="block">
-          <span class="text-sm text-slate-300">Username</span>
+          <span class="text-sm text-slate-300">{{ t('field.username') }}</span>
           <input
             v-model="username"
             type="text"
@@ -114,7 +116,7 @@ async function onSubmit(): Promise<void> {
         </label>
 
         <label class="block">
-          <span class="text-sm text-slate-300">Password</span>
+          <span class="text-sm text-slate-300">{{ t('field.password') }}</span>
           <input
             v-model="password"
             type="password"
@@ -126,7 +128,7 @@ async function onSubmit(): Promise<void> {
         </label>
 
         <label class="block">
-          <span class="text-sm text-slate-300">Confirm password</span>
+          <span class="text-sm text-slate-300">{{ t('field.confirm_password') }}</span>
           <input
             v-model="confirm"
             type="password"
@@ -146,16 +148,16 @@ async function onSubmit(): Promise<void> {
           :disabled="submitting"
           class="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900"
         >
-          {{ submitting ? 'Creating…' : 'Create account' }}
+          {{ submitting ? t('screen.register.submitting') : t('screen.register.submit_btn') }}
         </button>
 
         <p class="text-center text-sm text-slate-400">
-          Already have an account?
-          <RouterLink to="/login" class="text-blue-400 hover:text-blue-300">Sign in</RouterLink>
+          {{ t('screen.register.have_account_prompt') }}
+          <RouterLink to="/login" class="text-blue-400 hover:text-blue-300">{{ t('nav.sign_in') }}</RouterLink>
         </p>
       </form>
 
-      <p v-else class="text-sm text-slate-400">Checking registration status…</p>
+      <p v-else class="text-sm text-slate-400">{{ t('screen.register.checking') }}</p>
     </div>
   </div>
 </template>

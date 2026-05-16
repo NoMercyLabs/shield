@@ -16,10 +16,10 @@ If a build fails because the working tree is dirty in a confusing way,
 return your report describing the conflict instead of trying to "clean
 up" with git. The CTO has more context than you do.
 
-**NEVER kill the dev server on port 8080 without restarting it after.**
+**NEVER kill the dev server on port 8842 without restarting it after.**
 The CTO is using the running server to demo + verify. If you must rebuild
 and the build fails because a DLL is locked, find the PID via
-`netstat -ano | grep ':8080.*LISTENING'`, stop it with
+`netstat -ano | grep ':8842.*LISTENING'`, stop it with
 PowerShell `Stop-Process -Id <pid> -Force`, rebuild, then **restart
 immediately** with:
 
@@ -31,7 +31,7 @@ Shield__Db__Shield="Data Source=C:/Projects/NoMercyLabs/shield/data/shield-demo.
 Shield__Db__Feeds="Data Source=C:/Projects/NoMercyLabs/shield/data/feeds-demo.db" \
 Shield__OpenApi__Enabled=true \
 ASPNETCORE_ENVIRONMENT=Production \
-dotnet run --no-build -c Release -- --urls "http://0.0.0.0:8080" \
+dotnet run --no-build -c Release -- --urls "http://0.0.0.0:8842" \
   > /tmp/shield-demo.log 2>&1 &
 disown
 ```
@@ -52,6 +52,14 @@ report it — do not wipe `data/*.db` without flagging.
   (or `--context FeedsDbContext --output-dir Migrations/Feeds`).
   Update the migration's `Up` to ALTER existing tables when extending —
   don't `CreateTable` something a previous migration already created.
+- **i18n keys are snake_case + meaning-only, not English words.** Match the convention
+  in `foghorn/apps/editor/src/i18n/en.json`: top-level keys are domains (`app`, `nav`,
+  `workspace`, `entry`, `publish`), leaves are snake_case action/role names
+  (`open_btn`, `commit_placeholder`, `pause_ms`, `pick_folder_btn`), and contextual
+  grouping nests one level (`workspace.picker.title`). **Wrong:**
+  `auth.signInTitle`, `common.save`, `nav.dashboard` (camelCase + leaf is the English).
+  **Right:** `screen.signin.title`, `action.save`, `nav.dashboard` keeps domain but
+  uses snake_case + a leaf that won't change if the copy changes.
 
 ## What lives where
 

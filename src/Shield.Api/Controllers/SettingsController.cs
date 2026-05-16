@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
+using Shield.Api.Services;
 using Shield.Core.Domain;
 using Shield.Data;
 
@@ -43,12 +44,14 @@ public sealed class SettingsController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpClientFactory? _httpClientFactory;
+    private readonly IAppSettingsService _appSettings;
 
     public SettingsController(
         ShieldDbContext db,
         IDataProtectionProvider protectionProvider,
         IConfiguration configuration,
         IWebHostEnvironment environment,
+        IAppSettingsService appSettings,
         IHttpClientFactory? httpClientFactory = null
     )
     {
@@ -56,6 +59,7 @@ public sealed class SettingsController : ControllerBase
         _protector = protectionProvider.CreateProtector("shield.settings");
         _configuration = configuration;
         _environment = environment;
+        _appSettings = appSettings;
         _httpClientFactory = httpClientFactory;
     }
 
@@ -87,6 +91,28 @@ public sealed class SettingsController : ControllerBase
         // Only overwrite the secret when caller supplies a non-empty value; otherwise preserve it.
         if (!string.IsNullOrEmpty(request.OidcClientSecret))
             updated[Keys.OidcClientSecret] = request.OidcClientSecret;
+
+        ApplyProviderPatch(
+            updated,
+            request.Github,
+            AppSettingKeys.GithubOAuthClientId,
+            AppSettingKeys.GithubOAuthClientSecret,
+            AppSettingKeys.GithubOAuthScopes
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Slack,
+            AppSettingKeys.SlackOAuthClientId,
+            AppSettingKeys.SlackOAuthClientSecret,
+            AppSettingKeys.SlackOAuthScopes
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Google,
+            AppSettingKeys.GoogleOAuthClientId,
+            AppSettingKeys.GoogleOAuthClientSecret,
+            AppSettingKeys.GoogleOAuthScopes
+        );
 
         List<string> restartKeys = new();
         Guid? updatedBy = ResolveUserId();
@@ -127,11 +153,32 @@ public sealed class SettingsController : ControllerBase
         }
 
         await _db.SaveChangesAsync(ct);
+        // Bust the AppSettingsService cache so OAuthController sees the new creds without restart.
+        await _appSettings.ReloadAsync(ct);
 
         Dictionary<string, string> fresh = await LoadAllAsync(ct);
         return Ok(
             new UpdateSettingsResponse(BuildResponse(fresh), restartKeys.Count > 0, restartKeys)
         );
+    }
+
+    private static void ApplyProviderPatch(
+        Dictionary<string, string> updated,
+        OAuthProviderConfigPatch? patch,
+        string clientIdKey,
+        string secretKey,
+        string scopesKey
+    )
+    {
+        if (patch is null)
+            return;
+        if (patch.ClientId is not null)
+            updated[clientIdKey] = patch.ClientId;
+        if (patch.Scopes is not null)
+            updated[scopesKey] = patch.Scopes;
+        // null = preserve; "" = clear; non-empty = overwrite.
+        if (patch.ClientSecret is not null)
+            updated[secretKey] = patch.ClientSecret;
     }
 
     [HttpPost("test-oidc")]
@@ -274,6 +321,28 @@ public sealed class SettingsController : ControllerBase
             retention = parsedDays;
         }
 
+        OAuthProviderConfigResponse github = BuildProviderResponse(
+            stored,
+            AppSettingKeys.GithubOAuthClientId,
+            AppSettingKeys.GithubOAuthClientSecret,
+            AppSettingKeys.GithubOAuthScopes,
+            _configuration["Shield:OAuth:Github:ClientId"]
+        );
+        OAuthProviderConfigResponse slack = BuildProviderResponse(
+            stored,
+            AppSettingKeys.SlackOAuthClientId,
+            AppSettingKeys.SlackOAuthClientSecret,
+            AppSettingKeys.SlackOAuthScopes,
+            _configuration["Shield:OAuth:Slack:ClientId"]
+        );
+        OAuthProviderConfigResponse google = BuildProviderResponse(
+            stored,
+            AppSettingKeys.GoogleOAuthClientId,
+            AppSettingKeys.GoogleOAuthClientSecret,
+            AppSettingKeys.GoogleOAuthScopes,
+            _configuration["Shield:OAuth:Google:ClientId"]
+        );
+
         return new SettingsResponse(
             singleUser,
             openApi,
@@ -282,9 +351,37 @@ public sealed class SettingsController : ControllerBase
             string.IsNullOrEmpty(clientId) ? null : clientId,
             secretMasked,
             floor,
-            retention
+            retention,
+            github,
+            slack,
+            google
         );
     }
+
+    private static OAuthProviderConfigResponse BuildProviderResponse(
+        Dictionary<string, string> stored,
+        string clientIdKey,
+        string secretKey,
+        string scopesKey,
+        string? clientIdFallback
+    )
+    {
+        string? clientId = ReadString(stored, clientIdKey) ?? clientIdFallback;
+        string? secret = ReadString(stored, secretKey);
+        string? scopes = ReadString(stored, scopesKey);
+        string? secretMasked = string.IsNullOrEmpty(secret) ? null : MaskProviderSecret(secret);
+        bool configured = !string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(secret);
+        return new OAuthProviderConfigResponse(
+            string.IsNullOrEmpty(clientId) ? null : clientId,
+            secretMasked,
+            string.IsNullOrEmpty(scopes) ? null : scopes,
+            configured
+        );
+    }
+
+    // Provider-config mask is "****<last4>" for parity with the SettingsView display.
+    private static string MaskProviderSecret(string secret) =>
+        secret.Length <= 4 ? "****" : "****" + secret[^4..];
 
     private static bool ReadBool(Dictionary<string, string> map, string key, bool fallback)
     {

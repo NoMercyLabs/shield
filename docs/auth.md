@@ -61,3 +61,31 @@ In single-user mode the bypass middleware also short-circuits API requests, so n
 ## Agent auth
 
 Linux agent enrollment (Phase 2) uses bearer tokens minted in the UI, hashed at rest with Argon2, single-use until rotated. Replay protection via timestamp + nonce window. None of this code ships in Phase 1.
+
+## Data protection keyring
+
+Shield wraps Discord webhook URLs, OAuth client secrets, OIDC client secrets, and SMTP passwords through ASP.NET's `IDataProtection`. The keyring itself lives on disk; lose it and every encrypted value becomes unreadable.
+
+Two env vars control where it lives and how it's protected:
+
+```env
+Shield__Auth__DataProtectionKeysPath=/data/keys
+Shield__Auth__DataProtectionMasterKey=<random 32+ char secret>
+```
+
+- **`DataProtectionKeysPath`** — directory the framework writes keyring XML into. Default is `<AppContext.BaseDirectory>/data/keys` for dev; the Docker image points at `/data/keys` on the named `shield-keys` volume.
+- **`DataProtectionMasterKey`** — operator-supplied secret. Shield SHA-256s it to a 32-byte AES key and wraps every keyring XML element in an AES-GCM envelope (`<encryptedKey nonce="…" tag="…"><cipher>…</cipher></encryptedKey>`). A stolen DB file is unreadable without this env var; a recreated container with the same env var + the same `shield-keys` volume decrypts existing secrets exactly as before.
+
+**Production behaviour:** missing `DataProtectionMasterKey` throws at startup. Development bypasses the check (writes the keyring unwrapped) but logs a warning so you don't accidentally ship without it.
+
+**Generate one:**
+
+```bash
+openssl rand -base64 48
+```
+
+**Rotation:** to swap the master key, decrypt with the old key, encrypt with the new one. The decryptor falls back to plaintext passthrough for unwrapped legacy entries (and logs a warning), so flipping protection on for the first time on an existing dev install is non-destructive.
+
+## Audit log
+
+Every admin-significant write — finding ack / resolve / suppress, source / channel mutations, settings updates, OAuth connect / disconnect — is appended to the `AuditEntries` table. The middleware sits after the auth pipeline and only records 2xx responses, so failed attempts don't pollute the log. Surface via `GET /api/audit?page=&pageSize=&action=&targetType=` (Admin only) or the **Audit** page in the SPA.

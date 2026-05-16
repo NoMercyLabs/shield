@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Shield.Api.Contracts;
 using Shield.Api.Services;
 using Shield.Core.Domain;
 
@@ -209,6 +210,150 @@ public sealed class GitHubProvider : IOAuthProvider
         string codeChallenge,
         string scopes
     ) => BuildAuthorizationUrl(config, state, codeChallenge, scopes);
+
+    // Pages through /user/repos following the RFC 5988 Link header. Caps at MaxRepos to
+    // protect against runaway accounts; perPage is the upstream page size (max 100 per GitHub docs).
+    public async Task<IReadOnlyList<GitHubRepoEntry>> ListReposAsync(
+        string accessToken,
+        string affiliation,
+        int perPage,
+        int maxRepos,
+        CancellationToken ct
+    )
+    {
+        if (perPage <= 0 || perPage > 100)
+            perPage = 100;
+        if (maxRepos <= 0)
+            maxRepos = 1000;
+
+        HttpClient http = _httpClientFactory.CreateClient("oauth");
+        List<GitHubRepoEntry> repos = new();
+
+        string? nextUrl =
+            "https://api.github.com/user/repos?per_page="
+            + perPage
+            + "&affiliation="
+            + Uri.EscapeDataString(affiliation)
+            + "&sort=full_name";
+
+        while (!string.IsNullOrEmpty(nextUrl) && repos.Count < maxRepos)
+        {
+            using HttpRequestMessage request = new(HttpMethod.Get, nextUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.UserAgent.ParseAdd("shield-oauth");
+            request.Headers.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/vnd.github+json")
+            );
+
+            using HttpResponseMessage response = await http.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+
+            using JsonDocument doc = await JsonDocument.ParseAsync(
+                await response.Content.ReadAsStreamAsync(ct),
+                cancellationToken: ct
+            );
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                break;
+
+            foreach (JsonElement element in doc.RootElement.EnumerateArray())
+            {
+                GitHubRepoEntry? entry = ParseRepoEntry(element);
+                if (entry is null)
+                    continue;
+                repos.Add(entry);
+                if (repos.Count >= maxRepos)
+                    break;
+            }
+
+            nextUrl = TryExtractNextLink(response);
+        }
+
+        return repos;
+    }
+
+    private static GitHubRepoEntry? ParseRepoEntry(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            return null;
+
+        long id =
+            element.TryGetProperty("id", out JsonElement idEl)
+            && idEl.TryGetInt64(out long parsedId)
+                ? parsedId
+                : 0;
+        string name = element.TryGetProperty("name", out JsonElement nameEl)
+            ? nameEl.GetString() ?? string.Empty
+            : string.Empty;
+        string fullName = element.TryGetProperty("full_name", out JsonElement fullEl)
+            ? fullEl.GetString() ?? string.Empty
+            : string.Empty;
+        if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(name))
+            return null;
+
+        // Owner is "<login>/<repo>" — split rather than fish through owner.login so a fork's
+        // owner field is consistent with full_name regardless of org-vs-user.
+        int slash = fullName.IndexOf('/');
+        string owner = slash > 0 ? fullName[..slash] : string.Empty;
+        if (string.IsNullOrEmpty(owner))
+            return null;
+
+        string? description =
+            element.TryGetProperty("description", out JsonElement descEl)
+            && descEl.ValueKind == JsonValueKind.String
+                ? descEl.GetString()
+                : null;
+        string? defaultBranch =
+            element.TryGetProperty("default_branch", out JsonElement branchEl)
+            && branchEl.ValueKind == JsonValueKind.String
+                ? branchEl.GetString()
+                : null;
+        bool isPrivate =
+            element.TryGetProperty("private", out JsonElement privEl) && privEl.GetBoolean();
+        bool archived =
+            element.TryGetProperty("archived", out JsonElement archEl) && archEl.GetBoolean();
+        bool fork = element.TryGetProperty("fork", out JsonElement forkEl) && forkEl.GetBoolean();
+        string? language =
+            element.TryGetProperty("language", out JsonElement langEl)
+            && langEl.ValueKind == JsonValueKind.String
+                ? langEl.GetString()
+                : null;
+
+        return new GitHubRepoEntry(
+            id,
+            owner,
+            name,
+            fullName,
+            description,
+            defaultBranch,
+            isPrivate,
+            archived,
+            fork,
+            language
+        );
+    }
+
+    // RFC 5988 Link header: <url>; rel="next", <url>; rel="last". Pick the rel="next" url.
+    private static string? TryExtractNextLink(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Link", out IEnumerable<string>? values))
+            return null;
+        foreach (string headerValue in values)
+        {
+            foreach (string part in headerValue.Split(','))
+            {
+                string segment = part.Trim();
+                int relIdx = segment.IndexOf("rel=\"next\"", StringComparison.OrdinalIgnoreCase);
+                if (relIdx < 0)
+                    continue;
+                int lt = segment.IndexOf('<');
+                int gt = segment.IndexOf('>');
+                if (lt < 0 || gt <= lt)
+                    continue;
+                return segment.Substring(lt + 1, gt - lt - 1);
+            }
+        }
+        return null;
+    }
 
     public async Task<OAuthSigninResult> ExchangeCodeForSigninAsync(
         OAuthClientConfig config,

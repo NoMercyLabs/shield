@@ -3,7 +3,21 @@ import type { MaybeRef } from 'vue'
 import { unref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { InventoryItemResponse, PagedResponse, Source, SourceCreate, SourceDetail, SourceUpdate } from '@/types/api'
+import type {
+  BulkFromGithubRequest,
+  BulkFromGithubResponse,
+  BulkLocalFoldersRequest,
+  BulkLocalFoldersResponse,
+  FsBrowseResponse,
+  InventoryItemResponse,
+  PagedResponse,
+  SnapshotDiffResponse,
+  SnapshotListItem,
+  Source,
+  SourceCreate,
+  SourceDetail,
+  SourceUpdate,
+} from '@/types/api'
 
 export const useSourcesQuery = () => useQuery({
   queryKey: ['sources'],
@@ -46,6 +60,41 @@ export const useSnapshotItemsQuery = (
     const { data } = await api.get<PagedResponse<InventoryItemResponse>>(
       `/sources/${unref(sourceId)}/snapshots/${snapId}/items`,
       { params: { pageSize: 200 } },
+    )
+    return data
+  },
+})
+
+export const useSnapshotsListQuery = (sourceId: MaybeRef<number>) => useQuery({
+  queryKey: ['sources', sourceId, 'snapshots'],
+  queryFn: async (): Promise<SnapshotListItem[]> => {
+    const { data } = await api.get<SnapshotListItem[]>(
+      `/sources/${unref(sourceId)}/snapshots`,
+    )
+    return data
+  },
+})
+
+// Disabled until both IDs are set and differ. The diff endpoint 400s on
+// matching IDs server-side; gating here keeps the query cache from filling
+// with predictable error pairs while the operator picks dropdowns.
+export const useSnapshotDiffQuery = (
+  sourceId: MaybeRef<number>,
+  olderId: MaybeRef<string | null | undefined>,
+  newerId: MaybeRef<string | null | undefined>,
+) => useQuery({
+  queryKey: ['sources', sourceId, 'snapshots', 'diff', olderId, newerId],
+  enabled: () => {
+    const o = unref(olderId)
+    const n = unref(newerId)
+    return !!o && !!n && o !== n
+  },
+  queryFn: async (): Promise<SnapshotDiffResponse> => {
+    const o = unref(olderId)
+    const n = unref(newerId)
+    if (!o || !n) throw new Error('olderId and newerId required')
+    const { data } = await api.get<SnapshotDiffResponse>(
+      `/sources/${unref(sourceId)}/snapshots/${o}/diff/${n}`,
     )
     return data
   },
@@ -102,6 +151,43 @@ export const useToggleSourceMutation = () => {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
       queryClient.invalidateQueries({ queryKey: ['sources', id] })
+    },
+  })
+}
+
+export const useFsBrowse = (path: MaybeRef<string | null>) => useQuery({
+  queryKey: ['fs-browse', path],
+  queryFn: async (): Promise<FsBrowseResponse> => {
+    const current = unref(path)
+    const { data } = await api.get<FsBrowseResponse>('/fs/browse', {
+      params: current ? { path: current } : {},
+    })
+    return data
+  },
+})
+
+export const useBulkLocalFoldersMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: BulkLocalFoldersRequest): Promise<BulkLocalFoldersResponse> => {
+      const { data } = await api.post<BulkLocalFoldersResponse>('/sources/bulk-local-folders', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+    },
+  })
+}
+
+export const useBulkFromGithubMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: BulkFromGithubRequest): Promise<BulkFromGithubResponse> => {
+      const { data } = await api.post<BulkFromGithubResponse>('/sources/bulk-from-github', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
     },
   })
 }

@@ -21,10 +21,7 @@ public sealed class ComposerManifestEditor : IManifestEditor
 
         string source = File.ReadAllText(manifest);
         string escaped = Regex.Escape(packageName);
-        Regex pattern = new(
-            $"(\"{escaped}\"\\s*:\\s*\")([^\"]+)(\")",
-            RegexOptions.Compiled
-        );
+        Regex pattern = new($"(\"{escaped}\"\\s*:\\s*\")([^\"]+)(\")", RegexOptions.Compiled);
 
         Match match = pattern.Match(source);
         if (!match.Success)

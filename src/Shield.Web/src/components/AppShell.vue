@@ -1,7 +1,17 @@
 <script setup lang="ts">
+import { watchEffect } from 'vue'
+
 import Sidebar from '@/components/Sidebar.vue'
 import Topbar from '@/components/Topbar.vue'
 import ToastStack from '@/components/ToastStack.vue'
+import { useLiveFindings } from '@/stores/liveFindings'
+
+const live = useLiveFindings()
+
+watchEffect(() => {
+  const urgent = live.urgentCount.value
+  document.title = urgent > 0 ? `(${urgent}) Shield` : 'Shield'
+})
 </script>
 
 <template>

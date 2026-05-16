@@ -1,7 +1,7 @@
 # Shield Web UI — known issues (2026-05-16 audit)
 
 This document captures the state of `src/Shield.Web/src/` after a contract audit
-against the live API at `http://localhost:8080`. It lists what was fixed in the
+against the live API at `http://localhost:8842`. It lists what was fixed in the
 UI in this pass, and what still needs server-side work before the SPA can be
 considered feature-complete.
 
@@ -124,7 +124,7 @@ appsettings.
 
 Reproduce:
 ```bash
-curl -i http://localhost:8080/api/settings   # → HTTP/1.1 404 Not Found
+curl -i http://localhost:8842/api/settings   # → HTTP/1.1 404 Not Found
 ```
 
 ### Critical — `FindingResponse` lacks display fields
@@ -144,7 +144,7 @@ fallback, which is correct but ugly.
 
 Reproduce (after seeding any finding):
 ```bash
-curl -s http://localhost:8080/api/findings | jq '.items[0]'
+curl -s http://localhost:8842/api/findings | jq '.items[0]'
 ```
 
 ### High — enum wire format is integer-only

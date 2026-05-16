@@ -19,6 +19,7 @@ public interface IAppSettingsService
         Guid? updatedBy,
         CancellationToken ct = default
     );
+    Task<AppSettingsSnapshot> ReloadAsync(CancellationToken ct = default);
     event Action<AppSettingsSnapshot>? Changed;
 }
 
@@ -82,6 +83,8 @@ public static class AppSettingKeys
     public const string RetentionDays = "retentionDays";
     public const string RegistrationOpen = "registrationOpen";
 
+    public const string OnboardingDismissed = "onboarding.dismissed";
+
     public const string OAuthRedirectBase = "oauth.redirectBase";
     public const string GithubOAuthClientId = "oauth.github.clientId";
     public const string GithubOAuthClientSecret = "oauth.github.clientSecret";
@@ -129,6 +132,22 @@ public sealed class AppSettingsService : IAppSettingsService
         {
             _current ??= await LoadAsync(ct);
             return _current;
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    public async Task<AppSettingsSnapshot> ReloadAsync(CancellationToken ct = default)
+    {
+        await _writeLock.WaitAsync(ct);
+        try
+        {
+            AppSettingsSnapshot snapshot = await LoadAsync(ct);
+            _current = snapshot;
+            Changed?.Invoke(snapshot);
+            return snapshot;
         }
         finally
         {

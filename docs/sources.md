@@ -83,6 +83,41 @@ When the configured `path` is a git working tree, Shield reads `<path>/.git/conf
 
 Hosts eligible for detection (and the Promote action) come from `Shield:Scanners:DetectedRemoteHosts` in configuration — a comma-separated string, defaulting to `github.com,gitlab.com,bitbucket.org`. Other hosts (Gitea, Forgejo, self-hosted GitLab) are parsed but only recorded if you add them here. Promote-to-GitHub still requires `host == github.com` regardless of the whitelist.
 
+## GitHub webhook integration
+
+Shield can post a check comment on every pull request that introduces a new vulnerable dependency. The flow:
+
+1. Configure the secret. POST `/api/webhooks/secrets` (admin only) with the JSON body:
+   ```json
+   { "githubSecret": "<long random string>", "dependabotSecret": "<another long random string>" }
+   ```
+   Both fields are stored encrypted in the `AppSettings` table (`webhooks.github.secret`, `webhooks.dependabot.secret`) using the same `shield.settings` data protector as the rest of the runtime-mutable settings.
+2. In your GitHub repo (or org) **Settings -> Webhooks -> Add webhook**:
+   - **Payload URL**: `https://<your-shield>/api/webhooks/github`
+   - **Content type**: `application/json`
+   - **Secret**: the value you stored in step 1
+   - **Events**: select **Pull requests** (we listen for `opened`, `synchronize`, `reopened`)
+3. Make sure the matching `GithubRepo` source already exists in Shield (its `Name` is `<owner>/<repo>`).
+4. Open a PR. Shield runs a one-shot scan of the PR head ref, diffs against the latest tracked snapshot, matches added packages against the advisory store, and posts (or updates) a single comment marked with a `<!-- shield:pr-<number> -->` sentinel.
+
+Authentication for the comment uses the GitHub OAuth token stored via **Settings -> Integrations**; if no token is connected, Shield logs the result but skips the comment.
+
+### Dependabot consumer
+
+If your org publishes the Dependabot Alert webhook, point it at `https://<your-shield>/api/webhooks/dependabot` with the second secret. Each alert is persisted as an `Advisory` row (`Feed = Ghsa`, `ReferencesJson` tagged `DEPENDABOT`) and — when the repo matches a known `Source` — a re-match is queued so any newly-acknowledged fixes propagate to the findings list immediately. Cross-validation against OSV / GHSA happens via the existing matcher pipeline; duplicate GHSA IDs from multiple feeds upsert by `(Feed, ExternalId)`.
+
+Signature verification on both endpoints uses `X-Hub-Signature-256` (HMAC-SHA256), validated in constant time. A mismatch returns `401 Unauthorized`; a missing or malformed header also returns `401`.
+
+### Health badge
+
+Anonymous endpoint: `GET /api/badge/{owner}/{repo}.svg` returns a shields.io-style flat SVG with the open finding counts for the matching source (e.g. `shield | 1C 3H 2M 0L`). The response is cached for 5 minutes (`Cache-Control: max-age=300`) and is the only anonymous endpoint Shield exposes besides `/healthz`. Drop the URL straight into a README:
+
+```markdown
+![Shield](https://your-shield.example.com/api/badge/NoMercyLabs/shield.svg)
+```
+
+When no source matches, the badge shows `shield | not watched` in grey.
+
 ## Per-source scan interval
 
 `ScanInterval` is a .NET `TimeSpan`. Common values:

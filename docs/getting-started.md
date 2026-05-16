@@ -20,7 +20,7 @@ docker run -d --name shield \
   ghcr.io/nomercylabs/shield:latest
 ```
 
-Open `http://localhost:8080`. Single-user mode is the default — there's no login screen, you land directly on the dashboard.
+Open `http://localhost:8842`. Single-user mode is the default — there's no login screen, you land directly on the dashboard.
 
 ### Environment variables
 
