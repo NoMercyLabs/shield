@@ -14,7 +14,7 @@ WORKDIR /work/src/Shield.Web
 RUN npm run build
 
 # ---------- Stage 2: .NET build + publish ----------
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS dotnet-build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS dotnet-build
 WORKDIR /src
 COPY global.json Directory.Build.props Directory.Packages.props Shield.sln ./
 COPY src/ ./src/
