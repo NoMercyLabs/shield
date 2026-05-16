@@ -22,6 +22,52 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
+    public async Task List_returns_enriched_finding_with_package_and_advisory_fields()
+    {
+        string fixtureDir = Path.Combine(
+            Path.GetTempPath(),
+            "shield-enrich-list-" + Guid.NewGuid().ToString("n")
+        );
+        Directory.CreateDirectory(fixtureDir);
+        try
+        {
+            (Guid findingId, _) = await SeedFixScenarioAsync(
+                fixtureDir,
+                ecosystem: Ecosystem.Npm,
+                packageName: "lodash",
+                installedVersion: "4.17.20",
+                rangesJson: "[{\"events\":[{\"introduced\":\"0\"},{\"fixed\":\"4.17.21\"}]}]",
+                sourceType: SourceType.LocalFolder
+            );
+
+            HttpClient client = _factory.CreateClient();
+            HttpResponseMessage response = await client.GetAsync("/api/findings?pageSize=200");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+            page.Should().NotBeNull();
+            FindingResponse? item = page!.Items.FirstOrDefault(entry => entry.Id == findingId);
+            item.Should().NotBeNull();
+            item!.PackageName.Should().Be("lodash");
+            item.PackageVersion.Should().Be("4.17.20");
+            item.Ecosystem.Should().Be(Ecosystem.Npm);
+            item.AdvisorySummary.Should().Be("synthetic apply-fix advisory");
+            item.AdvisoryExternalId.Should().StartWith("TEST-APPLY-FIX-");
+            item.SourceName.Should().StartWith("fix-fixture-");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(fixtureDir, recursive: true);
+            }
+            catch
+            { /* best-effort */
+            }
+        }
+    }
+
+    [Fact]
     public async Task Ack_flips_finding_state_to_acked()
     {
         Guid id = await SeedFindingAsync();
@@ -38,7 +84,10 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task Apply_fix_local_folder_bumps_package_json()
     {
-        string fixtureDir = Path.Combine(Path.GetTempPath(), "shield-fix-test-" + Guid.NewGuid().ToString("n"));
+        string fixtureDir = Path.Combine(
+            Path.GetTempPath(),
+            "shield-fix-test-" + Guid.NewGuid().ToString("n")
+        );
         Directory.CreateDirectory(fixtureDir);
         string manifest = Path.Combine(fixtureDir, "package.json");
         await File.WriteAllTextAsync(
@@ -76,20 +125,30 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             // Detail endpoint now reports Acked + carries the bump note.
             HttpResponseMessage detail = await client.GetAsync($"/api/findings/{findingId}");
             detail.StatusCode.Should().Be(HttpStatusCode.OK);
-            FindingDetailResponse? after = await detail.Content.ReadFromJsonAsync<FindingDetailResponse>();
+            FindingDetailResponse? after =
+                await detail.Content.ReadFromJsonAsync<FindingDetailResponse>();
             after!.Finding.State.Should().Be(FindingState.Acked);
             after.Finding.Notes.Should().Contain("4.17.21");
         }
         finally
         {
-            try { Directory.Delete(fixtureDir, recursive: true); } catch { /* best-effort */ }
+            try
+            {
+                Directory.Delete(fixtureDir, recursive: true);
+            }
+            catch
+            { /* best-effort */
+            }
         }
     }
 
     [Fact]
     public async Task Get_finding_returns_fix_suggestion_when_advisory_has_known_fix()
     {
-        string fixtureDir = Path.Combine(Path.GetTempPath(), "shield-fix-detail-" + Guid.NewGuid().ToString("n"));
+        string fixtureDir = Path.Combine(
+            Path.GetTempPath(),
+            "shield-fix-detail-" + Guid.NewGuid().ToString("n")
+        );
         Directory.CreateDirectory(fixtureDir);
         try
         {
@@ -106,7 +165,8 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             HttpResponseMessage detail = await client.GetAsync($"/api/findings/{findingId}");
             detail.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            FindingDetailResponse? body = await detail.Content.ReadFromJsonAsync<FindingDetailResponse>();
+            FindingDetailResponse? body =
+                await detail.Content.ReadFromJsonAsync<FindingDetailResponse>();
             body.Should().NotBeNull();
             body!.FixSuggestion.Should().NotBeNull();
             body.FixSuggestion!.SuggestedVersion.Should().Be("4.17.21");
@@ -115,14 +175,23 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         }
         finally
         {
-            try { Directory.Delete(fixtureDir, recursive: true); } catch { /* best-effort */ }
+            try
+            {
+                Directory.Delete(fixtureDir, recursive: true);
+            }
+            catch
+            { /* best-effort */
+            }
         }
     }
 
     [Fact]
     public async Task Apply_fix_pr_strategy_rejected_for_local_folder()
     {
-        string fixtureDir = Path.Combine(Path.GetTempPath(), "shield-fix-reject-" + Guid.NewGuid().ToString("n"));
+        string fixtureDir = Path.Combine(
+            Path.GetTempPath(),
+            "shield-fix-reject-" + Guid.NewGuid().ToString("n")
+        );
         Directory.CreateDirectory(fixtureDir);
         try
         {
@@ -147,7 +216,13 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         }
         finally
         {
-            try { Directory.Delete(fixtureDir, recursive: true); } catch { /* best-effort */ }
+            try
+            {
+                Directory.Delete(fixtureDir, recursive: true);
+            }
+            catch
+            { /* best-effort */
+            }
         }
     }
 
@@ -178,7 +253,10 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         {
             // Some builds keep registration closed by default; fall back to using the seeded
             // admin and asserting the endpoint is reachable as Admin (smoke test of the gate).
-            await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin-applyfix", "P@ssword1"));
+            await client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest("admin-applyfix", "P@ssword1")
+            );
             HttpResponseMessage notFound = await client.PostAsJsonAsync(
                 $"/api/findings/{Guid.NewGuid()}/apply-fix",
                 new ApplyFixRequest("auto")
@@ -234,9 +312,10 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
         FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
 
-        string configJson = sourceType == SourceType.LocalFolder
-            ? JsonSerializer.Serialize(new { path = fixtureDir })
-            : JsonSerializer.Serialize(new { owner = "shield-test", repo = "fixture" });
+        string configJson =
+            sourceType == SourceType.LocalFolder
+                ? JsonSerializer.Serialize(new { path = fixtureDir })
+                : JsonSerializer.Serialize(new { owner = "shield-test", repo = "fixture" });
 
         Source source = new()
         {
@@ -314,12 +393,14 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration((_, config) =>
-            {
-                config.AddInMemoryCollection(
-                    new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                );
-            });
+            builder.ConfigureAppConfiguration(
+                (_, config) =>
+                {
+                    config.AddInMemoryCollection(
+                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
+                    );
+                }
+            );
         }
     }
 }

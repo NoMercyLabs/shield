@@ -5,6 +5,7 @@ namespace Shield.Api.Contracts;
 public sealed record FindingResponse(
     Guid Id,
     int SourceId,
+    string? SourceName,
     int InventoryItemId,
     Guid AdvisoryRefId,
     Severity Severity,
@@ -12,13 +13,27 @@ public sealed record FindingResponse(
     DateTime LastSeenAt,
     FindingState State,
     string DedupKey,
-    string? Notes
+    string? Notes,
+    string? PackageName,
+    string? PackageVersion,
+    Ecosystem? Ecosystem,
+    string? AdvisoryExternalId,
+    string? AdvisorySummary
 )
 {
-    public static FindingResponse From(Finding finding) =>
+    public static FindingResponse From(
+        Finding finding,
+        string? sourceName = null,
+        string? packageName = null,
+        string? packageVersion = null,
+        Ecosystem? ecosystem = null,
+        string? advisoryExternalId = null,
+        string? advisorySummary = null
+    ) =>
         new(
             finding.Id,
             finding.SourceId,
+            sourceName,
             finding.InventoryItemId,
             finding.AdvisoryRefId,
             finding.Severity,
@@ -26,7 +41,12 @@ public sealed record FindingResponse(
             finding.LastSeenAt,
             finding.State,
             finding.DedupKey,
-            finding.Notes
+            finding.Notes,
+            packageName,
+            packageVersion,
+            ecosystem,
+            advisoryExternalId,
+            advisorySummary
         );
 }
 

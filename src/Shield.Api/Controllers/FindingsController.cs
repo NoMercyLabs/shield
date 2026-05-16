@@ -76,9 +76,53 @@ public sealed class FindingsController : ControllerBase
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return Ok(
-            new FindingsPage(items.Select(FindingResponse.From).ToList(), total, page, pageSize)
-        );
+        List<FindingResponse> enriched = await EnrichAsync(items, ct);
+        return Ok(new FindingsPage(enriched, total, page, pageSize));
+    }
+
+    private async Task<List<FindingResponse>> EnrichAsync(
+        IReadOnlyList<Finding> findings,
+        CancellationToken ct
+    )
+    {
+        if (findings.Count == 0)
+            return new();
+
+        HashSet<int> sourceIds = findings.Select(finding => finding.SourceId).ToHashSet();
+        HashSet<int> itemIds = findings.Select(finding => finding.InventoryItemId).ToHashSet();
+        HashSet<Guid> advisoryIds = findings.Select(finding => finding.AdvisoryRefId).ToHashSet();
+
+        Dictionary<int, string> sourceNames = await _shieldDb
+            .Sources.Where(source => sourceIds.Contains(source.Id))
+            .ToDictionaryAsync(source => source.Id, source => source.Name, ct);
+
+        Dictionary<int, InventoryItem> items = await _shieldDb
+            .InventoryItems.Where(item => itemIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, ct);
+
+        Dictionary<Guid, Advisory> advisories = await _feedsDb
+            .Advisories.Where(advisory => advisoryIds.Contains(advisory.Id))
+            .ToDictionaryAsync(advisory => advisory.Id, ct);
+
+        List<FindingResponse> result = new(findings.Count);
+        foreach (Finding finding in findings)
+        {
+            items.TryGetValue(finding.InventoryItemId, out InventoryItem? item);
+            advisories.TryGetValue(finding.AdvisoryRefId, out Advisory? advisory);
+            sourceNames.TryGetValue(finding.SourceId, out string? sourceName);
+            result.Add(
+                FindingResponse.From(
+                    finding,
+                    sourceName: sourceName,
+                    packageName: item?.Name ?? advisory?.PackageName,
+                    packageVersion: item?.Version,
+                    ecosystem: item?.Ecosystem ?? advisory?.Ecosystem,
+                    advisoryExternalId: advisory?.ExternalId,
+                    advisorySummary: advisory?.Summary
+                )
+            );
+        }
+        return result;
     }
 
     [HttpGet("{id:guid}")]
@@ -96,10 +140,11 @@ public sealed class FindingsController : ControllerBase
             entry => entry.Id == finding.InventoryItemId,
             ct
         );
-        SourceType? sourceType = await _shieldDb
-            .Sources.Where(source => source.Id == finding.SourceId)
-            .Select(source => (SourceType?)source.Type)
-            .FirstOrDefaultAsync(ct);
+        Source? sourceRecord = await _shieldDb.Sources.FirstOrDefaultAsync(
+            source => source.Id == finding.SourceId,
+            ct
+        );
+        SourceType? sourceType = sourceRecord?.Type;
 
         FixSuggestionResponse? fix = null;
         if (advisory is not null && item is not null)
@@ -114,15 +159,17 @@ public sealed class FindingsController : ControllerBase
                 );
         }
 
-        return Ok(
-            new FindingDetailResponse(
-                FindingResponse.From(finding),
-                advisory,
-                item,
-                sourceType,
-                fix
-            )
+        FindingResponse findingResponse = FindingResponse.From(
+            finding,
+            sourceName: sourceRecord?.Name,
+            packageName: item?.Name ?? advisory?.PackageName,
+            packageVersion: item?.Version,
+            ecosystem: item?.Ecosystem ?? advisory?.Ecosystem,
+            advisoryExternalId: advisory?.ExternalId,
+            advisorySummary: advisory?.Summary
         );
+
+        return Ok(new FindingDetailResponse(findingResponse, advisory, item, sourceType, fix));
     }
 
     // POST /api/findings/{id}/apply-fix — Admin only. Body: { strategy: "auto" | "pr" }.

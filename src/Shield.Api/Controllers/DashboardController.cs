@@ -15,10 +15,12 @@ public sealed class DashboardController : ControllerBase
     private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(24);
 
     private readonly ShieldDbContext _db;
+    private readonly FeedsDbContext _feedsDb;
 
-    public DashboardController(ShieldDbContext db)
+    public DashboardController(ShieldDbContext db, FeedsDbContext feedsDb)
     {
         _db = db;
+        _feedsDb = feedsDb;
     }
 
     [HttpGet]
@@ -49,13 +51,60 @@ public sealed class DashboardController : ControllerBase
             .Take(5)
             .ToListAsync(ct);
 
+        List<FindingResponse> recentEnriched = await EnrichAsync(recent, ct);
+
         return Ok(
             new DashboardResponse(
                 counts,
                 SourcesHealthy: healthy,
                 SourcesStale: stale,
-                RecentFindings: recent.Select(FindingResponse.From).ToList()
+                RecentFindings: recentEnriched
             )
         );
+    }
+
+    private async Task<List<FindingResponse>> EnrichAsync(
+        IReadOnlyList<Finding> findings,
+        CancellationToken ct
+    )
+    {
+        if (findings.Count == 0)
+            return new();
+
+        HashSet<int> sourceIds = findings.Select(finding => finding.SourceId).ToHashSet();
+        HashSet<int> itemIds = findings.Select(finding => finding.InventoryItemId).ToHashSet();
+        HashSet<Guid> advisoryIds = findings.Select(finding => finding.AdvisoryRefId).ToHashSet();
+
+        Dictionary<int, string> sourceNames = await _db
+            .Sources.Where(source => sourceIds.Contains(source.Id))
+            .ToDictionaryAsync(source => source.Id, source => source.Name, ct);
+
+        Dictionary<int, InventoryItem> items = await _db
+            .InventoryItems.Where(item => itemIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, ct);
+
+        Dictionary<Guid, Advisory> advisories = await _feedsDb
+            .Advisories.Where(advisory => advisoryIds.Contains(advisory.Id))
+            .ToDictionaryAsync(advisory => advisory.Id, ct);
+
+        List<FindingResponse> result = new(findings.Count);
+        foreach (Finding finding in findings)
+        {
+            items.TryGetValue(finding.InventoryItemId, out InventoryItem? item);
+            advisories.TryGetValue(finding.AdvisoryRefId, out Advisory? advisory);
+            sourceNames.TryGetValue(finding.SourceId, out string? sourceName);
+            result.Add(
+                FindingResponse.From(
+                    finding,
+                    sourceName: sourceName,
+                    packageName: item?.Name ?? advisory?.PackageName,
+                    packageVersion: item?.Version,
+                    ecosystem: item?.Ecosystem ?? advisory?.Ecosystem,
+                    advisoryExternalId: advisory?.ExternalId,
+                    advisorySummary: advisory?.Summary
+                )
+            );
+        }
+        return result;
     }
 }

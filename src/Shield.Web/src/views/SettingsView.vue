@@ -26,7 +26,6 @@ const oidcClientSecret = ref('')
 const oidcSecretMasked = ref<string | null>(null)
 const alertSeverityFloor = ref<SeverityName>('Low')
 const retentionDays = ref(90)
-const restartKeys = ref<string[]>([])
 
 watch(data, (next) => {
   if (!next)
@@ -44,7 +43,7 @@ watch(data, (next) => {
 
 async function onSave(): Promise<void> {
   try {
-    const result = await update.mutateAsync({
+    await update.mutateAsync({
       singleUserMode: singleUserMode.value,
       openApiEnabled: openApiEnabled.value,
       oidcEnabled: oidcEnabled.value,
@@ -54,7 +53,6 @@ async function onSave(): Promise<void> {
       alertSeverityFloor: Severity[alertSeverityFloor.value],
       retentionDays: retentionDays.value,
     })
-    restartKeys.value = result.requiresRestart ? result.restartKeys : []
     oidcClientSecret.value = ''
     push('success', 'Settings saved.')
   }
@@ -99,27 +97,17 @@ async function onTestOidc(): Promise<void> {
     <p v-if="isLoading" class="text-sm text-slate-400">Loading…</p>
     <p v-else-if="isError" class="text-sm text-red-300">Failed to load settings.</p>
 
-    <div v-if="restartKeys.length" class="rounded-lg border border-amber-700 bg-amber-950 p-3 text-sm text-amber-200">
-      Restart required for: <span class="font-mono">{{ restartKeys.join(', ') }}</span>
-    </div>
-
     <template v-if="data">
       <section class="space-y-3 rounded-lg border border-slate-800 bg-slate-900 p-4">
         <h2 class="text-sm font-medium text-slate-300">General</h2>
 
         <label class="flex items-center justify-between gap-3 text-sm text-slate-200">
-          <span>
-            Single-user mode
-            <span class="ml-2 text-xs text-amber-300">Requires restart</span>
-          </span>
+          <span>Single-user mode</span>
           <input v-model="singleUserMode" type="checkbox" class="h-4 w-4 accent-blue-500" />
         </label>
 
         <label class="flex items-center justify-between gap-3 text-sm text-slate-200">
-          <span>
-            OpenAPI / Swagger enabled
-            <span class="ml-2 text-xs text-amber-300">Requires restart</span>
-          </span>
+          <span>OpenAPI / Swagger enabled</span>
           <input v-model="openApiEnabled" type="checkbox" class="h-4 w-4 accent-blue-500" />
         </label>
 
@@ -161,6 +149,10 @@ async function onTestOidc(): Promise<void> {
           <input
             v-model="oidcIssuer"
             type="url"
+            name="shield-oidc-issuer"
+            autocomplete="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
             placeholder="https://issuer.example.com/realms/shield"
             class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
@@ -170,6 +162,10 @@ async function onTestOidc(): Promise<void> {
           <span class="text-sm text-slate-300">Client ID</span>
           <input
             v-model="oidcClientId"
+            name="shield-oidc-client-id"
+            autocomplete="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
             class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
         </label>
@@ -184,6 +180,10 @@ async function onTestOidc(): Promise<void> {
           <input
             v-model="oidcClientSecret"
             type="password"
+            name="shield-oidc-client-secret"
+            autocomplete="new-password"
+            data-1p-ignore="true"
+            data-lpignore="true"
             placeholder="Leave blank to keep current"
             class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           />
