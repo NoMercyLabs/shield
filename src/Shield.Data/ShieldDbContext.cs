@@ -16,6 +16,7 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
     public DbSet<AlertChannel> AlertChannels => Set<AlertChannel>();
     public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
     public DbSet<AgentToken> AgentTokens => Set<AgentToken>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,5 +28,6 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
         modelBuilder.ApplyConfiguration(new Configurations.AlertChannelConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.AlertEventConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.AgentTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.AppSettingConfiguration());
     }
 }

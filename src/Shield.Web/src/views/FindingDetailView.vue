@@ -9,7 +9,8 @@ import {
   useSuppressFindingMutation,
 } from '@/queries/findings'
 import { useToasts } from '@/stores/toast'
-import { formatDate } from '@/lib/format'
+import { formatDate, parseJsonArray, severityName } from '@/lib/format'
+import { EcosystemNames, FindingStateNames } from '@/types/api'
 
 const props = defineProps<{ id: string }>()
 const id = computed(() => props.id)
@@ -21,6 +22,17 @@ const resolve = useResolveFindingMutation()
 const { push } = useToasts()
 
 const suppressReason = ref('')
+
+const finding = computed(() => data.value?.finding)
+const advisory = computed(() => data.value?.advisory)
+const item = computed(() => data.value?.item)
+
+const references = computed(() => parseJsonArray<string>(advisory.value?.referencesJson))
+const heading = computed(() => {
+  if (item.value) return `${item.value.name}@${item.value.version}`
+  if (advisory.value) return advisory.value.packageName
+  return finding.value?.dedupKey ?? '—'
+})
 
 async function run(verb: 'ack' | 'suppress' | 'resolve'): Promise<void> {
   try {
@@ -41,39 +53,47 @@ async function run(verb: 'ack' | 'suppress' | 'resolve'): Promise<void> {
     <p v-if="isLoading" class="text-sm text-slate-400">Loading…</p>
     <p v-else-if="isError" class="text-sm text-red-300">Failed to load finding.</p>
 
-    <template v-else-if="data">
+    <template v-else-if="finding">
       <header class="flex items-start justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-semibold">
-            {{ data.packageName }}@{{ data.packageVersion }}
-          </h1>
-          <p class="text-sm text-slate-400">{{ data.ecosystem }} · {{ data.sourceName }}</p>
+          <h1 class="text-2xl font-semibold">{{ heading }}</h1>
+          <p class="text-sm text-slate-400">
+            <span v-if="item">{{ EcosystemNames[item.ecosystem] }}</span>
+            <span v-else-if="advisory">{{ EcosystemNames[advisory.ecosystem] }}</span>
+            <span v-else>Unknown ecosystem</span>
+            · source #{{ finding.sourceId }}
+          </p>
         </div>
-        <SeverityBadge :severity="data.severity" />
+        <SeverityBadge :severity="finding.severity" />
       </header>
 
-      <section class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+      <section v-if="advisory" class="rounded-lg border border-slate-800 bg-slate-900 p-4">
         <h2 class="text-sm font-medium text-slate-300">Advisory</h2>
-        <p class="mt-2 text-sm text-slate-200">{{ data.advisory.summary }}</p>
+        <p class="mt-2 text-sm text-slate-200">{{ advisory.summary }}</p>
         <p class="mt-2 text-xs text-slate-500">
-          {{ data.advisory.feed }} · {{ data.advisory.externalId }} · CVSS {{ data.advisory.cvss ?? '—' }}
+          {{ advisory.externalId }} · CVSS {{ advisory.cvss ?? '—' }} · {{ severityName(advisory.severity) }}
         </p>
-        <ul v-if="data.advisory.references.length" class="mt-3 list-disc space-y-1 pl-5 text-sm">
-          <li v-for="ref in data.advisory.references" :key="ref">
+        <ul v-if="references.length" class="mt-3 list-disc space-y-1 pl-5 text-sm">
+          <li v-for="ref in references" :key="ref">
             <a :href="ref" class="text-blue-400 hover:underline" target="_blank" rel="noopener">{{ ref }}</a>
           </li>
         </ul>
+      </section>
+      <section v-else class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm text-slate-500">
+        Advisory record not available.
       </section>
 
       <section class="rounded-lg border border-slate-800 bg-slate-900 p-4">
         <h2 class="text-sm font-medium text-slate-300">Timeline</h2>
         <dl class="mt-2 grid grid-cols-2 gap-2 text-sm">
           <dt class="text-slate-500">First seen</dt>
-          <dd>{{ formatDate(data.firstSeenAt) }}</dd>
+          <dd>{{ formatDate(finding.firstSeenAt) }}</dd>
           <dt class="text-slate-500">Last seen</dt>
-          <dd>{{ formatDate(data.lastSeenAt) }}</dd>
+          <dd>{{ formatDate(finding.lastSeenAt) }}</dd>
           <dt class="text-slate-500">State</dt>
-          <dd>{{ data.state }}</dd>
+          <dd>{{ FindingStateNames[finding.state] }}</dd>
+          <dt v-if="finding.notes" class="text-slate-500">Notes</dt>
+          <dd v-if="finding.notes" class="whitespace-pre-wrap">{{ finding.notes }}</dd>
         </dl>
       </section>
 

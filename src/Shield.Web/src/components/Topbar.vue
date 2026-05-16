@@ -16,12 +16,12 @@ async function onLogout(): Promise<void> {
 <template>
   <header class="flex items-center justify-between px-4">
     <div class="text-sm text-slate-400">
-      <span v-if="user?.singleUser" class="rounded bg-slate-800 px-2 py-1 text-xs uppercase tracking-wide">Single-user mode</span>
+      <span v-if="user?.singleUserMode" class="rounded bg-slate-800 px-2 py-1 text-xs uppercase tracking-wide">Single-user mode</span>
     </div>
     <div class="flex items-center gap-3">
-      <span v-if="user" class="text-sm text-slate-300">{{ user.username }}</span>
+      <span v-if="user?.username" class="text-sm text-slate-300">{{ user.username }}</span>
       <button
-        v-if="user && !user.singleUser"
+        v-if="user && !user.singleUserMode"
         type="button"
         class="flex items-center gap-1 rounded px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
         @click="onLogout"

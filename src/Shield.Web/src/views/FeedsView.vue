@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-vue-next'
 import { useFeedsQuery, useRefreshFeedMutation } from '@/queries/feeds'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
+import { FeedNames } from '@/types/api'
 import type { Feed } from '@/types/api'
 
 const { data, isLoading, isError } = useFeedsQuery()
@@ -13,10 +14,10 @@ const { push } = useToasts()
 async function onRefresh(feed: Feed): Promise<void> {
   try {
     await refresh.mutateAsync(feed)
-    push('success', `${feed} refresh queued.`)
+    push('success', `${FeedNames[feed]} refresh queued.`)
   }
   catch {
-    push('error', `Failed to refresh ${feed}.`)
+    push('error', `Failed to refresh ${FeedNames[feed]}.`)
   }
 }
 </script>
@@ -41,17 +42,19 @@ async function onRefresh(feed: Feed): Promise<void> {
         </thead>
         <tbody class="divide-y divide-slate-800">
           <tr v-for="status in data" :key="status.feed" class="hover:bg-slate-800/50">
-            <td class="px-4 py-2 font-medium">{{ status.feed }}</td>
+            <td class="px-4 py-2 font-medium">{{ FeedNames[status.feed] }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.lastSuccessAt) }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.nextRunAt) }}</td>
             <td class="px-4 py-2">
               <span v-if="status.lastError" class="text-red-300" :title="status.lastError">Error</span>
+              <span v-else-if="!status.registered" class="text-slate-500">Not registered</span>
               <span v-else class="text-green-300">OK</span>
             </td>
             <td class="px-4 py-2 text-right">
               <button
                 type="button"
-                class="inline-flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
+                class="inline-flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+                :disabled="refresh.isPending.value || !status.registered"
                 @click="onRefresh(status.feed)"
               >
                 <RefreshCw class="h-3 w-3" />

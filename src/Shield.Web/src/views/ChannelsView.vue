@@ -4,7 +4,8 @@ import { Plus, Send } from 'lucide-vue-next'
 
 import { useChannelsQuery, useCreateChannelMutation, useTestSendMutation } from '@/queries/channels'
 import { useToasts } from '@/stores/toast'
-import type { Severity } from '@/types/api'
+import { severityName } from '@/lib/format'
+import { ChannelType, ChannelTypeNames, Severity } from '@/types/api'
 
 const { data, isLoading, isError } = useChannelsQuery()
 const create = useCreateChannelMutation()
@@ -14,12 +15,12 @@ const { push } = useToasts()
 const showForm = ref(false)
 const name = ref('')
 const webhookUrl = ref('')
-const minSeverity = ref<Severity>('High')
+const minSeverity = ref<Severity>(Severity.High)
 
 async function onSubmit(): Promise<void> {
   try {
     await create.mutateAsync({
-      type: 'Discord',
+      type: ChannelType.Discord,
       name: name.value,
       minSeverity: minSeverity.value,
       enabled: true,
@@ -86,13 +87,13 @@ async function onTest(id: string): Promise<void> {
       <label class="block">
         <span class="text-sm text-slate-300">Minimum severity</span>
         <select
-          v-model="minSeverity"
+          v-model.number="minSeverity"
           class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         >
-          <option value="Critical">Critical</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
+          <option :value="Severity.Critical">Critical</option>
+          <option :value="Severity.High">High</option>
+          <option :value="Severity.Medium">Medium</option>
+          <option :value="Severity.Low">Low</option>
         </select>
       </label>
       <button
@@ -116,7 +117,7 @@ async function onTest(id: string): Promise<void> {
         <div>
           <p class="text-sm font-medium">{{ channel.name }}</p>
           <p class="text-xs text-slate-500">
-            {{ channel.type }} · min {{ channel.minSeverity }} · {{ channel.enabled ? 'enabled' : 'disabled' }}
+            {{ ChannelTypeNames[channel.type] }} · min {{ severityName(channel.minSeverity) }} · {{ channel.enabled ? 'enabled' : 'disabled' }}
           </p>
         </div>
         <button

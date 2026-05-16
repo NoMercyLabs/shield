@@ -3,20 +3,20 @@ import type { MaybeRef } from 'vue'
 import { unref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { Finding, FindingFilter, PagedResult } from '@/types/api'
+import type { Finding, FindingDetail, FindingFilter, FindingsPage } from '@/types/api'
 
 export const useFindingsQuery = (filter: MaybeRef<FindingFilter>) => useQuery({
   queryKey: ['findings', filter],
-  queryFn: async (): Promise<PagedResult<Finding>> => {
-    const { data } = await api.get<PagedResult<Finding>>('/findings', { params: unref(filter) })
+  queryFn: async (): Promise<FindingsPage> => {
+    const { data } = await api.get<FindingsPage>('/findings', { params: unref(filter) })
     return data
   },
 })
 
 export const useFindingQuery = (id: MaybeRef<string>) => useQuery({
   queryKey: ['findings', id],
-  queryFn: async (): Promise<Finding> => {
-    const { data } = await api.get<Finding>(`/findings/${unref(id)}`)
+  queryFn: async (): Promise<FindingDetail> => {
+    const { data } = await api.get<FindingDetail>(`/findings/${unref(id)}`)
     return data
   },
 })
@@ -30,7 +30,8 @@ const transition = (verb: 'ack' | 'suppress' | 'resolve') => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, reason }: TransitionPayload): Promise<Finding> => {
-      const { data } = await api.post<Finding>(`/findings/${id}/${verb}`, reason ? { reason } : {})
+      const body = verb === 'suppress' ? { reason: reason ?? '' } : {}
+      const { data } = await api.post<Finding>(`/findings/${id}/${verb}`, body)
       return data
     },
     onSuccess: (_data, { id }) => {

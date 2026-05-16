@@ -1,6 +1,6 @@
 using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -85,12 +85,10 @@ string jwtKey =
     );
 SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(jwtKey));
 
+// AddIdentity already registered Identity.Application as the default cookie scheme; layer
+// JWT bearer alongside so headless API clients can authenticate without a cookie.
 builder
-    .Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    })
+    .Services.AddAuthentication()
     .AddJwtBearer(
         JwtBearerDefaults.AuthenticationScheme,
         options =>
@@ -104,6 +102,10 @@ builder
                 ClockSkew = TimeSpan.FromMinutes(2),
             };
         }
+    )
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, SingleUserAuthHandler>(
+        SingleUserAuthHandler.SchemeName,
+        configureOptions: null
     );
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -136,9 +138,23 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Default policy accepts the Identity cookie (SPA), a JWT bearer (API clients), or the
+    // SingleUser convenience scheme (solo operators). The auth handler decides whether each
+    // request matches its scheme; SingleUser only succeeds when Shield:SingleUser=true and
+    // no real cookie is present.
+    options.DefaultPolicy = new AuthorizationPolicyBuilder(
+            IdentityConstants.ApplicationScheme,
+            JwtBearerDefaults.AuthenticationScheme,
+            SingleUserAuthHandler.SchemeName
+        )
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 
 bool enableOpenApi =
     builder.Environment.IsDevelopment() || configuration.GetValue("Shield:OpenApi:Enabled", false);
@@ -162,6 +178,9 @@ using (IServiceScope scope = app.Services.CreateScope())
     InboxDbContext inboxDb = scope.ServiceProvider.GetRequiredService<InboxDbContext>();
     await inboxDb.Database.EnsureCreatedAsync();
 }
+
+// Seed Admin/Viewer roles and (in single-user mode) the synthetic operator account.
+await IdentitySeeder.SeedAsync(app.Services);
 
 if (enableOpenApi)
 {
@@ -191,12 +210,6 @@ app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = spaFileProvider });
 app.UseStaticFiles(new StaticFileOptions { FileProvider = spaFileProvider });
 
 app.UseRouting();
-
-bool singleUser = configuration.GetValue("Shield:SingleUser", false);
-if (singleUser)
-{
-    app.UseMiddleware<SingleUserMiddleware>();
-}
 
 app.UseAuthentication();
 app.UseAuthorization();

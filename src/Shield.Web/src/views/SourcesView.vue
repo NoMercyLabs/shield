@@ -6,7 +6,7 @@ import { Plus } from 'lucide-vue-next'
 import { useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
-import type { SourceType } from '@/types/api'
+import { SourceType, SourceTypeNames } from '@/types/api'
 
 const { data, isLoading, isError } = useSourcesQuery()
 const create = useCreateSourceMutation()
@@ -14,16 +14,24 @@ const { push } = useToasts()
 
 const showForm = ref(false)
 const name = ref('')
-const type = ref<SourceType>('GithubRepo')
+const type = ref<SourceType>(SourceType.GithubRepo)
 const configJson = ref('{}')
+const scanInterval = ref('01:00:00')
 
 async function onSubmit(): Promise<void> {
   try {
-    await create.mutateAsync({ name: name.value, type: type.value, configJson: configJson.value })
+    await create.mutateAsync({
+      name: name.value,
+      type: type.value,
+      configJson: configJson.value,
+      scanInterval: scanInterval.value,
+      enabled: true,
+    })
     push('success', `Source "${name.value}" added.`)
     showForm.value = false
     name.value = ''
     configJson.value = '{}'
+    scanInterval.value = '01:00:00'
   }
   catch {
     push('error', 'Failed to add source.')
@@ -61,13 +69,23 @@ async function onSubmit(): Promise<void> {
       <label class="block">
         <span class="text-sm text-slate-300">Type</span>
         <select
-          v-model="type"
+          v-model.number="type"
           class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         >
-          <option value="GithubRepo">GitHub repo</option>
-          <option value="LocalFolder">Local folder</option>
-          <option value="LinuxHost">Linux host (Phase 2)</option>
+          <option :value="SourceType.GithubRepo">GitHub repo</option>
+          <option :value="SourceType.LocalFolder">Local folder</option>
+          <option :value="SourceType.LinuxHost">Linux host (Phase 2)</option>
         </select>
+      </label>
+      <label class="block">
+        <span class="text-sm text-slate-300">Scan interval (hh:mm:ss)</span>
+        <input
+          v-model="scanInterval"
+          required
+          pattern="^\d+:\d{2}:\d{2}$"
+          placeholder="01:00:00"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
+        />
       </label>
       <label class="block">
         <span class="text-sm text-slate-300">Config (JSON)</span>
@@ -106,7 +124,7 @@ async function onSubmit(): Promise<void> {
                 {{ source.name }}
               </RouterLink>
             </td>
-            <td class="px-4 py-2 text-slate-400">{{ source.type }}</td>
+            <td class="px-4 py-2 text-slate-400">{{ SourceTypeNames[source.type] }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(source.lastScannedAt) }}</td>
             <td class="px-4 py-2">
               <span v-if="source.lastError" class="text-red-300">Error</span>

@@ -1,1 +1,0 @@
-import{s as r}from"./format-ODBvpHV_.js";import{k as a,f as n,w as o,P as i,b as c,z as m}from"./index-Bx3hA7W1.js";const u=a({__name:"SeverityBadge",props:{severity:{}},setup(e){const s=e,t=c(()=>r(s.severity));return(p,l)=>(m(),n("span",{class:o(["inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium",t.value])},i(e.severity),3))}});export{u as _};

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Persistence;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace Shield.Api.Tests;
 
-public sealed class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly string _testRoot;
     private readonly string _shieldDb;
@@ -58,9 +59,20 @@ public sealed class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsync
             RemoveDbContext<FeedsDbContext>(services);
             RemoveDbContext<InboxDbContext>(services);
 
-            services.AddDbContext<ShieldDbContext>(options => options.UseSqlite(shieldConn));
-            services.AddDbContext<FeedsDbContext>(options => options.UseSqlite(feedsConn));
-            services.AddDbContext<InboxDbContext>(options => options.UseSqlite(shieldConn));
+            // Suppress PendingModelChangesWarning — test DBs are created from scratch on every
+            // run so snapshot/model drift in dev migrations is irrelevant here.
+            services.AddDbContext<ShieldDbContext>(options =>
+                options.UseSqlite(shieldConn)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
+            );
+            services.AddDbContext<FeedsDbContext>(options =>
+                options.UseSqlite(feedsConn)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
+            );
+            services.AddDbContext<InboxDbContext>(options =>
+                options.UseSqlite(shieldConn)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
+            );
 
             // Swap LocalFolder scanner for FakeScanner deterministically.
             ServiceDescriptor[] scannerDescriptors = services

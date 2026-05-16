@@ -1,0 +1,16 @@
+{
+  "Shield.Alerter, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Alerter",
+  "Shield.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Api",
+  "Shield.Channels, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Channels",
+  "Shield.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Core",
+  "Shield.Data, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Data",
+  "Shield.Feeds.Ghsa, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Feeds.Ghsa",
+  "Shield.Feeds.NpmRegistry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Feeds.NpmRegistry",
+  "Shield.Feeds.Osv, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Feeds.Osv",
+  "Shield.Matcher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Matcher",
+  "Shield.Parsers.Composer, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Parsers.Composer",
+  "Shield.Parsers.Gradle, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Parsers.Gradle",
+  "Shield.Parsers.Npm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Parsers.Npm",
+  "Shield.Parsers.Nuget, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Parsers.Nuget",
+  "Shield.Scanners, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "C:\\Projects\\NoMercyLabs\\shield\\src\\Shield.Scanners"
+}

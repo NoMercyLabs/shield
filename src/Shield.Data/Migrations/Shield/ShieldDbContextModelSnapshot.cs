@@ -208,6 +208,27 @@ namespace Shield.Data.Migrations.Shield
                     b.ToTable("AlertEvents", (string)null);
                 });
 
+            modelBuilder.Entity("Shield.Core.Domain.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ValueEncrypted")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings", (string)null);
+                });
+
             modelBuilder.Entity("Shield.Core.Domain.Finding", b =>
                 {
                     b.Property<Guid>("Id")

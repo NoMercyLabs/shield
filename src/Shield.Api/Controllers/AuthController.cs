@@ -4,6 +4,7 @@ using System.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
@@ -19,16 +20,19 @@ public sealed class AuthController : ControllerBase
 {
     private readonly SignInManager<ShieldUser> _signInManager;
     private readonly UserManager<ShieldUser> _userManager;
+    private readonly RoleManager<ShieldRole> _roleManager;
     private readonly IOptions<ShieldOptions> _shieldOptions;
 
     public AuthController(
         SignInManager<ShieldUser> signInManager,
         UserManager<ShieldUser> userManager,
+        RoleManager<ShieldRole> roleManager,
         IOptions<ShieldOptions> shieldOptions
     )
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _roleManager = roleManager;
         _shieldOptions = shieldOptions;
     }
 
@@ -36,57 +40,116 @@ public sealed class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
-        if (_shieldOptions.Value.SingleUser)
-            return Ok(new LoginResponse(Succeeded: true, RequiresTwoFactor: false, Error: null));
-
         SignInResult result = await _signInManager.PasswordSignInAsync(
             request.Username,
             request.Password,
-            isPersistent: request.RememberMe,
+            isPersistent: true,
             lockoutOnFailure: true
         );
 
         if (result.RequiresTwoFactor)
         {
             if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
-                return Ok(
-                    new LoginResponse(Succeeded: false, RequiresTwoFactor: true, Error: null)
+                return Unauthorized(
+                    new LoginResponse(
+                        UserId: null,
+                        Username: null,
+                        Roles: Array.Empty<string>(),
+                        RequiresTwoFactor: true
+                    )
                 );
 
             SignInResult twoFactor = await _signInManager.TwoFactorAuthenticatorSignInAsync(
                 request.TwoFactorCode,
-                isPersistent: request.RememberMe,
+                isPersistent: true,
                 rememberClient: false
             );
-            if (twoFactor.Succeeded)
-                return Ok(
-                    new LoginResponse(Succeeded: true, RequiresTwoFactor: false, Error: null)
+            if (!twoFactor.Succeeded)
+                return Unauthorized(
+                    new LoginResponse(
+                        UserId: null,
+                        Username: null,
+                        Roles: Array.Empty<string>(),
+                        RequiresTwoFactor: true,
+                        Error: "Invalid 2FA code"
+                    )
                 );
+        }
+        else if (result.IsLockedOut)
+        {
             return Unauthorized(
                 new LoginResponse(
-                    Succeeded: false,
-                    RequiresTwoFactor: true,
-                    Error: "Invalid 2FA code"
+                    UserId: null,
+                    Username: null,
+                    Roles: Array.Empty<string>(),
+                    Error: "Account locked"
+                )
+            );
+        }
+        else if (!result.Succeeded)
+        {
+            return Unauthorized(
+                new LoginResponse(
+                    UserId: null,
+                    Username: null,
+                    Roles: Array.Empty<string>(),
+                    Error: "Invalid credentials"
                 )
             );
         }
 
-        if (result.Succeeded)
-            return Ok(new LoginResponse(Succeeded: true, RequiresTwoFactor: false, Error: null));
-        if (result.IsLockedOut)
-            return Unauthorized(
-                new LoginResponse(
-                    Succeeded: false,
-                    RequiresTwoFactor: false,
-                    Error: "Account locked"
-                )
+        ShieldUser user = (await _userManager.FindByNameAsync(request.Username))!;
+        IList<string> roles = await _userManager.GetRolesAsync(user);
+        return Ok(new LoginResponse(user.Id.ToString(), user.UserName, roles.ToList()));
+    }
+
+    // First-user-wins: when the users table is empty the first registration becomes Admin and
+    // auto-creates the Admin role if missing. Subsequent registrations land in Viewer.
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest(new { error = "Username and password are required" });
+
+        bool isFirstUser = !await _userManager.Users.AnyAsync();
+        string assignedRole = isFirstUser ? ShieldRoles.Admin : ShieldRoles.Viewer;
+
+        if (!await _roleManager.RoleExistsAsync(assignedRole))
+        {
+            IdentityResult roleCreate = await _roleManager.CreateAsync(new ShieldRole(assignedRole));
+            if (!roleCreate.Succeeded)
+                return Problem(
+                    title: "Failed to create role",
+                    detail: string.Join(", ", roleCreate.Errors.Select(error => error.Description))
+                );
+        }
+
+        ShieldUser user = new()
+        {
+            UserName = request.Username,
+            Email = request.Email,
+            EmailConfirmed = string.IsNullOrWhiteSpace(request.Email),
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        IdentityResult create = await _userManager.CreateAsync(user, request.Password);
+        if (!create.Succeeded)
+            return BadRequest(
+                new { error = string.Join(", ", create.Errors.Select(error => error.Description)) }
             );
-        return Unauthorized(
-            new LoginResponse(
-                Succeeded: false,
-                RequiresTwoFactor: false,
-                Error: "Invalid credentials"
-            )
+
+        IdentityResult assign = await _userManager.AddToRoleAsync(user, assignedRole);
+        if (!assign.Succeeded)
+            return Problem(
+                title: "Failed to assign role",
+                detail: string.Join(", ", assign.Errors.Select(error => error.Description))
+            );
+
+        IList<string> roles = await _userManager.GetRolesAsync(user);
+        return CreatedAtAction(
+            nameof(Me),
+            new RegisterResponse(user.Id.ToString(), user.UserName!, roles.ToList())
         );
     }
 
@@ -102,24 +165,19 @@ public sealed class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult<MeResponse>> Me()
     {
-        bool singleUser = _shieldOptions.Value.SingleUser;
+        ShieldUser? user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return Unauthorized();
 
-        string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        string? username = User.Identity?.Name;
-        List<string> roles = User.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToList();
-
-        if (!singleUser && userId is not null && Guid.TryParse(userId, out Guid uid))
-        {
-            ShieldUser? user = await _userManager.FindByIdAsync(uid.ToString());
-            if (user is not null)
-            {
-                username = user.UserName;
-                IList<string> dbRoles = await _userManager.GetRolesAsync(user);
-                roles = dbRoles.ToList();
-            }
-        }
-
-        return Ok(new MeResponse(userId, username, roles, singleUser));
+        IList<string> roles = await _userManager.GetRolesAsync(user);
+        return Ok(
+            new MeResponse(
+                user.Id.ToString(),
+                user.UserName,
+                roles.ToList(),
+                _shieldOptions.Value.SingleUser
+            )
+        );
     }
 
     [HttpPost("2fa/enroll")]
@@ -144,7 +202,9 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("2fa/verify")]
     [Authorize]
-    public async Task<IActionResult> VerifyTwoFactor([FromBody] TwoFactorVerifyRequest request)
+    public async Task<ActionResult<TwoFactorVerifyResponse>> VerifyTwoFactor(
+        [FromBody] TwoFactorVerifyRequest request
+    )
     {
         ShieldUser? user = await _userManager.GetUserAsync(User);
         if (user is null)
@@ -159,7 +219,10 @@ public sealed class AuthController : ControllerBase
             return BadRequest(new { error = "Invalid code" });
 
         await _userManager.SetTwoFactorEnabledAsync(user, true);
-        return NoContent();
+
+        IEnumerable<string>? recovery = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+        IReadOnlyList<string> codes = (recovery ?? Enumerable.Empty<string>()).ToList();
+        return Ok(new TwoFactorVerifyResponse(codes));
     }
 
     private static string BuildAuthenticatorUri(string username, string sharedKey)

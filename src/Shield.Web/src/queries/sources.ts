@@ -3,7 +3,7 @@ import type { MaybeRef } from 'vue'
 import { unref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { Source, SourceCreate } from '@/types/api'
+import type { InventoryItemResponse, PagedResponse, Source, SourceCreate, SourceDetail } from '@/types/api'
 
 export const useSourcesQuery = () => useQuery({
   queryKey: ['sources'],
@@ -15,8 +15,8 @@ export const useSourcesQuery = () => useQuery({
 
 export const useSourceQuery = (id: MaybeRef<number>) => useQuery({
   queryKey: ['sources', id],
-  queryFn: async (): Promise<Source> => {
-    const { data } = await api.get<Source>(`/sources/${unref(id)}`)
+  queryFn: async (): Promise<SourceDetail> => {
+    const { data } = await api.get<SourceDetail>(`/sources/${unref(id)}`)
     return data
   },
 })
@@ -33,6 +33,23 @@ export const useCreateSourceMutation = () => {
     },
   })
 }
+
+export const useSnapshotItemsQuery = (
+  sourceId: MaybeRef<number>,
+  snapshotId: MaybeRef<string | null | undefined>,
+) => useQuery({
+  queryKey: ['sources', sourceId, 'snapshots', snapshotId, 'items'],
+  enabled: () => !!unref(snapshotId),
+  queryFn: async (): Promise<PagedResponse<InventoryItemResponse>> => {
+    const snapId = unref(snapshotId)
+    if (!snapId) throw new Error('snapshotId required')
+    const { data } = await api.get<PagedResponse<InventoryItemResponse>>(
+      `/sources/${unref(sourceId)}/snapshots/${snapId}/items`,
+      { params: { pageSize: 200 } },
+    )
+    return data
+  },
+})
 
 export const useScanNowMutation = () => {
   const queryClient = useQueryClient()
