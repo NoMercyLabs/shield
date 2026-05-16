@@ -1,0 +1,5 @@
+# Replace `shield.example.com` with your real hostname and Caddy will provision a Let's Encrypt cert automatically.
+shield.example.com {
+	encode zstd gzip
+	reverse_proxy shield:8080
+}

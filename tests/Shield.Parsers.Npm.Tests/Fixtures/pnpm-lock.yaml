@@ -1,0 +1,70 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      vue:
+        specifier: ^3.4.0
+        version: 3.4.15
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.3.3
+
+packages:
+
+  '@babel/parser@7.23.6':
+    resolution: {integrity: sha512-abc}
+    engines: {node: '>=6.0.0'}
+
+  '@vue/compiler-core@3.4.15':
+    resolution: {integrity: sha512-def}
+
+  '@vue/compiler-dom@3.4.15':
+    resolution: {integrity: sha512-ghi}
+
+  '@vue/shared@3.4.15':
+    resolution: {integrity: sha512-jkl}
+
+  lodash@4.17.21:
+    resolution: {integrity: sha512-mno}
+
+  typescript@5.3.3:
+    resolution: {integrity: sha512-pqr}
+    hasBin: true
+
+  vue@3.4.15:
+    resolution: {integrity: sha512-stu}
+
+snapshots:
+
+  '@babel/parser@7.23.6': {}
+
+  '@vue/compiler-core@3.4.15':
+    dependencies:
+      '@babel/parser': 7.23.6
+      '@vue/shared': 3.4.15
+
+  '@vue/compiler-dom@3.4.15':
+    dependencies:
+      '@vue/compiler-core': 3.4.15
+      '@vue/shared': 3.4.15
+
+  '@vue/shared@3.4.15': {}
+
+  lodash@4.17.21: {}
+
+  typescript@5.3.3: {}
+
+  vue@3.4.15:
+    dependencies:
+      '@vue/compiler-dom': 3.4.15
+      '@vue/shared': 3.4.15

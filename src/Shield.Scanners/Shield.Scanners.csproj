@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Shield.Core\Shield.Core.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Npm\Shield.Parsers.Npm.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Composer\Shield.Parsers.Composer.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Gradle\Shield.Parsers.Gradle.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Octokit" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+</Project>

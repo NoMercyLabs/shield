@@ -1,0 +1,11 @@
+{
+  "id": "OSV-low-default",
+  "summary": "Falls back to Low when no score and no string severity",
+  "published": "2026-01-01T00:00:00Z",
+  "modified": "2026-01-02T00:00:00Z",
+  "affected": [
+    {
+      "package": { "name": "ghost-pkg", "ecosystem": "npm" }
+    }
+  ]
+}

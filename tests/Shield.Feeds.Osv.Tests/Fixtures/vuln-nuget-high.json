@@ -1,0 +1,19 @@
+{
+  "id": "GHSA-nuget-high",
+  "summary": "XXE in System.Xml-ish package",
+  "published": "2026-02-01T00:00:00Z",
+  "modified": "2026-05-01T08:30:00Z",
+  "affected": [
+    {
+      "package": { "name": "Some.Nuget.Package", "ecosystem": "NuGet" },
+      "ranges": [
+        { "type": "ECOSYSTEM", "events": [{ "introduced": "1.0.0" }, { "fixed": "1.4.2" }] }
+      ]
+    }
+  ],
+  "severity": [
+    { "type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/7.5" }
+  ],
+  "references": [],
+  "database_specific": { "severity": "HIGH" }
+}

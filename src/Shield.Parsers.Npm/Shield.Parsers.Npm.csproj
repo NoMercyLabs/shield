@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Shield.Core\Shield.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+</Project>

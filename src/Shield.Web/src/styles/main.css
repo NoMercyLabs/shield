@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-severity-critical: #dc2626;
+  --color-severity-high: #ea580c;
+  --color-severity-medium: #ca8a04;
+  --color-severity-low: #16a34a;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}

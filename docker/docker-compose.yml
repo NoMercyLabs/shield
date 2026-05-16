@@ -1,0 +1,49 @@
+# Shield + Caddy reverse proxy.
+# Local build by default; swap to the published image by commenting `build:` and uncommenting `image:`.
+services:
+  shield:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    # image: ghcr.io/nomercylabs/shield:latest
+    container_name: shield
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - shield-data:/data
+    environment:
+      # Single-user mode auto-authenticates the lone Admin. Flip to false to require login.
+      Shield__SingleUser: "true"
+      # Two SQLite DBs live under /data so they're picked up by the named volume.
+      Shield__Db__Shield: "Data Source=/data/shield.db"
+      Shield__Db__Feeds: "Data Source=/data/feeds.db"
+      # MUST be replaced with a real >=32 char secret in production. Anything weaker is unsafe.
+      Shield__Auth__JwtSigningKey: "CHANGE_ME_to_a_real_secret_with_at_least_32_chars"
+      # Optional: GitHub PAT for higher-fidelity GHSA + private repo scanning.
+      # Shield__Feeds__Ghsa__Token: ""
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: shield-caddy
+    restart: unless-stopped
+    depends_on:
+      - shield
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  shield-data:
+  caddy-data:
+  caddy-config:

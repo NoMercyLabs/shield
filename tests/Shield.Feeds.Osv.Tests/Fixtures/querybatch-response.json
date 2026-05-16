@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "vulns": [
+        { "id": "GHSA-npm-critical", "modified": "2026-04-10T12:00:00Z" }
+      ]
+    },
+    {
+      "vulns": [
+        { "id": "GHSA-nuget-high", "modified": "2026-05-01T08:30:00Z" }
+      ]
+    },
+    {}
+  ]
+}

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Shield.Core\Shield.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Semver" />
+    <PackageReference Include="NuGet.Versioning" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,35 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state"
+    ],
+    "content-hash": "abc123",
+    "packages": [
+        {
+            "name": "monolog/monolog",
+            "version": "3.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Seldaek/monolog.git",
+                "reference": "abc"
+            }
+        },
+        {
+            "name": "psr/log",
+            "version": "3.0.0"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "phpunit/phpunit",
+            "version": "10.5.0"
+        }
+    ],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
+}

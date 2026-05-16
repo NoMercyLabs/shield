@@ -1,0 +1,43 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+TestResults/
+*.coverage
+*.coveragexml
+
+## Node
+node_modules/
+dist/
+.vite/
+.cache/
+
+## SQLite runtime DBs
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+appsettings.Local.json
+appsettings.*.Local.json
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+logs/
+
+## Secrets
+*.pfx
+*.snk
+secrets.json
+.env
+.env.*
+!.env.example
