@@ -5,7 +5,10 @@ namespace Shield.Data.Extensions;
 
 public static class MigrationExtensions
 {
-    public static async Task MigrateShieldAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
+    public static async Task MigrateShieldAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default
+    )
     {
         await using AsyncServiceScope scope = services.CreateAsyncScope();
 

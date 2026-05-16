@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Auth;
 using Shield.Api.Contracts;
+using Shield.Api.Services;
 using Shield.Core.Domain;
 using Shield.Data;
 
@@ -17,11 +19,20 @@ public sealed class FindingsController : ControllerBase
 
     private readonly ShieldDbContext _shieldDb;
     private readonly FeedsDbContext _feedsDb;
+    private readonly IFixSuggester _fixSuggester;
+    private readonly IFixApplier _fixApplier;
 
-    public FindingsController(ShieldDbContext shieldDb, FeedsDbContext feedsDb)
+    public FindingsController(
+        ShieldDbContext shieldDb,
+        FeedsDbContext feedsDb,
+        IFixSuggester fixSuggester,
+        IFixApplier fixApplier
+    )
     {
         _shieldDb = shieldDb;
         _feedsDb = feedsDb;
+        _fixSuggester = fixSuggester;
+        _fixApplier = fixApplier;
     }
 
     [HttpGet]
@@ -85,8 +96,155 @@ public sealed class FindingsController : ControllerBase
             entry => entry.Id == finding.InventoryItemId,
             ct
         );
+        SourceType? sourceType = await _shieldDb
+            .Sources.Where(source => source.Id == finding.SourceId)
+            .Select(source => (SourceType?)source.Type)
+            .FirstOrDefaultAsync(ct);
 
-        return Ok(new FindingDetailResponse(FindingResponse.From(finding), advisory, item));
+        FixSuggestionResponse? fix = null;
+        if (advisory is not null && item is not null)
+        {
+            FixSuggestion? suggestion = _fixSuggester.Suggest(advisory, item);
+            if (suggestion is not null)
+                fix = new FixSuggestionResponse(
+                    suggestion.PackageName,
+                    suggestion.CurrentVersion,
+                    suggestion.SuggestedVersion,
+                    suggestion.Notes
+                );
+        }
+
+        return Ok(
+            new FindingDetailResponse(
+                FindingResponse.From(finding),
+                advisory,
+                item,
+                sourceType,
+                fix
+            )
+        );
+    }
+
+    // POST /api/findings/{id}/apply-fix — Admin only. Body: { strategy: "auto" | "pr" }.
+    // auto = manifest edit in place for LocalFolder sources; pr = open a GitHub PR for
+    // GithubRepo sources. Mismatched strategy/source pairings return 400.
+    [HttpPost("{id:guid}/apply-fix")]
+    [Authorize(Roles = ShieldRoles.Admin)]
+    public async Task<ActionResult<ApplyFixResponse>> ApplyFix(
+        Guid id,
+        [FromBody] ApplyFixRequest request,
+        CancellationToken ct
+    )
+    {
+        Finding? finding = await _shieldDb.Findings.FirstOrDefaultAsync(
+            entry => entry.Id == id,
+            ct
+        );
+        if (finding is null)
+            return NotFound();
+
+        Source? source = await _shieldDb.Sources.FirstOrDefaultAsync(
+            entry => entry.Id == finding.SourceId,
+            ct
+        );
+        if (source is null)
+            return NotFound();
+
+        InventoryItem? item = await _shieldDb.InventoryItems.FirstOrDefaultAsync(
+            entry => entry.Id == finding.InventoryItemId,
+            ct
+        );
+        Advisory? advisory = await _feedsDb.Advisories.FirstOrDefaultAsync(
+            entry => entry.Id == finding.AdvisoryRefId,
+            ct
+        );
+        if (item is null || advisory is null)
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    Array.Empty<string>(),
+                    null,
+                    null,
+                    "Finding is missing its inventory item or advisory."
+                )
+            );
+
+        FixSuggestion? suggestion = _fixSuggester.Suggest(advisory, item);
+        if (suggestion is null)
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    Array.Empty<string>(),
+                    null,
+                    null,
+                    "Advisory has no known fix version greater than the installed version."
+                )
+            );
+
+        string strategy = (request.Strategy ?? string.Empty).Trim().ToLowerInvariant();
+        if (strategy != "auto" && strategy != "pr")
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    Array.Empty<string>(),
+                    null,
+                    null,
+                    "Strategy must be 'auto' or 'pr'."
+                )
+            );
+
+        if (strategy == "auto" && source.Type != SourceType.LocalFolder)
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    Array.Empty<string>(),
+                    null,
+                    null,
+                    "Use strategy=pr for GitHub repo sources."
+                )
+            );
+        if (strategy == "pr" && source.Type != SourceType.GithubRepo)
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    Array.Empty<string>(),
+                    null,
+                    null,
+                    "Use strategy=auto for local folder sources."
+                )
+            );
+
+        ApplyFixResult result =
+            strategy == "auto"
+                ? await _fixApplier.ApplyLocalAsync(source, item, suggestion, ct)
+                : await _fixApplier.ApplyPullRequestAsync(source, item, advisory, suggestion, ct);
+
+        if (!result.Success)
+            return BadRequest(
+                new ApplyFixResponse(
+                    false,
+                    result.ChangedFiles,
+                    result.FollowUpCommand,
+                    result.PullRequestUrl,
+                    result.Reason
+                )
+            );
+
+        finding.State = FindingState.Acked;
+        finding.Notes = result.PullRequestUrl is not null
+            ? $"PR opened: {result.PullRequestUrl}"
+            : $"Applied bump to {suggestion.SuggestedVersion}; rescan to verify";
+        await _shieldDb.SaveChangesAsync(ct);
+
+        return Ok(
+            new ApplyFixResponse(
+                result.Success,
+                result.ChangedFiles,
+                result.FollowUpCommand,
+                result.PullRequestUrl,
+                result.Reason
+            )
+        );
     }
 
     [HttpPost("{id:guid}/ack")]

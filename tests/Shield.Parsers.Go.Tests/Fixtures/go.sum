@@ -1,0 +1,6 @@
+github.com/gin-gonic/gin v1.9.1 h1:abc
+github.com/gin-gonic/gin v1.9.1/go.mod h1:def
+github.com/stretchr/testify v1.8.4 h1:ghi
+github.com/stretchr/testify v1.8.4/go.mod h1:jkl
+golang.org/x/sys v0.15.0 h1:mno
+golang.org/x/sys v0.15.0/go.mod h1:pqr

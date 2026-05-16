@@ -26,7 +26,7 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
             item.SnapshotId,
             item.Ecosystem,
             item.Name,
-            item.Version
+            item.Version,
         });
     }
 }

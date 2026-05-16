@@ -2,7 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace Shield.Feeds.Osv.Models;
 
-internal sealed record OsvBatchRequest([property: JsonPropertyName("queries")] IReadOnlyList<OsvBatchQuery> Queries);
+internal sealed record OsvBatchRequest(
+    [property: JsonPropertyName("queries")] IReadOnlyList<OsvBatchQuery> Queries
+);
 
 internal sealed record OsvBatchQuery(
     [property: JsonPropertyName("package")] OsvPackage Package,
@@ -14,9 +16,13 @@ internal sealed record OsvPackage(
     [property: JsonPropertyName("ecosystem")] string Ecosystem
 );
 
-internal sealed record OsvBatchResponse([property: JsonPropertyName("results")] IReadOnlyList<OsvBatchResult> Results);
+internal sealed record OsvBatchResponse(
+    [property: JsonPropertyName("results")] IReadOnlyList<OsvBatchResult> Results
+);
 
-internal sealed record OsvBatchResult([property: JsonPropertyName("vulns")] IReadOnlyList<OsvVulnRef>? Vulns);
+internal sealed record OsvBatchResult(
+    [property: JsonPropertyName("vulns")] IReadOnlyList<OsvVulnRef>? Vulns
+);
 
 internal sealed record OsvVulnRef(
     [property: JsonPropertyName("id")] string Id,

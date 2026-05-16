@@ -13,12 +13,17 @@ public sealed class PollyHttpRetryHandler : DelegatingHandler
         _policy = policy ?? BuildDefault();
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-        _policy.ExecuteAsync(ct => base.SendAsync(request, ct), cancellationToken);
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    ) => _policy.ExecuteAsync(ct => base.SendAsync(request, ct), cancellationToken);
 
     public static IAsyncPolicy<HttpResponseMessage> BuildDefault() =>
         HttpPolicyExtensions
             .HandleTransientHttpError()
             .OrResult(response => response.StatusCode == HttpStatusCode.TooManyRequests)
-            .WaitAndRetryAsync(3, attempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt - 1)));
+            .WaitAndRetryAsync(
+                3,
+                attempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt - 1))
+            );
 }

@@ -16,9 +16,7 @@ public class AdvisoryConfiguration : IEntityTypeConfiguration<Advisory>
         builder.Property(advisory => advisory.Summary).HasMaxLength(4000);
         builder.Property(advisory => advisory.ReferencesJson).IsRequired();
 
-        builder
-            .HasIndex(advisory => new { advisory.Feed, advisory.ExternalId })
-            .IsUnique();
+        builder.HasIndex(advisory => new { advisory.Feed, advisory.ExternalId }).IsUnique();
 
         builder.HasIndex(advisory => new { advisory.Ecosystem, advisory.PackageName });
     }

@@ -7,6 +7,9 @@
     <ProjectReference Include="..\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
     <ProjectReference Include="..\Shield.Parsers.Composer\Shield.Parsers.Composer.csproj" />
     <ProjectReference Include="..\Shield.Parsers.Gradle\Shield.Parsers.Gradle.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Python\Shield.Parsers.Python.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Go\Shield.Parsers.Go.csproj" />
+    <ProjectReference Include="..\Shield.Parsers.Rust\Shield.Parsers.Rust.csproj" />
     <ProjectReference Include="..\Shield.Feeds.Osv\Shield.Feeds.Osv.csproj" />
     <ProjectReference Include="..\Shield.Feeds.Ghsa\Shield.Feeds.Ghsa.csproj" />
     <ProjectReference Include="..\Shield.Feeds.NpmRegistry\Shield.Feeds.NpmRegistry.csproj" />
@@ -20,5 +23,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Octokit" />
+    <PackageReference Include="NuGet.Versioning" />
+    <PackageReference Include="Semver" />
   </ItemGroup>
 </Project>

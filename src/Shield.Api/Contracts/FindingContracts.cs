@@ -33,7 +33,26 @@ public sealed record FindingResponse(
 public sealed record FindingDetailResponse(
     FindingResponse Finding,
     Advisory? Advisory,
-    InventoryItem? Item
+    InventoryItem? Item,
+    SourceType? SourceType,
+    FixSuggestionResponse? FixSuggestion
+);
+
+public sealed record FixSuggestionResponse(
+    string PackageName,
+    string CurrentVersion,
+    string SuggestedVersion,
+    string? Notes
+);
+
+public sealed record ApplyFixRequest(string Strategy);
+
+public sealed record ApplyFixResponse(
+    bool Success,
+    IReadOnlyList<string> ChangedFiles,
+    string? FollowUpCommand,
+    string? PullRequestUrl,
+    string? Reason
 );
 
 public sealed record SuppressFindingRequest(string Reason);

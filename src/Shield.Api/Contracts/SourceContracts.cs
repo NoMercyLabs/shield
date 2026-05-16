@@ -23,6 +23,14 @@ public sealed record UpdateSourceRequest(
     bool Enabled = true
 );
 
+public sealed record DetectedRemoteDto(
+    string Host,
+    string Owner,
+    string Repo,
+    string RemoteUrl,
+    string? Branch
+);
+
 public sealed record SourceResponse(
     int Id,
     SourceType Type,
@@ -33,7 +41,8 @@ public sealed record SourceResponse(
     string? LastError,
     bool Enabled,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    DetectedRemoteDto? DetectedRemote
 )
 {
     public static SourceResponse From(Source source) =>
@@ -47,8 +56,23 @@ public sealed record SourceResponse(
             source.LastError,
             source.Enabled,
             source.CreatedAt,
-            source.UpdatedAt
+            source.UpdatedAt,
+            ParseDetectedRemote(source.DetectedRemote)
         );
+
+    private static DetectedRemoteDto? ParseDetectedRemote(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            return JsonSerializer.Deserialize<DetectedRemoteDto>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 }
 
 public sealed record SnapshotSummary(
@@ -61,12 +85,7 @@ public sealed record SnapshotSummary(
 
 public sealed record SourceDetailResponse(SourceResponse Source, SnapshotSummary? LatestSnapshot);
 
-public sealed record SnapshotListItem(
-    Guid Id,
-    DateTime TakenAt,
-    string ContentsSha,
-    int ItemCount
-);
+public sealed record SnapshotListItem(Guid Id, DateTime TakenAt, string ContentsSha, int ItemCount);
 
 public sealed record InventoryItemResponse(
     int Id,
@@ -77,11 +96,10 @@ public sealed record InventoryItemResponse(
     string ParentChain
 );
 
-public sealed record PagedResponse<T>(
-    IReadOnlyList<T> Items,
-    int Total,
-    int Page,
-    int PageSize
-);
+public sealed record PagedResponse<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
 
-public sealed record ScanQueuedResponse(bool Accepted, DateTime QueuedAt, DateTime? EstimatedCompletion);
+public sealed record ScanQueuedResponse(
+    bool Accepted,
+    DateTime QueuedAt,
+    DateTime? EstimatedCompletion
+);

@@ -17,7 +17,7 @@ public sealed class OsvFeedSync : IFeedSync
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
     private readonly HttpClient _http;
@@ -35,13 +35,14 @@ public sealed class OsvFeedSync : IFeedSync
         new(FeedSyncResult.Ok(0, 0, state.Cursor));
 
     public ValueTask<FeedSyncResult> SyncAllAsync(FeedSyncState state, CancellationToken ct) =>
-        throw new NotImplementedException("Full mirror sync from osv-vulnerabilities/all.zip lands in Phase 2.");
+        throw new NotImplementedException(
+            "Full mirror sync from osv-vulnerabilities/all.zip lands in Phase 2."
+        );
 
-    public async ValueTask<(IReadOnlyList<Advisory> Advisories, FeedSyncResult Result)> QueryBatchAsync(
-        FeedSyncState state,
-        IReadOnlyList<OsvQuery> queries,
-        CancellationToken ct
-    )
+    public async ValueTask<(
+        IReadOnlyList<Advisory> Advisories,
+        FeedSyncResult Result
+    )> QueryBatchAsync(FeedSyncState state, IReadOnlyList<OsvQuery> queries, CancellationToken ct)
     {
         if (queries.Count == 0)
             return (Array.Empty<Advisory>(), FeedSyncResult.Ok(0, 0, state.Cursor));
@@ -53,11 +54,13 @@ public sealed class OsvFeedSync : IFeedSync
 
             foreach (IEnumerable<OsvQuery> batch in Chunk(queries, MaxBatchSize))
             {
-                IReadOnlyList<string> vulnIds = await PostBatchAsync(batch, ct).ConfigureAwait(false);
+                IReadOnlyList<string> vulnIds = await PostBatchAsync(batch, ct)
+                    .ConfigureAwait(false);
                 foreach (string vulnId in vulnIds.Distinct(StringComparer.Ordinal))
                 {
                     OsvVulnerability? vuln = await GetVulnAsync(vulnId, ct).ConfigureAwait(false);
-                    if (vuln is null) continue;
+                    if (vuln is null)
+                        continue;
 
                     foreach (Advisory advisory in NormalizeVuln(vuln))
                     {
@@ -68,7 +71,8 @@ public sealed class OsvFeedSync : IFeedSync
                 }
             }
 
-            string? nextCursor = maxModified?.ToString("O", CultureInfo.InvariantCulture) ?? state.Cursor;
+            string? nextCursor =
+                maxModified?.ToString("O", CultureInfo.InvariantCulture) ?? state.Cursor;
             return (collected, FeedSyncResult.Ok(collected.Count, 0, nextCursor));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -78,46 +82,59 @@ public sealed class OsvFeedSync : IFeedSync
         }
     }
 
-    private async Task<IReadOnlyList<string>> PostBatchAsync(IEnumerable<OsvQuery> batch, CancellationToken ct)
+    private async Task<IReadOnlyList<string>> PostBatchAsync(
+        IEnumerable<OsvQuery> batch,
+        CancellationToken ct
+    )
     {
         List<OsvBatchQuery> body = new();
         List<OsvQuery> ordered = new();
         foreach (OsvQuery query in batch)
         {
             string? eco = OsvEcosystemMapper.ToOsv(query.Ecosystem);
-            if (eco is null) continue;
+            if (eco is null)
+                continue;
             body.Add(new OsvBatchQuery(new OsvPackage(query.PackageName, eco), query.Version));
             ordered.Add(query);
         }
 
-        if (body.Count == 0) return Array.Empty<string>();
+        if (body.Count == 0)
+            return Array.Empty<string>();
 
         using HttpResponseMessage response = await _http
             .PostAsJsonAsync("v1/querybatch", new OsvBatchRequest(body), JsonOptions, ct)
             .ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        OsvBatchResponse? parsed = await response.Content
-            .ReadFromJsonAsync<OsvBatchResponse>(JsonOptions, ct)
+        OsvBatchResponse? parsed = await response
+            .Content.ReadFromJsonAsync<OsvBatchResponse>(JsonOptions, ct)
             .ConfigureAwait(false);
 
-        if (parsed is null) return Array.Empty<string>();
+        if (parsed is null)
+            return Array.Empty<string>();
 
         List<string> ids = new();
         for (int i = 0; i < parsed.Results.Count; i++)
         {
             IReadOnlyList<OsvVulnRef>? vulns = parsed.Results[i].Vulns;
-            if (vulns is null) continue;
-            foreach (OsvVulnRef reference in vulns) ids.Add(reference.Id);
+            if (vulns is null)
+                continue;
+            foreach (OsvVulnRef reference in vulns)
+                ids.Add(reference.Id);
         }
         return ids;
     }
 
     private async Task<OsvVulnerability?> GetVulnAsync(string id, CancellationToken ct)
     {
-        using HttpResponseMessage response = await _http.GetAsync($"v1/vulns/{Uri.EscapeDataString(id)}", ct).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<OsvVulnerability>(JsonOptions, ct).ConfigureAwait(false);
+        using HttpResponseMessage response = await _http
+            .GetAsync($"v1/vulns/{Uri.EscapeDataString(id)}", ct)
+            .ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            return null;
+        return await response
+            .Content.ReadFromJsonAsync<OsvVulnerability>(JsonOptions, ct)
+            .ConfigureAwait(false);
     }
 
     private static IEnumerable<Advisory> NormalizeVuln(OsvVulnerability vuln)
@@ -125,16 +142,19 @@ public sealed class OsvFeedSync : IFeedSync
         (Severity severity, double? cvss) = OsvSeverityMapper.Map(vuln);
         DateTime fetchedAt = DateTime.UtcNow;
         string referencesJson = JsonSerializer.Serialize(
-            vuln.References?.Select(r => new { type = r.Type, url = r.Url }).ToArray() ?? Array.Empty<object>()
+            vuln.References?.Select(r => new { type = r.Type, url = r.Url }).ToArray()
+                ?? Array.Empty<object>()
         );
 
         IReadOnlyList<OsvAffected> affected = vuln.Affected ?? Array.Empty<OsvAffected>();
-        if (affected.Count == 0) yield break;
+        if (affected.Count == 0)
+            yield break;
 
         foreach (OsvAffected entry in affected)
         {
             Ecosystem? ecosystem = OsvEcosystemMapper.FromOsv(entry.Package?.Ecosystem);
-            if (ecosystem is null || string.IsNullOrWhiteSpace(entry.Package?.Name)) continue;
+            if (ecosystem is null || string.IsNullOrWhiteSpace(entry.Package?.Name))
+                continue;
 
             string rangesJson = JsonSerializer.Serialize(entry.Ranges ?? Array.Empty<OsvRange>());
 
@@ -152,15 +172,23 @@ public sealed class OsvFeedSync : IFeedSync
                 ReferencesJson = referencesJson,
                 PublishedAt = vuln.Published ?? fetchedAt,
                 ModifiedAt = vuln.Modified ?? fetchedAt,
-                FetchedAt = fetchedAt
+                FetchedAt = fetchedAt,
             };
         }
     }
 
     private static DateTime? TryParseCursor(string? cursor)
     {
-        if (string.IsNullOrWhiteSpace(cursor)) return null;
-        if (DateTime.TryParse(cursor, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsed))
+        if (string.IsNullOrWhiteSpace(cursor))
+            return null;
+        if (
+            DateTime.TryParse(
+                cursor,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out DateTime parsed
+            )
+        )
             return parsed.ToUniversalTime();
         return null;
     }
@@ -171,7 +199,8 @@ public sealed class OsvFeedSync : IFeedSync
         {
             int end = Math.Min(start + size, source.Count);
             T[] slice = new T[end - start];
-            for (int i = start; i < end; i++) slice[i - start] = source[i];
+            for (int i = start; i < end; i++)
+                slice[i - start] = source[i];
             yield return slice;
         }
     }

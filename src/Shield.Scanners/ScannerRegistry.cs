@@ -17,5 +17,7 @@ public sealed class ScannerRegistry
 
     public IScanner Require(SourceType sourceType) =>
         FindFor(sourceType)
-            ?? throw new InvalidOperationException($"No scanner registered for SourceType.{sourceType}");
+        ?? throw new InvalidOperationException(
+            $"No scanner registered for SourceType.{sourceType}"
+        );
 }

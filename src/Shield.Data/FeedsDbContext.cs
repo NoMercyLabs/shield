@@ -5,7 +5,8 @@ namespace Shield.Data;
 
 public class FeedsDbContext : DbContext
 {
-    public FeedsDbContext(DbContextOptions<FeedsDbContext> options) : base(options) { }
+    public FeedsDbContext(DbContextOptions<FeedsDbContext> options)
+        : base(options) { }
 
     public DbSet<Advisory> Advisories => Set<Advisory>();
     public DbSet<PackageMeta> PackageMetas => Set<PackageMeta>();

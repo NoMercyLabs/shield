@@ -7,10 +7,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Shield.Alerter.Extensions;
 using Shield.Api.Auth;
+using Shield.Api.Auth.OAuthProviders;
 using Shield.Api.Persistence;
+using Shield.Api.Services;
+using Shield.Api.Services.ManifestEditors;
 using Shield.Api.Workers;
 using Shield.Channels.Extensions;
 using Shield.Channels.Inbox;
+using Shield.Core.Abstractions;
 using Shield.Core.Options;
 using Shield.Data;
 using Shield.Data.Extensions;
@@ -20,9 +24,12 @@ using Shield.Feeds.NpmRegistry.Extensions;
 using Shield.Feeds.Osv.Extensions;
 using Shield.Matcher.Extensions;
 using Shield.Parsers.Composer.Extensions;
+using Shield.Parsers.Go.Extensions;
 using Shield.Parsers.Gradle.Extensions;
 using Shield.Parsers.Npm.Extensions;
 using Shield.Parsers.Nuget.Extensions;
+using Shield.Parsers.Python.Extensions;
+using Shield.Parsers.Rust.Extensions;
 using Shield.Scanners.Extensions;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -39,6 +46,9 @@ builder.Services.AddNpmParser();
 builder.Services.AddNugetParser();
 builder.Services.AddComposerParser();
 builder.Services.AddGradleParser();
+builder.Services.AddPythonParser();
+builder.Services.AddGoParser();
+builder.Services.AddRustParser();
 builder.Services.AddOsvFeed();
 builder.Services.AddGhsaFeed(configuration);
 builder.Services.AddNpmRegistryFeed(configuration);
@@ -155,6 +165,37 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+
+// Runtime-mutable settings cache. Singleton so Current is shared across requests and
+// SingleUserAuthHandler sees the new snapshot the instant SettingsController writes.
+builder.Services.AddSingleton<IAppSettingsService, AppSettingsService>();
+
+// Host whitelist for auto-detected git remotes on LocalFolder scans.
+builder.Services.AddSingleton<Shield.Scanners.IDetectedRemoteHostPolicy>(
+    sp => new AppSettingsRemoteHostPolicy(sp.GetRequiredService<IAppSettingsService>())
+);
+
+// OAuth integration plumbing — PKCE state cache + encrypted token store + per-provider adapters.
+builder.Services.AddSingleton<IOAuthStateStore, OAuthStateStore>();
+builder.Services.AddSingleton<IOAuthTokenStore, OAuthTokenStore>();
+builder.Services.AddHttpClient("oauth");
+builder.Services.AddSingleton<IOAuthProvider, GitHubProvider>();
+builder.Services.AddSingleton<IOAuthProvider, SlackProvider>();
+builder.Services.AddSingleton<IOAuthProvider, GoogleProvider>();
+builder.Services.AddSingleton<IOAuthProviderRegistry, OAuthProviderRegistry>();
+builder.Services.AddSingleton<IOAuthTokenAccessor, OAuthTokenAccessor>();
+
+// Best-effort fix-suggestion + apply pipeline. Editors are stateless; suggester is pure.
+// Applier touches GitHub via Octokit so it stays singleton (no scoped state needed).
+builder.Services.AddSingleton<IFixSuggester, FixSuggester>();
+builder.Services.AddSingleton<IManifestEditor, NpmManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, NugetManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, ComposerManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, GradleManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, PythonManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, GoManifestEditor>();
+builder.Services.AddSingleton<IManifestEditor, RustManifestEditor>();
+builder.Services.AddSingleton<IFixApplier, FixApplier>();
 
 bool enableOpenApi =
     builder.Environment.IsDevelopment() || configuration.GetValue("Shield:OpenApi:Enabled", false);

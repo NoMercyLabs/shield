@@ -2,9 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 using Shield.Core.Abstractions;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
+using Shield.Parsers.Python;
+using Shield.Parsers.Rust;
 
 namespace Shield.Scanners.Extensions;
 
@@ -13,14 +16,17 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddShieldScanners(this IServiceCollection services)
     {
         services.TryAddSingleton(new ProductHeaderValue("Shield"));
-        services.AddSingleton<IGitHubClient>(provider =>
-            new GitHubClient(provider.GetRequiredService<ProductHeaderValue>())
-        );
+        services.AddSingleton<IGitHubClient>(provider => new GitHubClient(
+            provider.GetRequiredService<ProductHeaderValue>()
+        ));
 
         services.AddSingleton<NpmLockParser>();
         services.AddSingleton<NugetLockParser>();
         services.AddSingleton<ComposerLockParser>();
         services.AddSingleton<GradleLockfileParser>();
+        services.AddSingleton<PythonLockParser>();
+        services.AddSingleton<GoLockParser>();
+        services.AddSingleton<RustLockParser>();
 
         services.AddSingleton<ParserRegistry>();
         services.AddSingleton<IScanner, LocalFolderScanner>();

@@ -27,6 +27,9 @@ export const Ecosystem = {
   Composer: 2,
   Gradle: 3,
   Os: 4,
+  Python: 5,
+  Go: 6,
+  Rust: 7,
 } as const
 export type Ecosystem = (typeof Ecosystem)[keyof typeof Ecosystem]
 export type EcosystemName = keyof typeof Ecosystem
@@ -36,6 +39,9 @@ export const EcosystemNames: Record<Ecosystem, EcosystemName> = {
   2: 'Composer',
   3: 'Gradle',
   4: 'Os',
+  5: 'Python',
+  6: 'Go',
+  7: 'Rust',
 }
 
 export const SourceType = {
@@ -124,6 +130,14 @@ export interface LoginResponse {
 
 // ---------- sources ----------
 
+export interface DetectedRemote {
+  host: string
+  owner: string
+  repo: string
+  remoteUrl: string
+  branch: string | null
+}
+
 export interface Source {
   id: number
   type: SourceType
@@ -135,6 +149,7 @@ export interface Source {
   enabled: boolean
   createdAt: string
   updatedAt: string
+  detectedRemote: DetectedRemote | null
 }
 
 export interface SourceCreate {
@@ -202,6 +217,29 @@ export interface FindingDetail {
   finding: Finding
   advisory: Advisory | null
   item: InventoryItemResponse | null
+  sourceType: SourceType | null
+  fixSuggestion: FixSuggestion | null
+}
+
+export interface FixSuggestion {
+  packageName: string
+  currentVersion: string
+  suggestedVersion: string
+  notes: string | null
+}
+
+export type ApplyFixStrategy = 'auto' | 'pr'
+
+export interface ApplyFixRequest {
+  strategy: ApplyFixStrategy
+}
+
+export interface ApplyFixResponse {
+  success: boolean
+  changedFiles: string[]
+  followUpCommand: string | null
+  pullRequestUrl: string | null
+  reason: string | null
 }
 
 export interface FindingFilter {

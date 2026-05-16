@@ -20,12 +20,13 @@ namespace Shield.Data.Migrations.Shield
                     TokenHash = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     IssuedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Revoked = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Revoked = table.Column<bool>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AgentTokens", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AlertChannels",
@@ -36,12 +37,13 @@ namespace Shield.Data.Migrations.Shield
                     Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     ConfigJsonEncrypted = table.Column<string>(type: "TEXT", nullable: false),
                     MinSeverity = table.Column<int>(type: "INTEGER", nullable: false),
-                    Enabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AlertChannels", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AlertEvents",
@@ -52,12 +54,13 @@ namespace Shield.Data.Migrations.Shield
                     ChannelId = table.Column<Guid>(type: "TEXT", nullable: false),
                     SentAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    Error = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true)
+                    Error = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AlertEvents", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
@@ -65,13 +68,18 @@ namespace Shield.Data.Migrations.Shield
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
+                    NormalizedName = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
+                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetUsers",
@@ -81,9 +89,17 @@ namespace Shield.Data.Migrations.Shield
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     TotpSecret = table.Column<string>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
                     EmailConfirmed = table.Column<bool>(type: "INTEGER", nullable: false),
                     PasswordHash = table.Column<string>(type: "TEXT", nullable: true),
                     SecurityStamp = table.Column<string>(type: "TEXT", nullable: true),
@@ -93,12 +109,13 @@ namespace Shield.Data.Migrations.Shield
                     TwoFactorEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     LockoutEnd = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
                     LockoutEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false)
+                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "Findings",
@@ -113,18 +130,20 @@ namespace Shield.Data.Migrations.Shield
                     LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     State = table.Column<int>(type: "INTEGER", nullable: false),
                     DedupKey = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: true)
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: true),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Findings", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "Sources",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
@@ -134,22 +153,24 @@ namespace Shield.Data.Migrations.Shield
                     LastError = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
                     Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Sources", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
-                    ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
+                    ClaimValue = table.Column<string>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {
@@ -159,18 +180,21 @@ namespace Shield.Data.Migrations.Shield
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
-                    ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
+                    ClaimValue = table.Column<string>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {
@@ -180,8 +204,10 @@ namespace Shield.Data.Migrations.Shield
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserLogins",
@@ -190,25 +216,30 @@ namespace Shield.Data.Migrations.Shield
                     LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
                     ProviderKey = table.Column<string>(type: "TEXT", nullable: false),
                     ProviderDisplayName = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
+                    table.PrimaryKey(
+                        "PK_AspNetUserLogins",
+                        x => new { x.LoginProvider, x.ProviderKey }
+                    );
                     table.ForeignKey(
                         name: "FK_AspNetUserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -218,14 +249,17 @@ namespace Shield.Data.Migrations.Shield
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Cascade
+                    );
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserTokens",
@@ -234,18 +268,28 @@ namespace Shield.Data.Migrations.Shield
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: true)
+                    Value = table.Column<string>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                    table.PrimaryKey(
+                        "PK_AspNetUserTokens",
+                        x => new
+                        {
+                            x.UserId,
+                            x.LoginProvider,
+                            x.Name,
+                        }
+                    );
                     table.ForeignKey(
                         name: "FK_AspNetUserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "InventorySnapshots",
@@ -254,8 +298,12 @@ namespace Shield.Data.Migrations.Shield
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     TakenAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ContentsSha = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    ItemCount = table.Column<int>(type: "INTEGER", nullable: false)
+                    ContentsSha = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 128,
+                        nullable: false
+                    ),
+                    ItemCount = table.Column<int>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -265,21 +313,24 @@ namespace Shield.Data.Migrations.Shield
                         column: x => x.SourceId,
                         principalTable: "Sources",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "InventoryItems",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     SnapshotId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Ecosystem = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 400, nullable: false),
                     Version = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     ParentChain = table.Column<string>(type: "TEXT", nullable: false),
-                    IsDirect = table.Column<bool>(type: "INTEGER", nullable: false)
+                    IsDirect = table.Column<bool>(type: "INTEGER", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -289,142 +340,147 @@ namespace Shield.Data.Migrations.Shield
                         column: x => x.SnapshotId,
                         principalTable: "InventorySnapshots",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AgentTokens_HostId",
                 table: "AgentTokens",
-                column: "HostId");
+                column: "HostId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AgentTokens_TokenHash",
                 table: "AgentTokens",
-                column: "TokenHash");
+                column: "TokenHash"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AlertEvents_ChannelId",
                 table: "AlertEvents",
-                column: "ChannelId");
+                column: "ChannelId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AlertEvents_FindingId_SentAt",
                 table: "AlertEvents",
-                columns: new[] { "FindingId", "SentAt" });
+                columns: new[] { "FindingId", "SentAt" }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
-                column: "RoleId");
+                column: "RoleId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
                 table: "AspNetRoles",
                 column: "NormalizedName",
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
                 table: "AspNetUserClaims",
-                column: "UserId");
+                column: "UserId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserLogins_UserId",
                 table: "AspNetUserLogins",
-                column: "UserId");
+                column: "UserId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserRoles_RoleId",
                 table: "AspNetUserRoles",
-                column: "RoleId");
+                column: "RoleId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 table: "AspNetUsers",
-                column: "NormalizedEmail");
+                column: "NormalizedEmail"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Findings_DedupKey",
                 table: "Findings",
                 column: "DedupKey",
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Findings_InventoryItemId",
                 table: "Findings",
-                column: "InventoryItemId");
+                column: "InventoryItemId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Findings_SourceId",
                 table: "Findings",
-                column: "SourceId");
+                column: "SourceId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Findings_State",
                 table: "Findings",
-                column: "State");
+                column: "State"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_InventoryItems_SnapshotId_Ecosystem_Name_Version",
                 table: "InventoryItems",
-                columns: new[] { "SnapshotId", "Ecosystem", "Name", "Version" });
+                columns: new[] { "SnapshotId", "Ecosystem", "Name", "Version" }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_InventorySnapshots_SourceId",
                 table: "InventorySnapshots",
-                column: "SourceId");
+                column: "SourceId"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "AgentTokens");
+            migrationBuilder.DropTable(name: "AgentTokens");
 
-            migrationBuilder.DropTable(
-                name: "AlertChannels");
+            migrationBuilder.DropTable(name: "AlertChannels");
 
-            migrationBuilder.DropTable(
-                name: "AlertEvents");
+            migrationBuilder.DropTable(name: "AlertEvents");
 
-            migrationBuilder.DropTable(
-                name: "AspNetRoleClaims");
+            migrationBuilder.DropTable(name: "AspNetRoleClaims");
 
-            migrationBuilder.DropTable(
-                name: "AspNetUserClaims");
+            migrationBuilder.DropTable(name: "AspNetUserClaims");
 
-            migrationBuilder.DropTable(
-                name: "AspNetUserLogins");
+            migrationBuilder.DropTable(name: "AspNetUserLogins");
 
-            migrationBuilder.DropTable(
-                name: "AspNetUserRoles");
+            migrationBuilder.DropTable(name: "AspNetUserRoles");
 
-            migrationBuilder.DropTable(
-                name: "AspNetUserTokens");
+            migrationBuilder.DropTable(name: "AspNetUserTokens");
 
-            migrationBuilder.DropTable(
-                name: "Findings");
+            migrationBuilder.DropTable(name: "Findings");
 
-            migrationBuilder.DropTable(
-                name: "InventoryItems");
+            migrationBuilder.DropTable(name: "InventoryItems");
 
-            migrationBuilder.DropTable(
-                name: "AspNetRoles");
+            migrationBuilder.DropTable(name: "AspNetRoles");
 
-            migrationBuilder.DropTable(
-                name: "AspNetUsers");
+            migrationBuilder.DropTable(name: "AspNetUsers");
 
-            migrationBuilder.DropTable(
-                name: "InventorySnapshots");
+            migrationBuilder.DropTable(name: "InventorySnapshots");
 
-            migrationBuilder.DropTable(
-                name: "Sources");
+            migrationBuilder.DropTable(name: "Sources");
         }
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
+using Shield.Api.Services;
 using Shield.Core.Options;
 using Shield.Data.Identity;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
@@ -22,18 +23,21 @@ public sealed class AuthController : ControllerBase
     private readonly UserManager<ShieldUser> _userManager;
     private readonly RoleManager<ShieldRole> _roleManager;
     private readonly IOptions<ShieldOptions> _shieldOptions;
+    private readonly IAppSettingsService _settings;
 
     public AuthController(
         SignInManager<ShieldUser> signInManager,
         UserManager<ShieldUser> userManager,
         RoleManager<ShieldRole> roleManager,
-        IOptions<ShieldOptions> shieldOptions
+        IOptions<ShieldOptions> shieldOptions,
+        IAppSettingsService settings
     )
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _roleManager = roleManager;
         _shieldOptions = shieldOptions;
+        _settings = settings;
     }
 
     [HttpPost("login")]
@@ -109,7 +113,10 @@ public sealed class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        if (
+            string.IsNullOrWhiteSpace(request.Username)
+            || string.IsNullOrWhiteSpace(request.Password)
+        )
             return BadRequest(new { error = "Username and password are required" });
 
         bool isFirstUser = !await _userManager.Users.AnyAsync();
@@ -117,7 +124,9 @@ public sealed class AuthController : ControllerBase
 
         if (!await _roleManager.RoleExistsAsync(assignedRole))
         {
-            IdentityResult roleCreate = await _roleManager.CreateAsync(new ShieldRole(assignedRole));
+            IdentityResult roleCreate = await _roleManager.CreateAsync(
+                new ShieldRole(assignedRole)
+            );
             if (!roleCreate.Succeeded)
                 return Problem(
                     title: "Failed to create role",
@@ -152,6 +161,39 @@ public sealed class AuthController : ControllerBase
             new RegisterResponse(user.Id.ToString(), user.UserName!, roles.ToList())
         );
     }
+
+    // Anonymous discovery so the SPA can render OAuth signin buttons before the user is authenticated.
+    [HttpGet("providers")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthProvidersResponse>> Providers(CancellationToken ct)
+    {
+        AppSettingsSnapshot snapshot = await _settings.GetAsync(ct);
+        List<AuthProviderInfo> providers = new();
+        if (IsConfigured(snapshot.GithubOAuth))
+            providers.Add(
+                new AuthProviderInfo(
+                    "github",
+                    "GitHub",
+                    "https://github.githubassets.com/favicons/favicon.svg"
+                )
+            );
+        if (IsConfigured(snapshot.SlackOAuth))
+            providers.Add(
+                new AuthProviderInfo(
+                    "slack",
+                    "Slack",
+                    "https://a.slack-edge.com/80588/marketing/img/meta/slack_hash_256.png"
+                )
+            );
+        if (IsConfigured(snapshot.GoogleOAuth))
+            providers.Add(
+                new AuthProviderInfo("google", "Google", "https://www.google.com/favicon.ico")
+            );
+        return Ok(new AuthProvidersResponse(providers));
+    }
+
+    private static bool IsConfigured(OAuthClientSettings client) =>
+        !string.IsNullOrEmpty(client.ClientId) && !string.IsNullOrEmpty(client.ClientSecret);
 
     [HttpPost("logout")]
     [Authorize]
@@ -220,7 +262,10 @@ public sealed class AuthController : ControllerBase
 
         await _userManager.SetTwoFactorEnabledAsync(user, true);
 
-        IEnumerable<string>? recovery = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+        IEnumerable<string>? recovery = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(
+            user,
+            10
+        );
         IReadOnlyList<string> codes = (recovery ?? Enumerable.Empty<string>()).ToList();
         return Ok(new TwoFactorVerifyResponse(codes));
     }

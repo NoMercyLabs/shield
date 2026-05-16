@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Api.Workers;
 using Shield.Core.Domain;
@@ -78,7 +79,14 @@ public sealed class SourcesController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Name))
             return ValidationProblem("Name is required.");
 
-        if (!TryNormaliseConfig(request.Type, request.ConfigJson, out string configJson, out string? configError))
+        if (
+            !TryNormaliseConfig(
+                request.Type,
+                request.ConfigJson,
+                out string configJson,
+                out string? configError
+            )
+        )
             return ValidationProblem(configError ?? "Invalid configJson.");
 
         DateTime now = DateTime.UtcNow;
@@ -111,7 +119,14 @@ public sealed class SourcesController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Name))
             return ValidationProblem("Name is required.");
 
-        if (!TryNormaliseConfig(source.Type, request.ConfigJson, out string configJson, out string? configError))
+        if (
+            !TryNormaliseConfig(
+                source.Type,
+                request.ConfigJson,
+                out string configJson,
+                out string? configError
+            )
+        )
             return ValidationProblem(configError ?? "Invalid configJson.");
 
         source.Name = request.Name;
@@ -134,6 +149,54 @@ public sealed class SourcesController : ControllerBase
         return NoContent();
     }
 
+    // Creates a sibling GithubRepo source from a LocalFolder's detected origin.
+    // Admin only — same gate as Settings + OAuth.
+    [HttpPost("{id:int}/promote-to-github")]
+    [Authorize(Roles = ShieldRoles.Admin)]
+    public async Task<ActionResult<SourceResponse>> PromoteToGithub(int id, CancellationToken ct)
+    {
+        Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (source is null)
+            return NotFound();
+        if (source.Type != SourceType.LocalFolder)
+            return BadRequest(new { error = "Promote is only valid for LocalFolder sources." });
+
+        DetectedRemoteDto? detected = SourceResponse.From(source).DetectedRemote;
+        if (detected is null)
+            return BadRequest(new { error = "No detected remote on this source." });
+        if (!string.Equals(detected.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(
+                new
+                {
+                    error = $"Detected host '{detected.Host}' is not promotable; only github.com is supported.",
+                }
+            );
+
+        DateTime now = DateTime.UtcNow;
+        string siblingConfig = JsonSerializer.Serialize(
+            new
+            {
+                owner = detected.Owner,
+                repo = detected.Repo,
+                branch = string.IsNullOrWhiteSpace(detected.Branch) ? null : detected.Branch,
+            }
+        );
+
+        Source sibling = new()
+        {
+            Type = SourceType.GithubRepo,
+            Name = $"{source.Name} (GitHub)",
+            ConfigJson = siblingConfig,
+            ScanInterval = source.ScanInterval,
+            Enabled = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        _db.Sources.Add(sibling);
+        await _db.SaveChangesAsync(ct);
+        return CreatedAtAction(nameof(Get), new { id = sibling.Id }, SourceResponse.From(sibling));
+    }
+
     [HttpPost("{id:int}/scan-now")]
     public async Task<ActionResult<ScanQueuedResponse>> ScanNow(int id, CancellationToken ct)
     {
@@ -143,7 +206,9 @@ public sealed class SourcesController : ControllerBase
         DateTime queuedAt = DateTime.UtcNow;
         await _scanQueue.EnqueueAsync(id, ct);
         // EstimatedCompletion is nullable for now — worker is single-threaded, no reliable ETA.
-        return Accepted(new ScanQueuedResponse(Accepted: true, QueuedAt: queuedAt, EstimatedCompletion: null));
+        return Accepted(
+            new ScanQueuedResponse(Accepted: true, QueuedAt: queuedAt, EstimatedCompletion: null)
+        );
     }
 
     [HttpGet("{id:int}/snapshots")]
@@ -181,9 +246,12 @@ public sealed class SourcesController : ControllerBase
         CancellationToken ct = default
     )
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = DefaultPageSize;
-        if (pageSize > MaxPageSize) pageSize = MaxPageSize;
+        if (page < 1)
+            page = 1;
+        if (pageSize < 1)
+            pageSize = DefaultPageSize;
+        if (pageSize > MaxPageSize)
+            pageSize = MaxPageSize;
 
         InventorySnapshot? snapshot = await _db.InventorySnapshots.FirstOrDefaultAsync(
             entry => entry.Id == snapshotId && entry.SourceId == id,
@@ -293,19 +361,26 @@ public sealed class SourcesController : ControllerBase
         switch (type)
         {
             case SourceType.LocalFolder:
-                if (!TryGetString(root, "path", out string? path) || string.IsNullOrWhiteSpace(path))
+                if (
+                    !TryGetString(root, "path", out string? path) || string.IsNullOrWhiteSpace(path)
+                )
                 {
                     error = "LocalFolder configJson requires a non-empty 'path'.";
                     return false;
                 }
                 break;
             case SourceType.GithubRepo:
-                if (!TryGetString(root, "owner", out string? owner) || string.IsNullOrWhiteSpace(owner))
+                if (
+                    !TryGetString(root, "owner", out string? owner)
+                    || string.IsNullOrWhiteSpace(owner)
+                )
                 {
                     error = "GithubRepo configJson requires a non-empty 'owner'.";
                     return false;
                 }
-                if (!TryGetString(root, "repo", out string? repo) || string.IsNullOrWhiteSpace(repo))
+                if (
+                    !TryGetString(root, "repo", out string? repo) || string.IsNullOrWhiteSpace(repo)
+                )
                 {
                     error = "GithubRepo configJson requires a non-empty 'repo'.";
                     return false;

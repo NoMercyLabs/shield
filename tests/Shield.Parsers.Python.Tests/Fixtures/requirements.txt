@@ -1,0 +1,6 @@
+# project requirements
+django==5.0.1
+requests==2.31.0
+flask>=2.0.0
+pytest~=8.0  ; python_version >= "3.8"
+black

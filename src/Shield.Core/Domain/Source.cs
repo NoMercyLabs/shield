@@ -12,4 +12,8 @@ public class Source
     public bool Enabled { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // JSON payload describing the remote auto-detected from `<path>/.git/config` for LocalFolder
+    // sources. Null when not a working tree, parsing failed, or the host wasn't actionable.
+    public string? DetectedRemote { get; set; }
 }

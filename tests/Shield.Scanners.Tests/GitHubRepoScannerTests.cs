@@ -6,9 +6,12 @@ using Octokit;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
+using Shield.Parsers.Python;
+using Shield.Parsers.Rust;
 using Shield.Scanners;
 using Xunit;
 
@@ -34,7 +37,15 @@ public class GitHubRepoScannerTests
         """;
 
     static ParserRegistry NewParserRegistry() =>
-        new(new NpmLockParser(), new NugetLockParser(), new ComposerLockParser(), new GradleLockfileParser());
+        new(
+            new NpmLockParser(),
+            new NugetLockParser(),
+            new ComposerLockParser(),
+            new GradleLockfileParser(),
+            new PythonLockParser(),
+            new GoLockParser(),
+            new RustLockParser()
+        );
 
     [Fact]
     public async Task Scans_repo_tree_and_parses_recognized_blob()

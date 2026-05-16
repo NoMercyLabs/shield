@@ -16,7 +16,12 @@ public class PackageMetaConfiguration : IEntityTypeConfiguration<PackageMeta>
         builder.Property(meta => meta.TarballSha).HasMaxLength(128);
 
         builder
-            .HasIndex(meta => new { meta.Ecosystem, meta.Name, meta.Version })
+            .HasIndex(meta => new
+            {
+                meta.Ecosystem,
+                meta.Name,
+                meta.Version,
+            })
             .IsUnique();
     }
 }

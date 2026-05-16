@@ -64,3 +64,16 @@ export const useScanNowMutation = () => {
     },
   })
 }
+
+export const usePromoteSourceToGithubMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number): Promise<Source> => {
+      const { data } = await api.post<Source>(`/sources/${id}/promote-to-github`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+    },
+  })
+}

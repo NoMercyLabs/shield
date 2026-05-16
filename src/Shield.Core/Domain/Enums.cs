@@ -14,6 +14,9 @@ public enum Ecosystem
     Composer = 2,
     Gradle = 3,
     Os = 4,
+    Python = 5,
+    Go = 6,
+    Rust = 7,
 }
 
 public enum Severity
@@ -38,6 +41,8 @@ public enum ChannelType
     Ntfy = 1,
     Smtp = 2,
     Inbox = 3,
+    Slack = 4,
+    Webhook = 5,
 }
 
 public enum Feed
@@ -55,4 +60,11 @@ public enum AlertStatus
     Pending = 0,
     Sent = 1,
     Failed = 2,
+}
+
+public enum OAuthProvider
+{
+    Github = 0,
+    Slack = 1,
+    Google = 2,
 }

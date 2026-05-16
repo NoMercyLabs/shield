@@ -3,9 +3,12 @@ using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
+using Shield.Parsers.Python;
+using Shield.Parsers.Rust;
 using Shield.Scanners;
 using Xunit;
 
@@ -14,7 +17,15 @@ namespace Shield.Scanners.Tests;
 public class LocalFolderScannerTests
 {
     static ParserRegistry NewParserRegistry() =>
-        new(new NpmLockParser(), new NugetLockParser(), new ComposerLockParser(), new GradleLockfileParser());
+        new(
+            new NpmLockParser(),
+            new NugetLockParser(),
+            new ComposerLockParser(),
+            new GradleLockfileParser(),
+            new PythonLockParser(),
+            new GoLockParser(),
+            new RustLockParser()
+        );
 
     static LocalFolderScanner NewScanner() => new(NewParserRegistry());
 
@@ -32,7 +43,18 @@ public class LocalFolderScannerTests
         foreach (string file in Directory.EnumerateFiles(source))
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
         foreach (string dir in Directory.EnumerateDirectories(source))
-            CopyDirectory(dir, Path.Combine(destination, Path.GetFileName(dir)));
+        {
+            string dirName = Path.GetFileName(dir);
+            // Materialise the node_modules + .git fixtures at runtime so the SDK's
+            // default item exclusions don't strip them from the test output on Linux.
+            string targetName = dirName switch
+            {
+                "_synth_nm" => "node_modules",
+                "_synth_dot_git" => ".git",
+                _ => dirName,
+            };
+            CopyDirectory(dir, Path.Combine(destination, targetName));
+        }
     }
 
     [Fact]
@@ -144,5 +166,35 @@ public class LocalFolderScannerTests
 
         result.Success.Should().BeFalse();
         result.Error.Should().Contain("path");
+    }
+
+    [Fact]
+    public async Task Scan_populates_DetectedRemote_from_dot_git_config()
+    {
+        string root = CopyFixtureTree();
+        try
+        {
+            LocalFolderScanner scanner = NewScanner();
+            Source source = new()
+            {
+                Id = 7,
+                Type = SourceType.LocalFolder,
+                ConfigJson = JsonSerializer.Serialize(new { path = root }),
+            };
+
+            ScanResult result = await scanner.ScanAsync(source, CancellationToken.None);
+
+            result.Success.Should().BeTrue(result.Error);
+            source.DetectedRemote.Should().NotBeNullOrEmpty();
+            DetectedRemote? parsed = JsonSerializer.Deserialize<DetectedRemote>(source.DetectedRemote!);
+            parsed.Should().NotBeNull();
+            parsed!.Host.Should().Be("github.com");
+            parsed.Owner.Should().Be("NoMercyLabs");
+            parsed.Repo.Should().Be("shield");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 }

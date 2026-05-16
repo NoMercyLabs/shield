@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Plus } from 'lucide-vue-next'
+import { GitBranch, Plus } from 'lucide-vue-next'
 
 import { useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useToasts } from '@/stores/toast'
@@ -124,7 +124,19 @@ async function onSubmit(): Promise<void> {
                 {{ source.name }}
               </RouterLink>
             </td>
-            <td class="px-4 py-2 text-slate-400">{{ SourceTypeNames[source.type] }}</td>
+            <td class="px-4 py-2 text-slate-400">
+              <span class="inline-flex items-center gap-1">
+                {{ SourceTypeNames[source.type] }}
+                <span
+                  v-if="source.detectedRemote"
+                  class="inline-flex items-center gap-0.5 text-xs text-slate-500"
+                  :title="`Detected remote: ${source.detectedRemote.host}/${source.detectedRemote.owner}/${source.detectedRemote.repo}`"
+                >
+                  <GitBranch class="h-3 w-3" />
+                  {{ source.detectedRemote.host }}
+                </span>
+              </span>
+            </td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(source.lastScannedAt) }}</td>
             <td class="px-4 py-2">
               <span v-if="source.lastError" class="text-red-300">Error</span>

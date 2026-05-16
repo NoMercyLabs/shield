@@ -32,7 +32,11 @@ public sealed class GitHubRepoScanner : IScanner
             return ScanResult.Fail($"Invalid GithubRepo config JSON: {ex.Message}");
         }
 
-        if (config is null || string.IsNullOrWhiteSpace(config.Owner) || string.IsNullOrWhiteSpace(config.Repo))
+        if (
+            config is null
+            || string.IsNullOrWhiteSpace(config.Owner)
+            || string.IsNullOrWhiteSpace(config.Repo)
+        )
             return ScanResult.Fail("GithubRepo config missing 'owner' or 'repo'");
 
         string branch = string.IsNullOrWhiteSpace(config.Branch) ? "main" : config.Branch!;
@@ -50,8 +54,8 @@ public sealed class GitHubRepoScanner : IScanner
         Reference reference;
         try
         {
-            reference = await _client.Git.Reference
-                .Get(repo.Id, $"heads/{branch}")
+            reference = await _client
+                .Git.Reference.Get(repo.Id, $"heads/{branch}")
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -62,8 +66,8 @@ public sealed class GitHubRepoScanner : IScanner
         TreeResponse tree;
         try
         {
-            tree = await _client.Git.Tree
-                .GetRecursive(repo.Id, reference.Object.Sha)
+            tree = await _client
+                .Git.Tree.GetRecursive(repo.Id, reference.Object.Sha)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -95,9 +99,10 @@ public sealed class GitHubRepoScanner : IScanner
                 continue;
             }
 
-            byte[] bytes = blob.Encoding.Value == EncodingType.Base64
-                ? Convert.FromBase64String(blob.Content)
-                : System.Text.Encoding.UTF8.GetBytes(blob.Content);
+            byte[] bytes =
+                blob.Encoding.Value == EncodingType.Base64
+                    ? Convert.FromBase64String(blob.Content)
+                    : System.Text.Encoding.UTF8.GetBytes(blob.Content);
 
             using MemoryStream stream = new(bytes);
             ParseResult parsed = await parser

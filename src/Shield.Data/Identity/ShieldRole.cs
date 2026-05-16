@@ -6,5 +6,6 @@ public class ShieldRole : IdentityRole<Guid>
 {
     public ShieldRole() { }
 
-    public ShieldRole(string roleName) : base(roleName) { }
+    public ShieldRole(string roleName)
+        : base(roleName) { }
 }

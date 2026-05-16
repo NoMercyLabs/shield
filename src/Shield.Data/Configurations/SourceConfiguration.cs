@@ -14,5 +14,6 @@ public class SourceConfiguration : IEntityTypeConfiguration<Source>
         builder.Property(source => source.Name).IsRequired().HasMaxLength(200);
         builder.Property(source => source.ConfigJson).IsRequired();
         builder.Property(source => source.LastError).HasMaxLength(2000);
+        builder.Property(source => source.DetectedRemote).HasMaxLength(2000);
     }
 }

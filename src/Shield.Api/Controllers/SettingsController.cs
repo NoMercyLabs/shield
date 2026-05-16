@@ -98,17 +98,22 @@ public sealed class SettingsController : ControllerBase
             if (previous == value)
                 continue;
 
-            AppSetting? row = await _db.AppSettings.FirstOrDefaultAsync(item => item.Key == key, ct);
+            AppSetting? row = await _db.AppSettings.FirstOrDefaultAsync(
+                item => item.Key == key,
+                ct
+            );
             string encrypted = _protector.Protect(value);
             if (row is null)
             {
-                _db.AppSettings.Add(new AppSetting
-                {
-                    Key = key,
-                    ValueEncrypted = encrypted,
-                    UpdatedAt = now,
-                    UpdatedBy = updatedBy,
-                });
+                _db.AppSettings.Add(
+                    new AppSetting
+                    {
+                        Key = key,
+                        ValueEncrypted = encrypted,
+                        UpdatedAt = now,
+                        UpdatedBy = updatedBy,
+                    }
+                );
             }
             else
             {
@@ -124,7 +129,9 @@ public sealed class SettingsController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         Dictionary<string, string> fresh = await LoadAllAsync(ct);
-        return Ok(new UpdateSettingsResponse(BuildResponse(fresh), restartKeys.Count > 0, restartKeys));
+        return Ok(
+            new UpdateSettingsResponse(BuildResponse(fresh), restartKeys.Count > 0, restartKeys)
+        );
     }
 
     [HttpPost("test-oidc")]
@@ -139,26 +146,37 @@ public sealed class SettingsController : ControllerBase
         if (!Uri.TryCreate(request.Issuer, UriKind.Absolute, out Uri? issuerUri))
             return Ok(new TestOidcResponse(false, "Issuer URL is not a valid absolute URI."));
 
-        string discoveryUrl = issuerUri.GetLeftPart(UriPartial.Path).TrimEnd('/')
+        string discoveryUrl =
+            issuerUri.GetLeftPart(UriPartial.Path).TrimEnd('/')
             + "/.well-known/openid-configuration";
 
         try
         {
-            using HttpClient client = _httpClientFactory?.CreateClient("oidc-test") ?? new HttpClient();
+            using HttpClient client =
+                _httpClientFactory?.CreateClient("oidc-test") ?? new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(8);
             HttpResponseMessage response = await client.GetAsync(discoveryUrl, ct);
             if (!response.IsSuccessStatusCode)
-                return Ok(new TestOidcResponse(false, $"Discovery endpoint returned {(int)response.StatusCode}."));
+                return Ok(
+                    new TestOidcResponse(
+                        false,
+                        $"Discovery endpoint returned {(int)response.StatusCode}."
+                    )
+                );
 
             await using Stream body = await response.Content.ReadAsStreamAsync(ct);
             using JsonDocument doc = await JsonDocument.ParseAsync(body, cancellationToken: ct);
             JsonElement root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object
+            if (
+                root.ValueKind != JsonValueKind.Object
                 || !root.TryGetProperty("issuer", out _)
                 || !root.TryGetProperty("authorization_endpoint", out _)
-                || !root.TryGetProperty("token_endpoint", out _))
+                || !root.TryGetProperty("token_endpoint", out _)
+            )
             {
-                return Ok(new TestOidcResponse(false, "Discovery response missing required fields."));
+                return Ok(
+                    new TestOidcResponse(false, "Discovery response missing required fields.")
+                );
             }
 
             return Ok(new TestOidcResponse(true, null));
@@ -180,15 +198,18 @@ public sealed class SettingsController : ControllerBase
     [HttpGet("runtime")]
     public ActionResult<RuntimeInfoResponse> Runtime()
     {
-        string version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+        string version =
+            Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
             ?? typeof(SettingsController).Assembly.GetName().Version?.ToString()
             ?? "0.0.0";
-        return Ok(new RuntimeInfoResponse(
-            version,
-            _environment.EnvironmentName,
-            _environment.ContentRootPath,
-            _environment.WebRootPath ?? ""
-        ));
+        return Ok(
+            new RuntimeInfoResponse(
+                version,
+                _environment.EnvironmentName,
+                _environment.ContentRootPath,
+                _environment.WebRootPath ?? ""
+            )
+        );
     }
 
     private async Task<Dictionary<string, string>> LoadAllAsync(CancellationToken ct)
@@ -212,30 +233,43 @@ public sealed class SettingsController : ControllerBase
 
     private SettingsResponse BuildResponse(Dictionary<string, string> stored)
     {
-        bool singleUser = ReadBool(stored, Keys.SingleUserMode,
-            _configuration.GetValue("Shield:SingleUser", false));
-        bool openApi = ReadBool(stored, Keys.OpenApiEnabled,
-            _configuration.GetValue("Shield:OpenApi:Enabled", false));
-        bool oidcEnabled = ReadBool(stored, Keys.OidcEnabled,
-            _configuration.GetValue("Shield:Oidc:Enabled", false));
+        bool singleUser = ReadBool(
+            stored,
+            Keys.SingleUserMode,
+            _configuration.GetValue("Shield:SingleUser", false)
+        );
+        bool openApi = ReadBool(
+            stored,
+            Keys.OpenApiEnabled,
+            _configuration.GetValue("Shield:OpenApi:Enabled", false)
+        );
+        bool oidcEnabled = ReadBool(
+            stored,
+            Keys.OidcEnabled,
+            _configuration.GetValue("Shield:Oidc:Enabled", false)
+        );
 
-        string? issuer = ReadString(stored, Keys.OidcIssuer)
-            ?? _configuration["Shield:Oidc:Issuer"];
-        string? clientId = ReadString(stored, Keys.OidcClientId)
-            ?? _configuration["Shield:Oidc:ClientId"];
+        string? issuer =
+            ReadString(stored, Keys.OidcIssuer) ?? _configuration["Shield:Oidc:Issuer"];
+        string? clientId =
+            ReadString(stored, Keys.OidcClientId) ?? _configuration["Shield:Oidc:ClientId"];
         string? secret = ReadString(stored, Keys.OidcClientSecret);
         string? secretMasked = string.IsNullOrEmpty(secret) ? null : MaskSecret(secret);
 
         Severity floor = Severity.Low;
-        if (stored.TryGetValue(Keys.AlertSeverityFloor, out string? floorValue)
-            && Enum.TryParse(floorValue, ignoreCase: true, out Severity parsed))
+        if (
+            stored.TryGetValue(Keys.AlertSeverityFloor, out string? floorValue)
+            && Enum.TryParse(floorValue, ignoreCase: true, out Severity parsed)
+        )
         {
             floor = parsed;
         }
 
         int retention = 90;
-        if (stored.TryGetValue(Keys.RetentionDays, out string? retentionValue)
-            && int.TryParse(retentionValue, out int parsedDays))
+        if (
+            stored.TryGetValue(Keys.RetentionDays, out string? retentionValue)
+            && int.TryParse(retentionValue, out int parsedDays)
+        )
         {
             retention = parsedDays;
         }
@@ -259,8 +293,8 @@ public sealed class SettingsController : ControllerBase
         return fallback;
     }
 
-    private static string? ReadString(Dictionary<string, string> map, string key)
-        => map.TryGetValue(key, out string? value) && !string.IsNullOrEmpty(value) ? value : null;
+    private static string? ReadString(Dictionary<string, string> map, string key) =>
+        map.TryGetValue(key, out string? value) && !string.IsNullOrEmpty(value) ? value : null;
 
     private static string MaskSecret(string secret)
     {

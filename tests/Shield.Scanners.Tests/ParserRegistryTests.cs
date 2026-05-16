@@ -1,9 +1,12 @@
 using FluentAssertions;
 using Shield.Core.Abstractions;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
+using Shield.Parsers.Python;
+using Shield.Parsers.Rust;
 using Shield.Scanners;
 using Xunit;
 
@@ -12,7 +15,15 @@ namespace Shield.Scanners.Tests;
 public class ParserRegistryTests
 {
     static ParserRegistry NewRegistry() =>
-        new(new NpmLockParser(), new NugetLockParser(), new ComposerLockParser(), new GradleLockfileParser());
+        new(
+            new NpmLockParser(),
+            new NugetLockParser(),
+            new ComposerLockParser(),
+            new GradleLockfileParser(),
+            new PythonLockParser(),
+            new GoLockParser(),
+            new RustLockParser()
+        );
 
     [Theory]
     [InlineData("package-lock.json", typeof(NpmLockParser))]
@@ -22,6 +33,13 @@ public class ParserRegistryTests
     [InlineData("packages.lock.json", typeof(NugetLockParser))]
     [InlineData("composer.lock", typeof(ComposerLockParser))]
     [InlineData("gradle.lockfile", typeof(GradleLockfileParser))]
+    [InlineData("poetry.lock", typeof(PythonLockParser))]
+    [InlineData("Pipfile.lock", typeof(PythonLockParser))]
+    [InlineData("requirements.txt", typeof(PythonLockParser))]
+    [InlineData("go.sum", typeof(GoLockParser))]
+    [InlineData("go.mod", typeof(GoLockParser))]
+    [InlineData("Cargo.lock", typeof(RustLockParser))]
+    [InlineData("Cargo.toml", typeof(RustLockParser))]
     public void FindFor_routes_filenames_to_correct_parser(string filename, Type expected)
     {
         ParserRegistry registry = NewRegistry();

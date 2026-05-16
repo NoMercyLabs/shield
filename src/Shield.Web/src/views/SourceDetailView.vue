@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Pencil, Play, Trash2, X } from 'lucide-vue-next'
+import { ExternalLink, GitBranch, Pencil, Play, Trash2, Upload, X } from 'lucide-vue-next'
 
 import InventoryTree from '@/components/InventoryTree.vue'
 import {
   useDeleteSourceMutation,
+  usePromoteSourceToGithubMutation,
   useScanNowMutation,
   useSnapshotItemsQuery,
   useSourceQuery,
   useUpdateSourceMutation,
 } from '@/queries/sources'
+import { useAuth } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
 import { EcosystemNames, SourceTypeNames } from '@/types/api'
@@ -30,7 +32,9 @@ const { data, isLoading, isError } = useSourceQuery(sourceId)
 const scan = useScanNowMutation()
 const update = useUpdateSourceMutation()
 const remove = useDeleteSourceMutation()
+const promote = usePromoteSourceToGithubMutation()
 const { push } = useToasts()
+const { isAdmin } = useAuth()
 
 const source = computed(() => data.value?.source)
 const snapshot = computed(() => data.value?.latestSnapshot ?? null)
@@ -101,6 +105,17 @@ async function onDelete(): Promise<void> {
     push('error', 'Failed to delete source.')
   }
 }
+
+async function onPromote(): Promise<void> {
+  try {
+    const sibling = await promote.mutateAsync(sourceId.value)
+    push('success', `Created GitHub source "${sibling.name}".`)
+    await router.push(`/sources/${sibling.id}`)
+  }
+  catch {
+    push('error', 'Failed to promote to GitHub source.')
+  }
+}
 </script>
 
 <template>
@@ -113,6 +128,28 @@ async function onDelete(): Promise<void> {
         <div>
           <h1 class="text-2xl font-semibold">{{ source.name }}</h1>
           <p class="text-sm text-slate-400">{{ SourceTypeNames[source.type] }}</p>
+          <p v-if="source.detectedRemote" class="mt-1 flex items-center gap-2 text-xs text-slate-400">
+            <GitBranch class="h-3.5 w-3.5" />
+            <a
+              :href="`https://${source.detectedRemote.host}/${source.detectedRemote.owner}/${source.detectedRemote.repo}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 hover:text-blue-300 hover:underline"
+            >
+              {{ source.detectedRemote.host }}/{{ source.detectedRemote.owner }}/{{ source.detectedRemote.repo }}
+              <ExternalLink class="h-3 w-3" />
+            </a>
+            <button
+              v-if="isAdmin && source.detectedRemote.host === 'github.com'"
+              type="button"
+              class="inline-flex items-center gap-1 rounded border border-slate-700 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+              :disabled="promote.isPending.value"
+              @click="onPromote"
+            >
+              <Upload class="h-3 w-3" />
+              Promote to GitHub source
+            </button>
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <button

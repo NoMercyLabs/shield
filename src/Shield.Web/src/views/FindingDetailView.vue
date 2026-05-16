@@ -4,13 +4,15 @@ import { computed, ref } from 'vue'
 import SeverityBadge from '@/components/SeverityBadge.vue'
 import {
   useAckFindingMutation,
+  useApplyFixMutation,
   useFindingQuery,
   useResolveFindingMutation,
   useSuppressFindingMutation,
 } from '@/queries/findings'
 import { useToasts } from '@/stores/toast'
 import { formatDate, parseJsonArray, severityName } from '@/lib/format'
-import { EcosystemNames, FindingStateNames } from '@/types/api'
+import { EcosystemNames, FindingStateNames, SourceType } from '@/types/api'
+import type { ApplyFixStrategy } from '@/types/api'
 
 const props = defineProps<{ id: string }>()
 const id = computed(() => props.id)
@@ -19,6 +21,7 @@ const { data, isLoading, isError } = useFindingQuery(id)
 const ack = useAckFindingMutation()
 const suppress = useSuppressFindingMutation()
 const resolve = useResolveFindingMutation()
+const applyFix = useApplyFixMutation()
 const { push } = useToasts()
 
 const suppressReason = ref('')
@@ -26,6 +29,13 @@ const suppressReason = ref('')
 const finding = computed(() => data.value?.finding)
 const advisory = computed(() => data.value?.advisory)
 const item = computed(() => data.value?.item)
+const fixSuggestion = computed(() => data.value?.fixSuggestion ?? null)
+const sourceType = computed(() => data.value?.sourceType ?? null)
+const fixStrategy = computed<ApplyFixStrategy | null>(() => {
+  if (sourceType.value === SourceType.LocalFolder) return 'auto'
+  if (sourceType.value === SourceType.GithubRepo) return 'pr'
+  return null
+})
 
 const references = computed(() => parseJsonArray<string>(advisory.value?.referencesJson))
 const heading = computed(() => {
@@ -44,6 +54,31 @@ async function run(verb: 'ack' | 'suppress' | 'resolve'): Promise<void> {
   }
   catch {
     push('error', `Failed to ${verb}.`)
+  }
+}
+
+async function applyBestEffortFix(): Promise<void> {
+  const strategy = fixStrategy.value
+  if (!strategy) {
+    push('error', 'Source type does not support automatic fixes yet.')
+    return
+  }
+  try {
+    const result = await applyFix.mutateAsync({ id: id.value, strategy })
+    if (result.pullRequestUrl) {
+      push('success', `Pull request opened: ${result.pullRequestUrl}`)
+    }
+    else {
+      const files = result.changedFiles.length
+      const followUp = result.followUpCommand ? ` — run \`${result.followUpCommand}\`` : ''
+      push('success', `Applied fix (${files} file${files === 1 ? '' : 's'} changed)${followUp}.`)
+    }
+  }
+  catch (error) {
+    const message =
+      (error as { response?: { data?: { reason?: string } } })?.response?.data?.reason
+      ?? 'Failed to apply fix.'
+    push('error', message)
   }
 }
 </script>
@@ -95,6 +130,41 @@ async function run(verb: 'ack' | 'suppress' | 'resolve'): Promise<void> {
           <dt v-if="finding.notes" class="text-slate-500">Notes</dt>
           <dd v-if="finding.notes" class="whitespace-pre-wrap">{{ finding.notes }}</dd>
         </dl>
+      </section>
+
+      <section
+        v-if="fixSuggestion"
+        class="rounded-lg border border-emerald-700/60 bg-emerald-950/40 p-4"
+      >
+        <h2 class="text-sm font-medium text-emerald-200">Fix available</h2>
+        <p class="mt-1 text-sm text-emerald-100">
+          bump {{ fixSuggestion.packageName }}
+          <span class="font-mono">{{ fixSuggestion.currentVersion }}</span>
+          →
+          <span class="font-mono">{{ fixSuggestion.suggestedVersion }}</span>
+        </p>
+        <p v-if="fixSuggestion.notes" class="mt-1 text-xs text-emerald-300/80">
+          Notes: {{ fixSuggestion.notes }}
+        </p>
+        <p v-if="!fixStrategy" class="mt-2 text-xs text-emerald-300/80">
+          Source type does not support automatic fixes yet — bump manually.
+        </p>
+        <div class="mt-3">
+          <button
+            type="button"
+            class="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            :disabled="applyFix.isPending.value || !fixStrategy"
+            @click="applyBestEffortFix()"
+          >
+            {{ fixStrategy === 'pr' ? 'Open pull request' : 'Apply fix' }}
+          </button>
+        </div>
+      </section>
+      <section
+        v-else-if="advisory"
+        class="rounded-lg border border-slate-800 bg-slate-900 p-4 text-sm text-slate-500"
+      >
+        No known fix is available for this advisory yet.
       </section>
 
       <section class="rounded-lg border border-slate-800 bg-slate-900 p-4">

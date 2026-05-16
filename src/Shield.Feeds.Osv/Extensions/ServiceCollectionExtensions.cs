@@ -10,11 +10,16 @@ public static class ServiceCollectionExtensions
         services.AddTransient<PollyHttpRetryHandler>();
 
         services
-            .AddHttpClient(OsvFeedSync.HttpClientName, client =>
-            {
-                client.BaseAddress = new Uri("https://api.osv.dev/");
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("Shield/0.1 (+https://github.com/nomercylabs/shield)");
-            })
+            .AddHttpClient(
+                OsvFeedSync.HttpClientName,
+                client =>
+                {
+                    client.BaseAddress = new Uri("https://api.osv.dev/");
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                        "Shield/0.1 (+https://github.com/nomercylabs/shield)"
+                    );
+                }
+            )
             .AddHttpMessageHandler<PollyHttpRetryHandler>();
 
         services.AddTransient<IFeedSync>(sp =>

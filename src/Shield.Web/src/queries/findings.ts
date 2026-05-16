@@ -3,7 +3,15 @@ import type { MaybeRef } from 'vue'
 import { unref } from 'vue'
 
 import { api } from '@/lib/api'
-import type { Finding, FindingDetail, FindingFilter, FindingsPage } from '@/types/api'
+import type {
+  ApplyFixRequest,
+  ApplyFixResponse,
+  ApplyFixStrategy,
+  Finding,
+  FindingDetail,
+  FindingFilter,
+  FindingsPage,
+} from '@/types/api'
 
 export const useFindingsQuery = (filter: MaybeRef<FindingFilter>) => useQuery({
   queryKey: ['findings', filter],
@@ -44,3 +52,23 @@ const transition = (verb: 'ack' | 'suppress' | 'resolve') => {
 export const useAckFindingMutation = () => transition('ack')
 export const useSuppressFindingMutation = () => transition('suppress')
 export const useResolveFindingMutation = () => transition('resolve')
+
+interface ApplyFixPayload {
+  id: string
+  strategy: ApplyFixStrategy
+}
+
+export const useApplyFixMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, strategy }: ApplyFixPayload): Promise<ApplyFixResponse> => {
+      const body: ApplyFixRequest = { strategy }
+      const { data } = await api.post<ApplyFixResponse>(`/findings/${id}/apply-fix`, body)
+      return data
+    },
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['findings'] })
+      queryClient.invalidateQueries({ queryKey: ['findings', id] })
+    },
+  })
+}

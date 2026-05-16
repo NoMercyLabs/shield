@@ -18,19 +18,19 @@ namespace Shield.Data.Migrations.Shield
                     Key = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     ValueEncrypted = table.Column<string>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AppSettings", x => x.Key);
-                });
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "AppSettings");
+            migrationBuilder.DropTable(name: "AppSettings");
         }
     }
 }

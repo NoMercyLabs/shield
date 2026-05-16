@@ -13,9 +13,7 @@ public class FindingConfiguration : IEntityTypeConfiguration<Finding>
         builder.Property(finding => finding.DedupKey).IsRequired().HasMaxLength(128);
         builder.Property(finding => finding.Notes).HasMaxLength(4000);
 
-        builder
-            .HasIndex(finding => finding.DedupKey)
-            .IsUnique();
+        builder.HasIndex(finding => finding.DedupKey).IsUnique();
 
         builder.HasIndex(finding => finding.SourceId);
         builder.HasIndex(finding => finding.InventoryItemId);

@@ -20,10 +20,15 @@ public sealed class LocalFolderScanner : IScanner
     };
 
     readonly ParserRegistry _parsers;
+    readonly IDetectedRemoteHostPolicy? _remoteHostPolicy;
 
-    public LocalFolderScanner(ParserRegistry parsers)
+    public LocalFolderScanner(
+        ParserRegistry parsers,
+        IDetectedRemoteHostPolicy? remoteHostPolicy = null
+    )
     {
         _parsers = parsers;
+        _remoteHostPolicy = remoteHostPolicy;
     }
 
     public SourceType SourceType => SourceType.LocalFolder;
@@ -45,6 +50,8 @@ public sealed class LocalFolderScanner : IScanner
 
         if (!Directory.Exists(config.Path))
             return ScanResult.Fail($"Path does not exist: {config.Path}");
+
+        UpdateDetectedRemote(source, config.Path);
 
         IReadOnlyList<string> ignore = config.IgnoreGlobs is { Count: > 0 }
             ? config.IgnoreGlobs
@@ -88,6 +95,23 @@ public sealed class LocalFolderScanner : IScanner
             item.SnapshotId = snapshotId;
 
         return ScanResult.Ok(snapshot, aggregated);
+    }
+
+    // Refresh source.DetectedRemote from the live `.git/config`. Mutates source in place;
+    // the scan worker writes the row back to the DB so the API picks up the change.
+    void UpdateDetectedRemote(Source source, string path)
+    {
+        DetectedRemote? detected = GitRemoteParser.DetectFromWorkingTree(path);
+        string? serialised = null;
+        if (detected is not null)
+        {
+            IEnumerable<string> hosts =
+                _remoteHostPolicy?.ActionableHosts ?? GitRemoteParser.DefaultActionableHosts;
+            if (hosts.Contains(detected.Host, StringComparer.OrdinalIgnoreCase))
+                serialised = JsonSerializer.Serialize(detected);
+        }
+        if (!string.Equals(source.DetectedRemote, serialised, StringComparison.Ordinal))
+            source.DetectedRemote = serialised;
     }
 
     static IEnumerable<string> EnumerateFiles(string root, HashSet<string> ignoreSet)

@@ -279,6 +279,65 @@ namespace Shield.Data.Migrations.Shield
                     b.ToTable("Findings", (string)null);
                 });
 
+            modelBuilder.Entity("Shield.Core.Domain.IntegrationToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccessTokenEncrypted")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountLogin")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Extra")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("LinkedUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RefreshTokenEncrypted")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "LinkedUserId");
+
+                    b.HasIndex("Provider", "Subject");
+
+                    b.ToTable("IntegrationTokens", (string)null);
+                });
+
             modelBuilder.Entity("Shield.Core.Domain.InventoryItem", b =>
                 {
                     b.Property<int>("Id")
@@ -353,6 +412,10 @@ namespace Shield.Data.Migrations.Shield
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetectedRemote")
+                        .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
