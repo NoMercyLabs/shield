@@ -3,6 +3,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DefaultItemExcludesInProjectFolder>$(DefaultItemExcludesInProjectFolder.Replace('node_modules/**;', '').Replace(';node_modules/**', ''))</DefaultItemExcludesInProjectFolder>
+    <DefaultItemExcludes>$(DefaultItemExcludes.Replace('node_modules/**;', '').Replace(';node_modules/**', ''))</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

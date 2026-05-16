@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
             .AddHttpMessageHandler<PollyTransientHandler>();
 
         services.AddSingleton<IPackageMetaSink, InMemoryPackageMetaSink>();
+        services.AddSingleton<IPackageNameSource, InMemoryPackageNameSource>();
         services.AddSingleton<IFeedSync, NpmRegistryFeedSync>();
         return services;
     }
