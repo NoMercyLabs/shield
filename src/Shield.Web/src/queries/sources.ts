@@ -4,6 +4,9 @@ import { unref } from 'vue'
 
 import { api } from '@/lib/api'
 import type {
+  AutoFixMode,
+  BulkApplyRequest,
+  BulkApplyResponse,
   BulkFromGithubRequest,
   BulkFromGithubResponse,
   BulkLocalFoldersRequest,
@@ -201,6 +204,37 @@ export const usePromoteSourceToGithubMutation = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
+    },
+  })
+}
+
+export const useApplyAllFixesMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: number, payload: BulkApplyRequest }): Promise<BulkApplyResponse> => {
+      const { data } = await api.post<BulkApplyResponse>(
+        `/sources/${input.id}/apply-all-fixes`,
+        input.payload,
+      )
+      return data
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['sources', input.id] })
+    },
+  })
+}
+
+export const useUpdateSourceAutoFixModeMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: number, autoFixMode: AutoFixMode }): Promise<Source> => {
+      const { data } = await api.patch<Source>(`/sources/${input.id}/auto-fix-mode`, { autoFixMode: input.autoFixMode })
+      return data
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['sources', input.id] })
     },
   })
 }

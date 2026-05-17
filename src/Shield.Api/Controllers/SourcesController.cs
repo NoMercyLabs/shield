@@ -1,11 +1,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Api.Services;
-using Shield.Api.Workers;
+using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
 
@@ -21,17 +22,25 @@ public sealed class SourcesController : ControllerBase
     private static readonly TimeSpan DefaultScanInterval = TimeSpan.FromHours(1);
 
     private readonly ShieldDbContext _db;
-    private readonly ScanQueue _scanQueue;
+    private readonly IPersistentScanQueue _scanQueue;
     private readonly FeedsDbContext _feedsDb;
     private readonly IAnomalyDetector _anomalyDetector;
     private readonly IAccessResolver _access;
+    private readonly IBulkFixApplier _bulkFixApplier;
+    private readonly IAuditLogger _auditLogger;
+    private readonly INotificationPublisher _notifications;
+    private readonly ISecurityEventLogger _securityLog;
 
     public SourcesController(
         ShieldDbContext db,
-        ScanQueue scanQueue,
+        IPersistentScanQueue scanQueue,
         FeedsDbContext feedsDb,
         IAnomalyDetector anomalyDetector,
-        IAccessResolver access
+        IAccessResolver access,
+        IBulkFixApplier bulkFixApplier,
+        IAuditLogger auditLogger,
+        INotificationPublisher notifications,
+        ISecurityEventLogger securityLog
     )
     {
         _db = db;
@@ -39,9 +48,14 @@ public sealed class SourcesController : ControllerBase
         _feedsDb = feedsDb;
         _anomalyDetector = anomalyDetector;
         _access = access;
+        _bulkFixApplier = bulkFixApplier;
+        _auditLogger = auditLogger;
+        _notifications = notifications;
+        _securityLog = securityLog;
     }
 
     [HttpGet]
+    [RequireApiScope("sources:read")]
     public async Task<ActionResult<IReadOnlyList<SourceResponse>>> List(CancellationToken ct)
     {
         bool isAdmin = User.IsInRole(ShieldRoles.Admin);
@@ -53,11 +67,14 @@ public sealed class SourcesController : ControllerBase
                 return Ok(Array.Empty<SourceResponse>());
             query = query.Where(source => visible.Contains(source.Id));
         }
-        List<Source> sources = await query.OrderByDescending(source => source.UpdatedAt).ToListAsync(ct);
+        List<Source> sources = await query
+            .OrderByDescending(source => source.UpdatedAt)
+            .ToListAsync(ct);
         return Ok(sources.Select(SourceResponse.From).ToList());
     }
 
     [HttpGet("{id:int}")]
+    [RequireApiScope("sources:read")]
     public async Task<ActionResult<SourceDetailResponse>> Get(int id, CancellationToken ct)
     {
         if (!await _access.CanReadAsync(User, id, ct))
@@ -81,7 +98,7 @@ public sealed class SourcesController : ControllerBase
                 .Select(group => new { group.Key, Count = group.Count() })
                 .ToDictionaryAsync(entry => entry.Key, entry => entry.Count, ct);
 
-            summary = new SnapshotSummary(
+            summary = new(
                 snapshot.Id,
                 snapshot.TakenAt,
                 snapshot.ContentsSha,
@@ -94,7 +111,8 @@ public sealed class SourcesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
     public async Task<ActionResult<SourceResponse>> Create(
         [FromBody] CreateSourceRequest request,
         CancellationToken ct
@@ -132,7 +150,8 @@ public sealed class SourcesController : ControllerBase
     // Bulk-create LocalFolder sources from a list of absolute paths. Admin only.
     // Dedupes against existing LocalFolder sources that already reference the same path.
     [HttpPost("bulk-local-folders")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
     public async Task<ActionResult<BulkLocalFoldersResponse>> BulkLocalFolders(
         [FromBody] BulkLocalFoldersRequest request,
         CancellationToken ct
@@ -174,7 +193,7 @@ public sealed class SourcesController : ControllerBase
         DateTime now = DateTime.UtcNow;
         int created = 0;
         int skipped = 0;
-        List<Source> newSources = new();
+        List<Source> newSources = [];
 
         foreach (string rawPath in request.Paths)
         {
@@ -225,7 +244,10 @@ public sealed class SourcesController : ControllerBase
         }
 
         if (created > 0)
+        {
             await _db.SaveChangesAsync(ct);
+            await EnqueueBulkAsync(newSources, ct);
+        }
 
         return Ok(
             new BulkLocalFoldersResponse(
@@ -237,6 +259,7 @@ public sealed class SourcesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [NoApiToken]
     public async Task<ActionResult<SourceResponse>> Update(
         int id,
         [FromBody] UpdateSourceRequest request,
@@ -275,6 +298,7 @@ public sealed class SourcesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [NoApiToken]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         if (!await _access.CanReadAsync(User, id, ct))
@@ -293,7 +317,8 @@ public sealed class SourcesController : ControllerBase
     // Creates a sibling GithubRepo source from a LocalFolder's detected origin.
     // Admin only — same gate as Settings + OAuth.
     [HttpPost("{id:int}/promote-to-github")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
     public async Task<ActionResult<SourceResponse>> PromoteToGithub(int id, CancellationToken ct)
     {
         Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
@@ -342,7 +367,8 @@ public sealed class SourcesController : ControllerBase
     // in one transaction. Idempotent — a selection whose `owner/name` already exists is skipped.
     // Token is read server-side from the OAuth IntegrationToken; never stored in ConfigJson.
     [HttpPost("bulk-from-github")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
     public async Task<ActionResult<BulkFromGithubResponse>> BulkFromGithub(
         [FromBody] BulkFromGithubRequest request,
         CancellationToken ct
@@ -364,7 +390,7 @@ public sealed class SourcesController : ControllerBase
         ).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         DateTime now = DateTime.UtcNow;
-        List<Source> toInsert = new();
+        List<Source> toInsert = [];
         int skipped = 0;
 
         foreach (BulkSelection selection in request.Selections)
@@ -393,7 +419,7 @@ public sealed class SourcesController : ControllerBase
                 }
             );
             toInsert.Add(
-                new Source
+                new()
                 {
                     Type = SourceType.GithubRepo,
                     Name = name,
@@ -410,6 +436,7 @@ public sealed class SourcesController : ControllerBase
         {
             _db.Sources.AddRange(toInsert);
             await _db.SaveChangesAsync(ct);
+            await EnqueueBulkAsync(toInsert, ct);
         }
 
         List<SourceResponse> created = toInsert.Select(SourceResponse.From).ToList();
@@ -417,6 +444,7 @@ public sealed class SourcesController : ControllerBase
     }
 
     [HttpPost("{id:int}/scan-now")]
+    [NoApiToken]
     public async Task<ActionResult<ScanQueuedResponse>> ScanNow(int id, CancellationToken ct)
     {
         if (!await _access.CanReadAsync(User, id, ct))
@@ -435,7 +463,154 @@ public sealed class SourcesController : ControllerBase
         );
     }
 
+    [HttpPost("{id:int}/apply-all-fixes")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
+    [EnableRateLimiting("bulk-apply")]
+    public async Task<ActionResult<BulkApplyResponse>> ApplyAllFixes(
+        int id,
+        [FromBody] BulkApplyRequest request,
+        CancellationToken ct
+    )
+    {
+        Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (source is null)
+            return NotFound();
+
+        if (source.Type != SourceType.GithubRepo)
+        {
+            return BadRequest(
+                new
+                {
+                    error = "apply_unsupported_type",
+                    message = "Bulk apply only supports GithubRepo sources.",
+                }
+            );
+        }
+
+        // 24-hour cooldown gate. Admin can bypass with force=true.
+        if (!request.DryRun && !request.Force && source.LastBulkApplyAt.HasValue)
+        {
+            TimeSpan elapsed = DateTime.UtcNow - source.LastBulkApplyAt.Value;
+            if (elapsed < TimeSpan.FromHours(24))
+            {
+                DateTime retryAfter = source.LastBulkApplyAt.Value.AddHours(24);
+                return StatusCode(
+                    StatusCodes.Status429TooManyRequests,
+                    new
+                    {
+                        error = "bulk_cooldown",
+                        retryAfter = retryAfter.ToString("o"),
+                        message = $"Bulk apply was run recently. Wait until {retryAfter:u} or pass force=true to bypass.",
+                    }
+                );
+            }
+        }
+
+        // Load all advisories for this source's open findings.
+        List<Finding> openFindings = await _db
+            .Findings.Where(finding => finding.SourceId == id && finding.State == FindingState.Open)
+            .ToListAsync(ct);
+
+        List<Advisory> advisories = [];
+        if (openFindings.Count > 0)
+        {
+            HashSet<Guid> advisoryIds = openFindings
+                .Select(finding => finding.AdvisoryRefId)
+                .ToHashSet();
+            advisories = await _feedsDb
+                .Advisories.Where(advisory => advisoryIds.Contains(advisory.Id))
+                .ToListAsync(ct);
+        }
+
+        BulkApplyResult result = await _bulkFixApplier.ApplyAllPullRequestAsync(
+            source,
+            advisories,
+            request.DryRun,
+            request.MaxPackages,
+            ct
+        );
+
+        if (!request.DryRun && result.PullRequestUrl is not null)
+        {
+            source.LastBulkApplyAt = DateTime.UtcNow;
+            source.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+
+            await _auditLogger.RecordAsync(
+                "source.bulk_apply",
+                "Source",
+                id.ToString(),
+                details: new
+                {
+                    packages = result.Entries.Select(entry => entry.PackageName).ToList(),
+                    prUrl = result.PullRequestUrl,
+                    count = result.Entries.Count,
+                },
+                ct
+            );
+
+            await _notifications.BroadcastAsync(
+                NotificationKind.SystemMessage,
+                Severity.Low,
+                $"Bulk fix PR opened for {source.Name}",
+                $"{result.Entries.Count} packages bumped — {result.PullRequestUrl}",
+                relatedType: "Source",
+                relatedId: id.ToString(),
+                ct
+            );
+
+            await _securityLog.LogAsync(
+                source: "shield.fix",
+                eventType: "fix.bulk_pr_opened",
+                severity: Severity.Low,
+                path: $"/api/sources/{id}/apply-all-fixes",
+                ct: ct
+            );
+        }
+
+        return Ok(
+            new BulkApplyResponse(
+                DryRun: result.DryRun,
+                PullRequestUrl: result.PullRequestUrl,
+                Entries: result.Entries,
+                Errors: result.Errors,
+                ReusedBranch: result.ReusedBranch
+            )
+        );
+    }
+
+    [HttpPatch("{id:int}/auto-fix-mode")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
+    public async Task<ActionResult<SourceResponse>> SetAutoFixMode(
+        int id,
+        [FromBody] SetAutoFixModeRequest request,
+        CancellationToken ct
+    )
+    {
+        Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (source is null)
+            return NotFound();
+
+        source.AutoFixMode = request.AutoFixMode;
+        source.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(SourceResponse.From(source));
+    }
+
+    // Enqueue scans for the freshly-created sources from a bulk-add response. Shared between
+    // bulk-from-github and bulk-local-folders so both call sites get identical semantics.
+    private async Task EnqueueBulkAsync(IEnumerable<Source> sources, CancellationToken ct)
+    {
+        List<int> ids = sources.Select(source => source.Id).ToList();
+        if (ids.Count == 0)
+            return;
+        await _scanQueue.EnqueueManyAsync(ids, ct);
+    }
+
     [HttpGet("{id:int}/snapshots")]
+    [RequireApiScope("sources:read")]
     public async Task<ActionResult<IReadOnlyList<SnapshotListItem>>> Snapshots(
         int id,
         CancellationToken ct
@@ -475,6 +650,7 @@ public sealed class SourcesController : ControllerBase
     // Path order /{olderId}/diff/{newerId} keeps the older snapshot adjacent to the
     // resource it's already namespaced under and avoids a {guid}/{guid} ambiguity.
     [HttpGet("{id:int}/snapshots/{olderId:guid}/diff/{newerId:guid}")]
+    [RequireApiScope("sources:read")]
     public async Task<ActionResult<SnapshotDiffResponse>> Diff(
         int id,
         Guid olderId,
@@ -519,7 +695,7 @@ public sealed class SourcesController : ControllerBase
             .Where(item => !newerIndex.ContainsKey((item.Ecosystem, NormalizeDiffName(item.Name))))
             .ToList();
 
-        List<InventoryDiffChange> versionChanged = new();
+        List<InventoryDiffChange> versionChanged = [];
         foreach (InventoryItem newerItem in newerItems)
         {
             if (
@@ -530,7 +706,7 @@ public sealed class SourcesController : ControllerBase
             )
             {
                 versionChanged.Add(
-                    new InventoryDiffChange(
+                    new(
                         newerItem.Ecosystem,
                         newerItem.Name,
                         olderItem.Version,
@@ -574,14 +750,7 @@ public sealed class SourcesController : ControllerBase
             );
 
             added.Add(
-                new InventoryDiffEntry(
-                    item.Ecosystem,
-                    item.Name,
-                    item.Version,
-                    item.IsDirect,
-                    item.ParentChain,
-                    flags
-                )
+                new(item.Ecosystem, item.Name, item.Version, item.IsDirect, item.ParentChain, flags)
             );
         }
 
@@ -616,7 +785,7 @@ public sealed class SourcesController : ControllerBase
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(entry => entry.Key, entry => entry.Count, ct);
 
-        return new SnapshotSummary(
+        return new(
             snapshot.Id,
             snapshot.TakenAt,
             snapshot.ContentsSha,
@@ -628,6 +797,7 @@ public sealed class SourcesController : ControllerBase
     private static string NormalizeDiffName(string name) => name.Trim().ToLowerInvariant();
 
     [HttpGet("{id:int}/snapshots/{snapshotId:guid}/items")]
+    [RequireApiScope("sources:read")]
     public async Task<ActionResult<PagedResponse<InventoryItemResponse>>> SnapshotItems(
         int id,
         Guid snapshotId,

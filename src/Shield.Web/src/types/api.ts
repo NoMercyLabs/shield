@@ -30,6 +30,12 @@ export const Ecosystem = {
   Python: 5,
   Go: 6,
   Rust: 7,
+  RubyGems: 8,
+  SwiftPM: 9,
+  Pub: 10,
+  Maven: 11,
+  Hex: 12,
+  Vcpkg: 13,
 } as const
 export type Ecosystem = (typeof Ecosystem)[keyof typeof Ecosystem]
 export type EcosystemName = keyof typeof Ecosystem
@@ -42,6 +48,12 @@ export const EcosystemNames: Record<Ecosystem, EcosystemName> = {
   5: 'Python',
   6: 'Go',
   7: 'Rust',
+  8: 'RubyGems',
+  9: 'SwiftPM',
+  10: 'Pub',
+  11: 'Maven',
+  12: 'Hex',
+  13: 'Vcpkg',
 }
 
 export const SourceType = {
@@ -55,6 +67,19 @@ export const SourceTypeNames: Record<SourceType, SourceTypeName> = {
   0: 'GithubRepo',
   1: 'LocalFolder',
   2: 'LinuxHost',
+}
+
+export const AutoFixMode = {
+  Off: 0,
+  WeeklyDigest: 1,
+  OnEveryScan: 2,
+} as const
+export type AutoFixMode = (typeof AutoFixMode)[keyof typeof AutoFixMode]
+export type AutoFixModeName = keyof typeof AutoFixMode
+export const AutoFixModeNames: Record<AutoFixMode, AutoFixModeName> = {
+  0: 'Off',
+  1: 'WeeklyDigest',
+  2: 'OnEveryScan',
 }
 
 export const FindingState = {
@@ -98,6 +123,8 @@ export const Feed = {
   DepsDev: 3,
   Socket: 4,
   TrivyDb: 5,
+  Kev: 6,
+  Epss: 7,
 } as const
 export type Feed = (typeof Feed)[keyof typeof Feed]
 export type FeedName = keyof typeof Feed
@@ -108,6 +135,8 @@ export const FeedNames: Record<Feed, FeedName> = {
   3: 'DepsDev',
   4: 'Socket',
   5: 'TrivyDb',
+  6: 'Kev',
+  7: 'Epss',
 }
 
 // ---------- auth ----------
@@ -117,6 +146,21 @@ export interface Me {
   username: string | null
   roles: string[]
   singleUserMode: boolean
+  displayName?: string | null
+  avatarUrl?: string | null
+  profileUrl?: string | null
+  providerLogin?: string | null
+  providerKey?: string | null
+  // Populated when this `/me` response is being returned through an active
+  // "Admin viewing as X" impersonation override. `impersonatedBy` is the admin's user id;
+  // `impersonatorLogin` is their display name for the banner.
+  impersonatedBy?: string | null
+  impersonatorLogin?: string | null
+}
+
+export interface ImpersonationStartResponse {
+  userId: string
+  username: string
 }
 
 export interface LoginRequest {
@@ -154,6 +198,35 @@ export interface Source {
   createdAt: string
   updatedAt: string
   detectedRemote: DetectedRemote | null
+  lastBulkApplyAt: string | null
+  autoFixMode: AutoFixMode
+}
+
+export interface BulkApplyRequest {
+  dryRun?: boolean
+  maxPackages?: number | null
+  force?: boolean
+}
+
+export interface BulkApplyEntry {
+  packageName: string
+  currentVersion: string
+  suggestedVersion: string
+  manifestPath: string
+  advisoryIds: string[]
+}
+
+export interface BulkApplyError {
+  packageName: string
+  reason: string
+}
+
+export interface BulkApplyResponse {
+  dryRun: boolean
+  pullRequestUrl: string | null
+  entries: BulkApplyEntry[]
+  errors: BulkApplyError[]
+  reusedBranch: string | null
 }
 
 export interface SourceCreate {
@@ -276,6 +349,11 @@ export interface Advisory {
   publishedAt: string
   modifiedAt: string
   fetchedAt: string
+  isKev?: boolean
+  kevAddedAt?: string | null
+  kevDueDate?: string | null
+  epssScore?: number | null
+  epssPercentile?: number | null
 }
 
 export interface Finding {
@@ -295,6 +373,16 @@ export interface Finding {
   ecosystem: Ecosystem | null
   advisoryExternalId: string | null
   advisorySummary: string | null
+  isKev?: boolean
+  kevAddedAt?: string | null
+  kevDueDate?: string | null
+  epssScore?: number | null
+  epssPercentile?: number | null
+  // Name fields shipped alongside the numeric enum wire values so token consumers don't have
+  // to keep their own lookup table. UI prefers numeric + the local Names map for i18n consistency.
+  severityName?: string
+  stateName?: string
+  ecosystemName?: string | null
 }
 
 export interface AdvisoryReference {
@@ -315,6 +403,14 @@ export interface FindingDetail {
   item: InventoryItemResponse | null
   sourceType: SourceType | null
   fixSuggestion: FixSuggestion | null
+  // True when the caller has Triage permission on this finding's source. The triage action
+  // buttons (Ack / Resolve / Suppress) hide when false instead of letting the server 403.
+  canTriage?: boolean
+}
+
+export interface FixEligibility {
+  eligible: boolean
+  reason: string | null
 }
 
 export interface FixSuggestion {
@@ -322,6 +418,8 @@ export interface FixSuggestion {
   currentVersion: string
   suggestedVersion: string
   notes: string | null
+  prEligibility: FixEligibility
+  autoEligibility: FixEligibility
 }
 
 export type ApplyFixStrategy = 'auto' | 'pr'
@@ -338,14 +436,42 @@ export interface ApplyFixResponse {
   reason: string | null
 }
 
+export const SortBy = {
+  Severity: 'severity',
+  DiscoveredAt: 'discoveredAt',
+  PackageName: 'packageName',
+  SourceName: 'sourceName',
+} as const
+export type SortBy = (typeof SortBy)[keyof typeof SortBy]
+
+export const SortDir = {
+  Asc: 'asc',
+  Desc: 'desc',
+} as const
+export type SortDir = (typeof SortDir)[keyof typeof SortDir]
+
 export interface FindingFilter {
   severity?: Severity[]
   sourceId?: number[]
   ecosystem?: Ecosystem[]
   state?: FindingState[]
   packageName?: string[]
+  hasFix?: boolean | null
+  kevOnly?: boolean
+  epssMin?: number | null
+  advisoryQuery?: string | null
+  sortBy?: SortBy
+  sortDir?: SortDir
   page?: number
   pageSize?: number
+}
+
+export interface FindingFilterPreset {
+  id: string
+  name: string
+  kind: string
+  queryJson: string
+  createdAt: string
 }
 
 export interface BulkFindingsRequest {
@@ -454,6 +580,23 @@ export interface OAuthStatus {
   scopes: string[]
   accountLogin: string | null
   expiresAt: string | null
+  deviceFlowAvailable?: boolean
+}
+
+export interface GithubDeviceStartResponse {
+  flowId: string
+  userCode: string
+  verificationUri: string
+  expiresIn: number
+  interval: number
+  verificationUriComplete?: string | null
+}
+
+export type GithubDevicePollStatus = 'pending' | 'slow_down' | 'expired' | 'denied' | 'ok'
+
+export interface GithubDevicePollResponse {
+  status: GithubDevicePollStatus
+  user?: { login: string, id: number, avatarUrl: string | null }
 }
 
 export interface SlackChannelInfo {
@@ -576,9 +719,16 @@ export interface AuditEntry {
   at: string
   actorUserId: string | null
   actorName: string
+  // GitHub login + avatar resolved server-side when the actor has a bound GitHub identity.
+  // Falls back to actorName when null. Avatar drives the round chip in AuditView.
+  actorLogin: string | null
+  actorAvatarUrl: string | null
   action: string
   targetType: string
   targetId: string
+  // Friendly label for the target (Source.Name, Invite.Email, etc.). Null when the type
+  // doesn't have an obvious display string — UI falls back to `{targetType}#{targetId}`.
+  targetLabel: string | null
   detailsJson: string | null
   remoteIp: string | null
 }
@@ -597,6 +747,79 @@ export interface AuditFilter {
   targetType?: string | null
 }
 
+// ---------- security (fail2ban correlation) ----------
+
+export interface SecurityEvent {
+  id: string
+  at: string
+  source: string
+  eventType: string
+  severity: Severity
+  host: string | null
+  jail: string | null
+  remoteIp: string | null
+  userAgent: string | null
+  userName: string | null
+  path: string | null
+  detailsJson: string | null
+}
+
+export interface SecurityEventsPage {
+  items: SecurityEvent[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface SecurityEventFilter {
+  page?: number
+  pageSize?: number
+  minSeverity?: Severity | null
+  source?: string | null
+  jail?: string | null
+  ip?: string | null
+  userName?: string | null
+  since?: string | null
+  until?: string | null
+}
+
+export interface IpReputation {
+  id: number
+  ip: string
+  eventCount: number
+  score: number
+  firstSeenAt: string
+  lastSeenAt: string
+  lastJail: string | null
+  lastBannedAt: string | null
+  lastUnbannedAt: string | null
+  currentlyBanned: boolean
+  notes: string | null
+  country: string | null
+}
+
+export interface IpReputationsPage {
+  items: IpReputation[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface IpDetail {
+  reputation: IpReputation
+  recentEvents: SecurityEvent[]
+}
+
+export interface SecurityHost {
+  host: string
+  lastSeenAt: string
+  eventCount: number
+}
+
+export interface SecurityHostsResponse {
+  items: SecurityHost[]
+}
+
 // ---------- onboarding ----------
 
 export interface OnboardingStatusResponse {
@@ -605,4 +828,313 @@ export interface OnboardingStatusResponse {
   channelCount: number
   githubConnected: boolean
   anyOauthConfigured: boolean
+}
+
+// ---------- access (per-source ACL) ----------
+
+export const SourceAccessLevel = {
+  Read: 0,
+  Triage: 1,
+} as const
+export type SourceAccessLevel = (typeof SourceAccessLevel)[keyof typeof SourceAccessLevel]
+export type SourceAccessLevelName = keyof typeof SourceAccessLevel
+export const SourceAccessLevelNames: Record<SourceAccessLevel, SourceAccessLevelName> = {
+  0: 'Read',
+  1: 'Triage',
+}
+
+export type AccessRoleName = 'Admin' | 'Maintainer' | 'Viewer'
+
+export interface AccessUser {
+  id: string
+  username: string
+  email: string | null
+  roles: string[]
+  createdAt: string
+}
+
+export interface GroupMember {
+  userId: string
+  username: string
+  addedAt: string
+}
+
+export interface SourceGroup {
+  id: number
+  name: string
+  description: string | null
+  createdAt: string
+  members: GroupMember[]
+}
+
+export interface CreateGroupRequest {
+  name: string
+  description?: string | null
+}
+
+export interface UpdateGroupRequest {
+  name: string
+  description?: string | null
+}
+
+export interface AddGroupMemberRequest {
+  username?: string | null
+  email?: string | null
+}
+
+export interface SourceGrant {
+  id: number
+  sourceId: number
+  userId: string | null
+  username: string | null
+  groupId: number | null
+  groupName: string | null
+  level: SourceAccessLevel
+  grantedAt: string
+  grantedBy: string | null
+}
+
+export interface SourceGrants {
+  sourceId: number
+  grants: SourceGrant[]
+}
+
+export interface GrantSourceRequest {
+  userId?: string | null
+  groupId?: number | null
+  level: SourceAccessLevel
+}
+
+export interface InviteExternalIdentity {
+  provider: 'github'
+  subjectId: string
+  login: string
+  displayName?: string | null
+  avatarUrl?: string | null
+  email?: string | null
+}
+
+export interface InviteUserRequest {
+  email?: string | null
+  role: AccessRoleName
+  sourceGroupIds?: number[] | null
+  externalIdentity?: InviteExternalIdentity | null
+}
+
+export interface InvitePreBoundIdentity {
+  provider: string
+  subjectId: string
+  login: string
+}
+
+export interface InviteUserResponse {
+  inviteId: string
+  email: string
+  role: AccessRoleName
+  sourceGroupIds: number[]
+  expiresAt: string
+  acceptUrl: string
+  emailSent: boolean
+  emailSkipReason: string | null
+  preBound?: InvitePreBoundIdentity | null
+}
+
+export interface PendingInvite {
+  id: string
+  email: string
+  role: AccessRoleName
+  sourceGroupIds: number[]
+  sourceGroupNames: string[]
+  createdAt: string
+  expiresAt: string
+  lastSentAt: string | null
+  resendCount: number
+  inviterLogin: string | null
+  preBound?: InvitePreBoundIdentity | null
+  // Raw invite token. Admin-only endpoint exposes it so the Pending Invitations table can
+  // build the accept URL for Copy/Share buttons without an extra per-row request.
+  token?: string | null
+}
+
+export interface GithubOrgSummary {
+  login: string
+  name?: string | null
+  avatarUrl?: string | null
+  memberCount?: number | null
+}
+
+export interface GithubUserSummary {
+  login: string
+  name?: string | null
+  email?: string | null
+  avatarUrl?: string | null
+  githubId: string
+}
+
+export interface GithubOrgListResponse {
+  orgs: GithubOrgSummary[]
+}
+
+export interface GithubMemberListResponse {
+  members: GithubUserSummary[]
+  page: number
+  perPage: number
+  hasMore: boolean
+}
+
+export interface GithubUserSearchResponse {
+  users: GithubUserSummary[]
+}
+
+export interface PublicInvitePreview {
+  role: AccessRoleName
+  sourceGroupNames: string[]
+  inviterLogin: string
+  expiresAt: string
+}
+
+export interface AcceptInviteRequest {
+  token: string
+  // Optional — populated by the device-flow signin path. When omitted, the server uses
+  // the caller's authenticated session cookie (post auth-code popup) as identity proof.
+  acceptanceTicket?: string
+}
+
+export interface AcceptInviteResponse {
+  userId: string
+  username: string
+  role: AccessRoleName
+  sourceGroupIds: number[]
+}
+
+// ---------- two-factor + sessions ----------
+
+export interface TwoFactorEnrollResponse {
+  sharedKey: string
+  authenticatorUri: string
+  recoveryCodes: string[]
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean
+  requiredByPolicy: boolean
+  remainingRecoveryCodes: number
+}
+
+export interface SessionInfo {
+  id: string
+  userId: string
+  username: string | null
+  userAgent: string | null
+  remoteIp: string | null
+  createdAt: string
+  lastActiveAt: string
+  isCurrent: boolean
+}
+
+export interface SessionListResponse {
+  sessions: SessionInfo[]
+}
+
+// ---------- notifications ----------
+
+export const NotificationKind = {
+  ScanFailed: 0,
+  OauthExpiring: 1,
+  FeedDown: 2,
+  MaintainerChange: 3,
+  NewAnomaly: 4,
+  SystemMessage: 5,
+} as const
+export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind]
+export type NotificationKindName = keyof typeof NotificationKind
+export const NotificationKindNames: Record<NotificationKind, NotificationKindName> = {
+  0: 'ScanFailed',
+  1: 'OauthExpiring',
+  2: 'FeedDown',
+  3: 'MaintainerChange',
+  4: 'NewAnomaly',
+  5: 'SystemMessage',
+}
+
+export interface Notification {
+  id: string
+  userId: string | null
+  kind: NotificationKind
+  severity: Severity
+  title: string
+  body: string
+  relatedType: string | null
+  relatedId: string | null
+  createdAt: string
+  readAt: string | null
+  archivedAt: string | null
+}
+
+export interface NotificationsPage {
+  items: Notification[]
+  unreadCount: number
+}
+
+// ---------- package watch ----------
+
+export interface PackageWatch {
+  id: string
+  ecosystem: Ecosystem
+  packageName: string
+  addedAt: string
+}
+
+export interface WatchOpenCounts {
+  low: number
+  medium: number
+  high: number
+  critical: number
+}
+
+export interface WatchSummaryRow {
+  ecosystem: Ecosystem
+  packageName: string
+  sourceCount: number
+  openFindings: WatchOpenCounts
+}
+
+// ---------- saved filters ----------
+
+export interface SavedFilter {
+  id: string
+  name: string
+  kind: string
+  queryJson: string
+  createdAt: string
+}
+
+// ---------- api tokens (CI personal-access tokens) ----------
+
+export type ApiTokenScope = 'findings:read' | 'findings:write' | 'sources:read' | 'sbom:write'
+
+export interface ApiToken {
+  id: string
+  userId: string
+  name: string
+  prefix: string
+  scopes: ApiTokenScope[]
+  sourceIdFilter: number[]
+  createdAt: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+  lastUsedIp: string | null
+  revokedAt: string | null
+}
+
+export interface CreateTokenRequest {
+  name: string
+  scopes: ApiTokenScope[]
+  expiresInDays?: number | null
+  sourceIdFilter?: number[] | null
+}
+
+export interface CreateTokenResponse {
+  token: ApiToken
+  plaintext: string
 }

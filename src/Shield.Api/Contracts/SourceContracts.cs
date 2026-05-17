@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Shield.Api.Services;
 using Shield.Core.Domain;
 
 namespace Shield.Api.Contracts;
@@ -42,7 +43,9 @@ public sealed record SourceResponse(
     bool Enabled,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DetectedRemoteDto? DetectedRemote
+    DetectedRemoteDto? DetectedRemote,
+    DateTime? LastBulkApplyAt = null,
+    AutoFixMode AutoFixMode = AutoFixMode.Off
 )
 {
     public static SourceResponse From(Source source) =>
@@ -57,7 +60,9 @@ public sealed record SourceResponse(
             source.Enabled,
             source.CreatedAt,
             source.UpdatedAt,
-            ParseDetectedRemote(source.DetectedRemote)
+            ParseDetectedRemote(source.DetectedRemote),
+            source.LastBulkApplyAt,
+            source.AutoFixMode
         );
 
     private static readonly JsonSerializerOptions DetectedRemoteOptions = new(
@@ -183,4 +188,36 @@ public sealed record BulkFromGithubResponse(
     int Created,
     int SkippedExisting,
     IReadOnlyList<SourceResponse> Sources
+);
+
+public sealed record BulkApplyRequest(
+    bool DryRun = false,
+    int? MaxPackages = null,
+    bool Force = false
+);
+
+public sealed record SetAutoFixModeRequest(AutoFixMode AutoFixMode);
+
+// Mirrors BulkApplyResult from BulkFixApplier for API consumers.
+public sealed record BulkApplyResponse(
+    bool DryRun,
+    string? PullRequestUrl,
+    IReadOnlyList<BulkApplyEntry> Entries,
+    IReadOnlyList<BulkApplyError> Errors,
+    string? ReusedBranch
+);
+
+public sealed record ScanQueueFailureItem(
+    Guid Id,
+    int SourceId,
+    DateTime EnqueuedAt,
+    DateTime CompletedAt,
+    int Attempts,
+    string ErrorMessage
+);
+
+public sealed record ScanQueueStatusResponse(
+    int Pending,
+    int InProgress,
+    IReadOnlyList<ScanQueueFailureItem> RecentFailures
 );
