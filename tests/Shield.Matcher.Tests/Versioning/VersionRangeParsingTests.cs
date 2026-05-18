@@ -46,11 +46,11 @@ public class VersionRangeParsingTests
     public void ParseOsvEvents_multiple_intervals_yields_multiple_ranges()
     {
         const string events = """
-        [
-          { "introduced": "1.0.0" }, { "fixed": "1.2.0" },
-          { "introduced": "2.0.0" }, { "fixed": "2.3.0" }
-        ]
-        """;
+            [
+              { "introduced": "1.0.0" }, { "fixed": "1.2.0" },
+              { "introduced": "2.0.0" }, { "fixed": "2.3.0" }
+            ]
+            """;
 
         IReadOnlyList<VersionRange> ranges = VersionRange.ParseOsvEvents(events);
 

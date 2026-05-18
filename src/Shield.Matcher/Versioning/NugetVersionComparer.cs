@@ -19,8 +19,10 @@ public sealed class NugetVersionComparer : IVersionComparer
         {
             foreach (string exact in range.Exact)
             {
-                if (NuGetVersion.TryParse(exact, out NuGetVersion? exactVersion) &&
-                    candidate == exactVersion)
+                if (
+                    NuGetVersion.TryParse(exact, out NuGetVersion? exactVersion)
+                    && candidate == exactVersion
+                )
                     return true;
             }
             return false;
@@ -64,7 +66,12 @@ public sealed class NugetVersionComparer : IVersionComparer
     public static VersionRange? ParseNuGetRangeNotation(string notation)
     {
         ArgumentNullException.ThrowIfNull(notation);
-        if (!NuGet.Versioning.VersionRange.TryParse(notation, out NuGet.Versioning.VersionRange? parsed))
+        if (
+            !NuGet.Versioning.VersionRange.TryParse(
+                notation,
+                out NuGet.Versioning.VersionRange? parsed
+            )
+        )
             return null;
 
         string? gtOrEq = null;
@@ -91,9 +98,13 @@ public sealed class NugetVersionComparer : IVersionComparer
                 lt = upperString;
         }
 
-        if (parsed.HasLowerBound && parsed.HasUpperBound &&
-            parsed.IsMinInclusive && parsed.IsMaxInclusive &&
-            parsed.MinVersion == parsed.MaxVersion)
+        if (
+            parsed.HasLowerBound
+            && parsed.HasUpperBound
+            && parsed.IsMinInclusive
+            && parsed.IsMaxInclusive
+            && parsed.MinVersion == parsed.MaxVersion
+        )
         {
             exact = [parsed.MinVersion!.ToNormalizedString()];
             gtOrEq = null;
@@ -105,6 +116,7 @@ public sealed class NugetVersionComparer : IVersionComparer
             Lt: lt,
             GtOrEqExclusive: gtOrEqExclusive,
             LtOrEq: ltOrEq,
-            Exact: exact);
+            Exact: exact
+        );
     }
 }

@@ -24,8 +24,10 @@ public sealed class SemverVersionComparer : IVersionComparer
         {
             foreach (string exact in range.Exact)
             {
-                if (TryParse(exact, out SemVersion? exactVersion) &&
-                    candidate.ComparePrecedenceTo(exactVersion) == 0)
+                if (
+                    TryParse(exact, out SemVersion? exactVersion)
+                    && candidate.ComparePrecedenceTo(exactVersion) == 0
+                )
                     return true;
             }
             return false;

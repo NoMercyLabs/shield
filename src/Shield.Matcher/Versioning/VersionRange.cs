@@ -7,7 +7,8 @@ public sealed record VersionRange(
     string? Lt = null,
     string? GtOrEqExclusive = null,
     string? LtOrEq = null,
-    IReadOnlyList<string>? Exact = null)
+    IReadOnlyList<string>? Exact = null
+)
 {
     public static IReadOnlyList<VersionRange> ParseOsvEvents(string eventsJson)
     {
@@ -70,6 +71,5 @@ public sealed record VersionRange(
         return ranges;
     }
 
-    public static VersionRange Exactly(params string[] versions)
-        => new(Exact: versions);
+    public static VersionRange Exactly(params string[] versions) => new(Exact: versions);
 }
