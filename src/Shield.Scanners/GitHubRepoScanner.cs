@@ -125,11 +125,25 @@ public sealed class GitHubRepoScanner : IScanner
 
         List<InventoryItem> aggregated = [];
 
+        // Path-segment ignore set — defaults skip Fixtures / __pycache__ / node_modules / …
+        // unless the source config overrides with its own list. Empty array means "scan
+        // everything"; null means "use defaults".
+        IReadOnlyList<string> ignore = config.IgnoreGlobs is null
+            ? ScannerIgnoreDefaults.Segments
+            : config.IgnoreGlobs;
+        HashSet<string> ignoreSet = new(ignore, StringComparer.OrdinalIgnoreCase);
+
         foreach (TreeItem entry in tree.Tree)
         {
             ct.ThrowIfCancellationRequested();
 
             if (entry.Type.Value != TreeType.Blob)
+                continue;
+
+            if (
+                ignoreSet.Count > 0
+                && ScannerIgnoreDefaults.ContainsIgnoredSegment(entry.Path, ignoreSet)
+            )
                 continue;
 
             string filename = Path.GetFileName(entry.Path);
@@ -202,4 +216,10 @@ public sealed class GitHubRepoConfig
 
     [JsonPropertyName("token")]
     public string? Token { get; set; }
+
+    // Per-source override for ScannerIgnoreDefaults — paths whose any segment matches one
+    // of these names are dropped from the inventory. When null, defaults apply
+    // (Fixtures / __pycache__ / node_modules / …). Set to an empty array to scan everything.
+    [JsonPropertyName("ignoreGlobs")]
+    public List<string>? IgnoreGlobs { get; set; }
 }

@@ -1318,6 +1318,8 @@
     "flag_major": "Major",
     "flag_too_young": "Jung",
     "apply_latest_btn": "Latest anwenden",
+    "apply_latest_confirm": "Alle verfuegbaren Updates (inklusive Major-Versionsspruenge) anwenden und pro Quelle einen PR oeffnen?",
+    "apply_latest_confirm_majors": "Dies enthaelt {count} Major-Versionsspruenge, die das Projekt brechen koennten. Pro Quelle einen PR mit allen Updates oeffnen?",
     "apply_minor_btn": "Nur Minor anwenden",
     "apply_ok": "{prs} PR(s) geoeffnet, {failed} fehlgeschlagen.",
     "apply_no_prs": "Es wurden keine Pull Requests geoeffnet.",

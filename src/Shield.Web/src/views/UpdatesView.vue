@@ -78,6 +78,19 @@ async function onRefresh(sourceId?: number): Promise<void> {
 }
 
 async function onApply(scope: UpdateApplyScope): Promise<void> {
+  // Apply Latest sweeps major-version bumps into a single PR — confirm before firing so
+  // an idle click on the amber button doesn't open a 60-package PR with breaking changes.
+  // LatestMinor stays one-click since it excludes IsBreakingMajor rows server-side.
+  if (scope === UpdateApplyScope.Latest) {
+    const majorCount = grouped.value
+      .flatMap(group => group.rows)
+      .filter(row => row.isBreakingMajor).length
+    const message = majorCount > 0
+      ? t('updates_view.apply_latest_confirm_majors', { count: majorCount })
+      : t('updates_view.apply_latest_confirm')
+    if (!window.confirm(message))
+      return
+  }
   try {
     const response = await apply.mutateAsync({ scope, confirmProduction: true })
     if (response.queued && response.jobId) {

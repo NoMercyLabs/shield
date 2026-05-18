@@ -10,14 +10,10 @@ namespace Shield.Scanners;
 
 public sealed class LocalFolderScanner : IScanner
 {
+    // Shared with the GitHub repo scanner via ScannerIgnoreDefaults so adding a new
+    // fixture / build-output exclusion lands in both code paths in one edit.
     private static readonly IReadOnlyList<string> DefaultIgnoreGlobs =
-    [
-        "node_modules",
-        "vendor",
-        "bin",
-        "obj",
-        ".git",
-    ];
+        ScannerIgnoreDefaults.Segments;
 
     private readonly ParserRegistry _parsers;
     private readonly IDetectedRemoteHostPolicy? _remoteHostPolicy;

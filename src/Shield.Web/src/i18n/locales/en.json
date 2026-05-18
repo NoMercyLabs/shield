@@ -1306,6 +1306,8 @@
     "flag_major": "Major",
     "flag_too_young": "Young",
     "apply_latest_btn": "Apply latest",
+    "apply_latest_confirm": "Apply all available updates (including any major-version bumps) and open one PR per source?",
+    "apply_latest_confirm_majors": "This will include {count} major-version bump(s) that may break the project. Open one PR per source with everything included?",
     "apply_minor_btn": "Apply minor only",
     "apply_ok": "{prs} PR(s) opened, {failed} failed.",
     "apply_no_prs": "No pull requests were opened.",

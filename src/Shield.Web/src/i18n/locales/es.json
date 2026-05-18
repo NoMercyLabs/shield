@@ -1320,6 +1320,8 @@
     "flag_major": "Mayor",
     "flag_too_young": "Nueva",
     "apply_latest_btn": "Aplicar latest",
+    "apply_latest_confirm": "Aplicar todas las actualizaciones disponibles (incluyendo cambios de version mayor) y abrir un PR por fuente?",
+    "apply_latest_confirm_majors": "Esto incluye {count} cambio(s) de version mayor que podrian romper el proyecto. Abrir un PR por fuente con todo incluido?",
     "apply_minor_btn": "Aplicar solo minor",
     "apply_ok": "{prs} PR(s) abiertos, {failed} fallaron.",
     "apply_no_prs": "No se abrieron pull requests.",

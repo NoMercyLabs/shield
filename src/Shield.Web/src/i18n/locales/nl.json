@@ -1268,6 +1268,8 @@
     "flag_major": "Major",
     "flag_too_young": "Jong",
     "apply_latest_btn": "Latest toepassen",
+    "apply_latest_confirm": "Alle beschikbare updates toepassen (inclusief major-versiesprongen) en per bron een PR openen?",
+    "apply_latest_confirm_majors": "Dit bevat {count} major-versiesprong(en) die het project kunnen breken. Per bron een PR met alles erin openen?",
     "apply_minor_btn": "Alleen minor toepassen",
     "apply_ok": "{prs} PR(s) geopend, {failed} mislukt.",
     "apply_no_prs": "Er zijn geen pull requests geopend.",

@@ -93,9 +93,19 @@ public sealed class UpdateApplier : IUpdateApplier
         HashSet<(Ecosystem, string)> advisoryDriven = await OpenFindingPackagesAsync(source.Id, ct);
         int skippedYoung = 0;
         int skippedMajor = 0;
+        int skippedUnknownVersion = 0;
         List<PackageUpdate> selected = [];
         foreach (PackageUpdate row in sourceRows)
         {
+            // Empty current version means the parser couldn't read it from the manifest —
+            // bumping anyway would silently overwrite an unknown baseline. Skip and let the
+            // operator pin the version manually. Counted toward skippedMajor for the UI
+            // since both render as "unmergeable" in the apply-results modal.
+            if (string.IsNullOrWhiteSpace(row.CurrentVersion))
+            {
+                skippedUnknownVersion++;
+                continue;
+            }
             if (request.Scope == UpdateApplyScope.LatestMinor && row.IsBreakingMajor)
             {
                 skippedMajor++;
@@ -115,6 +125,9 @@ public sealed class UpdateApplier : IUpdateApplier
             }
             selected.Add(row);
         }
+        // Roll unknown-version skips into the major counter for the UI; both are "filtered
+        // for safety" in the apply-results summary. Renaming the field is a separate cleanup.
+        skippedMajor += skippedUnknownVersion;
 
         if (selected.Count == 0)
             return new(
