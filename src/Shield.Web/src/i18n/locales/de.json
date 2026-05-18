@@ -69,7 +69,7 @@
       "sign_out": "Abmelden"
     },
     "impersonation_banner": {
-      "label": "{admin} zeigt als @{user}",
+      "label": "{admin} zeigt als {'@'}{user}",
       "exit_btn": "Identitaetswechsel beenden",
       "exiting": "Wird beendet…",
       "exit_success": "Identitaetswechsel beendet.",
@@ -277,7 +277,7 @@
     "access": {
       "impersonate_btn": "Identitaet annehmen",
       "impersonate_title": "Anzeigen als {user}",
-      "impersonate_started": "Zeigt jetzt als @{user} an.",
+      "impersonate_started": "Zeigt jetzt als {'@'}{user} an.",
       "impersonate_failed": "Identitaetswechsel konnte nicht gestartet werden.",
       "invite": {
         "section_title": "Mitarbeiter einladen",
@@ -1028,7 +1028,7 @@
     "invite_sent_github": "Einladung an {login} gesendet.",
     "invite_failed": "Einladung konnte nicht gesendet werden.",
     "impersonation_failed": "Identitätswechsel fehlgeschlagen.",
-    "impersonating_as": "Jetzt als @{username}.",
+    "impersonating_as": "Jetzt als {'@'}{username}.",
     "copy_invite_title": "Einladungslink für {email} kopieren",
     "share_invite_title": "Einladung für {email} teilen",
     "revoke_invite_title": "Einladung für {email} widerrufen",

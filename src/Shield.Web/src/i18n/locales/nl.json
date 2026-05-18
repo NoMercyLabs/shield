@@ -65,7 +65,7 @@
       "sign_out": "Afmelden"
     },
     "impersonation_banner": {
-      "label": "{admin} bekijkt als @{user}",
+      "label": "{admin} bekijkt als {'@'}{user}",
       "exit_btn": "Imitatie beëindigen",
       "exiting": "Bezig met afsluiten…",
       "exit_success": "Imitatie beëindigd.",
@@ -273,7 +273,7 @@
     "access": {
       "impersonate_btn": "Imiteren",
       "impersonate_title": "Bekijken als {user}",
-      "impersonate_started": "Bekijkt nu als @{user}.",
+      "impersonate_started": "Bekijkt nu als {'@'}{user}.",
       "impersonate_failed": "Imitatie starten mislukt.",
       "invite": {
         "section_title": "Medewerker uitnodigen",
@@ -978,7 +978,7 @@
     "invite_sent_github": "Uitnodiging verzonden naar {login}.",
     "invite_failed": "Uitnodiging verzenden mislukt.",
     "impersonation_failed": "Imitatie starten mislukt.",
-    "impersonating_as": "Nu weergeven als @{username}.",
+    "impersonating_as": "Nu weergeven als {'@'}{username}.",
     "copy_invite_title": "Uitnodigingslink kopiëren voor {email}",
     "share_invite_title": "Uitnodiging delen voor {email}",
     "revoke_invite_title": "Uitnodiging intrekken voor {email}",

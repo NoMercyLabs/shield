@@ -65,7 +65,7 @@
       "sign_out": "Sign out"
     },
     "impersonation_banner": {
-      "label": "{admin} viewing as @{user}",
+      "label": "{admin} viewing as {'@'}{user}",
       "exit_btn": "Exit impersonation",
       "exiting": "Exiting…",
       "exit_success": "Exited impersonation.",
@@ -273,7 +273,7 @@
     "access": {
       "impersonate_btn": "Impersonate",
       "impersonate_title": "View as {user}",
-      "impersonate_started": "Now viewing as @{user}.",
+      "impersonate_started": "Now viewing as {'@'}{user}.",
       "impersonate_failed": "Failed to start impersonation.",
       "invite": {
         "section_title": "Invite collaborator",
@@ -1140,7 +1140,7 @@
     "invite_sent_github": "Invitation sent to {login}.",
     "invite_failed": "Failed to send invitation.",
     "impersonation_failed": "Failed to start impersonation.",
-    "impersonating_as": "Now viewing as @{username}.",
+    "impersonating_as": "Now viewing as {'@'}{username}.",
     "copy_invite_title": "Copy invitation link for {email}",
     "share_invite_title": "Share invitation for {email}",
     "revoke_invite_title": "Revoke invitation for {email}",

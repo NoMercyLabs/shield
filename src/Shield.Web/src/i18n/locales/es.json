@@ -69,7 +69,7 @@
       "sign_out": "Cerrar sesión"
     },
     "impersonation_banner": {
-      "label": "{admin} viendo como @{user}",
+      "label": "{admin} viendo como {'@'}{user}",
       "exit_btn": "Salir de suplantación",
       "exiting": "Saliendo…",
       "exit_success": "Suplantación finalizada.",
@@ -277,7 +277,7 @@
     "access": {
       "impersonate_btn": "Suplantar",
       "impersonate_title": "Ver como {user}",
-      "impersonate_started": "Ahora viendo como @{user}.",
+      "impersonate_started": "Ahora viendo como {'@'}{user}.",
       "impersonate_failed": "Error al iniciar la suplantación.",
       "invite": {
         "section_title": "Invitar colaborador",
@@ -1030,7 +1030,7 @@
     "invite_sent_github": "Invitación enviada a {login}.",
     "invite_failed": "Error al enviar la invitación.",
     "impersonation_failed": "Error al iniciar la suplantación.",
-    "impersonating_as": "Ahora viendo como @{username}.",
+    "impersonating_as": "Ahora viendo como {'@'}{username}.",
     "copy_invite_title": "Copiar enlace de invitación para {email}",
     "share_invite_title": "Compartir invitación para {email}",
     "revoke_invite_title": "Revocar invitación para {email}",
