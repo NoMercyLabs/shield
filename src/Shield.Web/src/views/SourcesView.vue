@@ -35,17 +35,21 @@ const canRefreshGithubAccess = computed(() =>
 )
 
 const sortableRows = computed<Source[]>(() => data.value ?? [])
-const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<Source>(sortableRows, [
-  { key: 'name', extract: row => row.name, defaultDirection: 'asc' },
-  { key: 'type', extract: row => SourceTypeNames[row.type], defaultDirection: 'asc' },
-  { key: 'lastScanned', extract: row => row.lastScannedAt, defaultDirection: 'desc' },
-  {
-    key: 'status',
-    extract: row =>
-      row.lastError ? 'error' : row.enabled ? (row.lastScannedAt ? 'ok' : 'pending') : 'disabled',
-    defaultDirection: 'asc',
-  },
-])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<Source>(
+  sortableRows,
+  [
+    { key: 'name', extract: row => row.name, defaultDirection: 'asc' },
+    { key: 'type', extract: row => SourceTypeNames[row.type], defaultDirection: 'asc' },
+    { key: 'lastScanned', extract: row => row.lastScannedAt, defaultDirection: 'desc' },
+    {
+      key: 'status',
+      extract: row =>
+        row.lastError ? 'error' : row.enabled ? (row.lastScannedAt ? 'ok' : 'pending') : 'disabled',
+      defaultDirection: 'asc',
+    },
+  ],
+  { storageKey: 'shield.sources.sort' },
+)
 
 async function onRefreshGithubAccess(): Promise<void> {
   try {

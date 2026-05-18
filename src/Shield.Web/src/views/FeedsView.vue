@@ -17,16 +17,20 @@ const refresh = useRefreshFeedMutation()
 const { push } = useToasts()
 
 const rows = computed<FeedStatus[]>(() => data.value ?? [])
-const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<FeedStatus>(rows, [
-  { key: 'feed', extract: row => FeedNames[row.feed], defaultDirection: 'asc' },
-  { key: 'lastSuccess', extract: row => row.lastSuccessAt, defaultDirection: 'desc' },
-  { key: 'nextRun', extract: row => row.nextRunAt, defaultDirection: 'asc' },
-  {
-    key: 'status',
-    extract: row => (row.lastError ? 'error' : row.registered ? 'ok' : 'not-registered'),
-    defaultDirection: 'asc',
-  },
-])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<FeedStatus>(
+  rows,
+  [
+    { key: 'feed', extract: row => FeedNames[row.feed], defaultDirection: 'asc' },
+    { key: 'lastSuccess', extract: row => row.lastSuccessAt, defaultDirection: 'desc' },
+    { key: 'nextRun', extract: row => row.nextRunAt, defaultDirection: 'asc' },
+    {
+      key: 'status',
+      extract: row => (row.lastError ? 'error' : row.registered ? 'ok' : 'not-registered'),
+      defaultDirection: 'asc',
+    },
+  ],
+  { storageKey: 'shield.feeds.sort' },
+)
 
 async function onRefresh(feed: Feed): Promise<void> {
   try {

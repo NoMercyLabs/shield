@@ -51,13 +51,17 @@ const { data, isLoading, isError } = useAuditQuery(filter)
 // this only reorders what's currently visible — but it's still better than no sort, and
 // the page is bounded by pageSize (default 50) so the reshuffle stays cheap.
 const auditRows = computed<AuditEntry[]>(() => data.value?.items ?? [])
-const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<AuditEntry>(auditRows, [
-  { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
-  { key: 'actor', extract: row => row.actorName, defaultDirection: 'asc' },
-  { key: 'action', extract: row => row.action, defaultDirection: 'asc' },
-  { key: 'target', extract: row => `${row.targetType}/${row.targetLabel ?? row.targetId}`, defaultDirection: 'asc' },
-  { key: 'ip', extract: row => row.remoteIp, defaultDirection: 'asc' },
-])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<AuditEntry>(
+  auditRows,
+  [
+    { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
+    { key: 'actor', extract: row => row.actorName, defaultDirection: 'asc' },
+    { key: 'action', extract: row => row.action, defaultDirection: 'asc' },
+    { key: 'target', extract: row => `${row.targetType}/${row.targetLabel ?? row.targetId}`, defaultDirection: 'asc' },
+    { key: 'ip', extract: row => row.remoteIp, defaultDirection: 'asc' },
+  ],
+  { storageKey: 'shield.audit.sort' },
+)
 
 const totalPages = computed(() => {
   if (!data.value)

@@ -1,4 +1,4 @@
-import { computed, type ComputedRef, ref, type Ref } from 'vue'
+import { computed, type ComputedRef, ref, type Ref, watch } from 'vue'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -20,17 +20,47 @@ export interface ClientSortHandle<TRow> {
   toggleSort: (key: string) => void
 }
 
+export interface ClientSortOptions {
+  // Starting sort applied when nothing is persisted yet. Pass to make the table land in
+  // a sensible order on first visit; subsequent visits restore the user's last choice.
+  initial?: { key: string, direction?: SortDirection }
+  // localStorage key for cross-reload persistence. Each table should pass its own — sharing
+  // a key would let one table's sort state leak into another's column space (different
+  // column key sets) and silently no-op via the columnsByKey lookup. Omit to opt out.
+  storageKey?: string
+}
+
+interface PersistedSort {
+  key: string | null
+  direction: SortDirection
+}
+
 // In-memory sorting for tables that have all their rows loaded client-side. Stable: rows
 // with equal sort keys keep their original relative order. Nulls sort to the end so a
 // table sorted "by last delivery" doesn't bury never-delivered rows at the top.
+//
+// When `storageKey` is provided the chosen column + direction round-trip through
+// localStorage so the user's last sort survives a reload. Validation guards against:
+//   - older persisted keys that no longer exist in the current column set,
+//   - direction values that aren't 'asc' / 'desc',
+//   - private-mode browsers that throw on localStorage access.
 export function useClientSort<TRow>(
   rows: Ref<TRow[]>,
   columns: SortableColumn<TRow>[],
-  initial?: { key: string, direction?: SortDirection },
+  options?: ClientSortOptions,
 ): ClientSortHandle<TRow> {
   const columnsByKey = new Map(columns.map(col => [col.key, col]))
-  const sortKey = ref<string | null>(initial?.key ?? null)
-  const sortDir = ref<SortDirection>(initial?.direction ?? 'asc')
+  const restored = loadPersistedSort(options?.storageKey, columnsByKey)
+  const sortKey = ref<string | null>(restored?.key ?? options?.initial?.key ?? null)
+  const sortDir = ref<SortDirection>(
+    restored?.direction ?? options?.initial?.direction ?? 'asc',
+  )
+
+  if (options?.storageKey) {
+    watch([sortKey, sortDir], ([key, direction]) => {
+      savePersistedSort(options.storageKey!, { key, direction })
+    })
+  }
 
   const sortedRows = computed<TRow[]>(() => {
     if (!sortKey.value || !columnsByKey.has(sortKey.value))
@@ -78,4 +108,37 @@ function compareScalar(
   if (a < b) return -1
   if (a > b) return 1
   return 0
+}
+
+function loadPersistedSort<TRow>(
+  storageKey: string | undefined,
+  columnsByKey: Map<string, SortableColumn<TRow>>,
+): PersistedSort | null {
+  if (!storageKey || typeof localStorage === 'undefined')
+    return null
+  try {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PersistedSort>
+    const key = typeof parsed.key === 'string' && columnsByKey.has(parsed.key)
+      ? parsed.key
+      : null
+    const direction = parsed.direction === 'asc' || parsed.direction === 'desc'
+      ? parsed.direction
+      : 'asc'
+    return { key, direction }
+  }
+  catch {
+    return null
+  }
+}
+
+function savePersistedSort(storageKey: string, value: PersistedSort): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(value))
+  }
+  catch {
+    // Private-mode / quota-exceeded — best-effort.
+  }
 }

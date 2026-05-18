@@ -151,33 +151,45 @@ function clearSelection(): void {
 // Three independent sort handles — the three tables in this view (timeline, IPs, hosts)
 // are conceptually unrelated, so each carries its own sort state.
 const timelineRowsRef = computed<SecurityEvent[]>(() => timelinePage.value?.items ?? [])
-const timelineSort = useClientSort<SecurityEvent>(timelineRowsRef, [
-  { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
-  { key: 'severity', extract: row => row.severity, defaultDirection: 'desc' },
-  { key: 'source', extract: row => row.source, defaultDirection: 'asc' },
-  { key: 'event', extract: row => row.eventType, defaultDirection: 'asc' },
-  { key: 'ip', extract: row => row.remoteIp, defaultDirection: 'asc' },
-  { key: 'jailHost', extract: row => `${row.jail ?? ''}/${row.host ?? ''}`, defaultDirection: 'asc' },
-  { key: 'user', extract: row => row.userName ?? '', defaultDirection: 'asc' },
-])
+const timelineSort = useClientSort<SecurityEvent>(
+  timelineRowsRef,
+  [
+    { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
+    { key: 'severity', extract: row => row.severity, defaultDirection: 'desc' },
+    { key: 'source', extract: row => row.source, defaultDirection: 'asc' },
+    { key: 'event', extract: row => row.eventType, defaultDirection: 'asc' },
+    { key: 'ip', extract: row => row.remoteIp, defaultDirection: 'asc' },
+    { key: 'jailHost', extract: row => `${row.jail ?? ''}/${row.host ?? ''}`, defaultDirection: 'asc' },
+    { key: 'user', extract: row => row.userName ?? '', defaultDirection: 'asc' },
+  ],
+  { storageKey: 'shield.security.timeline.sort' },
+)
 
 const ipsRowsRef = computed<IpReputation[]>(() => ipsResponse.value?.items ?? [])
-const ipsSort = useClientSort<IpReputation>(ipsRowsRef, [
-  { key: 'ip', extract: row => row.ip, defaultDirection: 'asc' },
-  { key: 'country', extract: row => row.country ?? '', defaultDirection: 'asc' },
-  { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
-  { key: 'score', extract: row => row.score, defaultDirection: 'desc' },
-  { key: 'banned', extract: row => row.lastBannedAt, defaultDirection: 'desc' },
-  { key: 'lastJail', extract: row => row.lastJail ?? '', defaultDirection: 'asc' },
-  { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
-])
+const ipsSort = useClientSort<IpReputation>(
+  ipsRowsRef,
+  [
+    { key: 'ip', extract: row => row.ip, defaultDirection: 'asc' },
+    { key: 'country', extract: row => row.country ?? '', defaultDirection: 'asc' },
+    { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
+    { key: 'score', extract: row => row.score, defaultDirection: 'desc' },
+    { key: 'banned', extract: row => row.lastBannedAt, defaultDirection: 'desc' },
+    { key: 'lastJail', extract: row => row.lastJail ?? '', defaultDirection: 'asc' },
+    { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
+  ],
+  { storageKey: 'shield.security.ips.sort' },
+)
 
 const hostsRowsRef = computed<SecurityHost[]>(() => hostsResponse.value?.items ?? [])
-const hostsSort = useClientSort<SecurityHost>(hostsRowsRef, [
-  { key: 'host', extract: row => row.host, defaultDirection: 'asc' },
-  { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
-  { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
-])
+const hostsSort = useClientSort<SecurityHost>(
+  hostsRowsRef,
+  [
+    { key: 'host', extract: row => row.host, defaultDirection: 'asc' },
+    { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
+    { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
+  ],
+  { storageKey: 'shield.security.hosts.sort' },
+)
 </script>
 
 <template>

@@ -34,21 +34,29 @@ const invites = usePendingInvitesQuery()
 
 // Two independent sort handles — invites + users tables sort separately.
 const invitesRowsRef = computed<PendingInvite[]>(() => invites.data.value ?? [])
-const invitesSort = useClientSort<PendingInvite>(invitesRowsRef, [
-  { key: 'email', extract: row => row.email, defaultDirection: 'asc' },
-  { key: 'role', extract: row => row.role, defaultDirection: 'asc' },
-  { key: 'groups', extract: row => row.sourceGroupNames.join(','), defaultDirection: 'asc' },
-  { key: 'invitedBy', extract: row => row.inviterLogin ?? '', defaultDirection: 'asc' },
-  { key: 'expires', extract: row => row.expiresAt, defaultDirection: 'asc' },
-])
+const invitesSort = useClientSort<PendingInvite>(
+  invitesRowsRef,
+  [
+    { key: 'email', extract: row => row.email, defaultDirection: 'asc' },
+    { key: 'role', extract: row => row.role, defaultDirection: 'asc' },
+    { key: 'groups', extract: row => row.sourceGroupNames.join(','), defaultDirection: 'asc' },
+    { key: 'invitedBy', extract: row => row.inviterLogin ?? '', defaultDirection: 'asc' },
+    { key: 'expires', extract: row => row.expiresAt, defaultDirection: 'asc' },
+  ],
+  { storageKey: 'shield.access.invites.sort' },
+)
 
 const usersRowsRef = computed<AccessUser[]>(() => users.data.value ?? [])
-const usersSort = useClientSort<AccessUser>(usersRowsRef, [
-  { key: 'username', extract: row => row.username, defaultDirection: 'asc' },
-  { key: 'email', extract: row => row.email ?? '', defaultDirection: 'asc' },
-  { key: 'roles', extract: row => row.roles.join(','), defaultDirection: 'asc' },
-  { key: 'created', extract: row => row.createdAt, defaultDirection: 'desc' },
-])
+const usersSort = useClientSort<AccessUser>(
+  usersRowsRef,
+  [
+    { key: 'username', extract: row => row.username, defaultDirection: 'asc' },
+    { key: 'email', extract: row => row.email ?? '', defaultDirection: 'asc' },
+    { key: 'roles', extract: row => row.roles.join(','), defaultDirection: 'asc' },
+    { key: 'created', extract: row => row.createdAt, defaultDirection: 'desc' },
+  ],
+  { storageKey: 'shield.access.users.sort' },
+)
 const createGroup = useCreateGroupMutation()
 const deleteGroup = useDeleteGroupMutation()
 const addMember = useAddGroupMemberMutation()

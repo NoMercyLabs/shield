@@ -42,13 +42,17 @@ interface SourceGroup {
 // group's rows the same way. Source-group ORDER itself is fixed (alphabetical by source
 // name) — the per-source headers are the grouping anchor, not part of the sort.
 const allRows = computed<UpdateRow[]>(() => data.value ?? [])
-const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<UpdateRow>(allRows, [
-  { key: 'package', extract: row => row.name, defaultDirection: 'asc' },
-  { key: 'ecosystem', extract: row => row.ecosystemLabel, defaultDirection: 'asc' },
-  { key: 'current', extract: row => row.currentVersion, defaultDirection: 'asc' },
-  { key: 'latest', extract: row => row.latestVersion, defaultDirection: 'asc' },
-  { key: 'published', extract: row => row.publishedAt, defaultDirection: 'desc' },
-])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<UpdateRow>(
+  allRows,
+  [
+    { key: 'package', extract: row => row.name, defaultDirection: 'asc' },
+    { key: 'ecosystem', extract: row => row.ecosystemLabel, defaultDirection: 'asc' },
+    { key: 'current', extract: row => row.currentVersion, defaultDirection: 'asc' },
+    { key: 'latest', extract: row => row.latestVersion, defaultDirection: 'asc' },
+    { key: 'published', extract: row => row.publishedAt, defaultDirection: 'desc' },
+  ],
+  { storageKey: 'shield.updates.sort' },
+)
 
 const grouped = computed<SourceGroup[]>(() => {
   const bySource = new Map<number, SourceGroup>()
