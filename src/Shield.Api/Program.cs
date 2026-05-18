@@ -880,11 +880,28 @@ WebApplication app = builder.Build();
 // Apply migrations on startup (both Shield + Feeds contexts).
 await app.Services.MigrateShieldAsync();
 
-// Inbox lives in the same SQLite file as the Shield DB; create the table on first boot.
+// Inbox lives in the same SQLite file as the Shield DB. EnsureCreatedAsync silently
+// no-ops here because ShieldDbContext already created the __EFMigrationsHistory table,
+// which EF treats as "DB is migration-managed, don't touch it." Use raw CREATE TABLE IF
+// NOT EXISTS so the Inbox channel never tries to publish to a missing table.
 using (IServiceScope scope = app.Services.CreateScope())
 {
     InboxDbContext inboxDb = scope.ServiceProvider.GetRequiredService<InboxDbContext>();
-    await inboxDb.Database.EnsureCreatedAsync();
+    await inboxDb.Database.ExecuteSqlRawAsync(
+        """
+        CREATE TABLE IF NOT EXISTS "InboxMessages" (
+            "Id" TEXT NOT NULL CONSTRAINT "PK_InboxMessages" PRIMARY KEY,
+            "CreatedAt" TEXT NOT NULL,
+            "Severity" INTEGER NOT NULL,
+            "Title" TEXT NOT NULL,
+            "Body" TEXT NOT NULL,
+            "FindingId" TEXT NULL,
+            "Read" INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS "IX_InboxMessages_CreatedAt" ON "InboxMessages" ("CreatedAt");
+        CREATE INDEX IF NOT EXISTS "IX_InboxMessages_Read" ON "InboxMessages" ("Read");
+        """
+    );
 }
 
 // Seed Admin, Maintainer, and Viewer roles.
