@@ -3,10 +3,10 @@ using System.Text;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Shield.Api.Services;
+using Shield.Api.Services.Access;
+using Shield.Api.Services.Auth;
 using Shield.Core.Domain;
 using Shield.Data;
 using Shield.Data.Identity;
@@ -21,7 +21,7 @@ namespace Shield.Api.Tests;
 public sealed class GithubAccessResolverTests
 {
     [Fact]
-    public async Task User_without_github_login_returns_null()
+    public async Task UserWithoutGithubLoginReturnsNull()
     {
         using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
@@ -39,7 +39,7 @@ public sealed class GithubAccessResolverTests
     }
 
     [Fact]
-    public async Task User_with_matching_org_gets_triage_on_orgs_sources()
+    public async Task UserWithMatchingOrgGetsTriageOnOrgsSources()
     {
         using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
@@ -80,7 +80,7 @@ public sealed class GithubAccessResolverTests
     }
 
     [Fact]
-    public async Task User_with_github_login_but_no_org_match_returns_empty_snapshot()
+    public async Task UserWithGithubLoginButNoOrgMatchReturnsEmptySnapshot()
     {
         using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
@@ -103,7 +103,7 @@ public sealed class GithubAccessResolverTests
     }
 
     [Fact]
-    public async Task Cache_hit_returns_same_result_without_second_http_call()
+    public async Task CacheHitReturnsSameResultWithoutSecondHttpCall()
     {
         using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
@@ -129,7 +129,7 @@ public sealed class GithubAccessResolverTests
     }
 
     [Fact]
-    public async Task Invalidate_drops_cached_entry_so_next_call_refetches()
+    public async Task InvalidateDropsCachedEntrySoNextCallRefetches()
     {
         using GithubAccessFactory factory = new();
         _ = factory.CreateClient();

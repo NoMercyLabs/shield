@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Security;
 using Shield.Core.Domain;
 using Xunit;
 
@@ -19,7 +19,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Events_filter_by_severity_returns_only_matching_rows()
+    public async Task EventsFilterBySeverityReturnsOnlyMatchingRows()
     {
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: "10.0.0.1");
         await SeedEventAsync("shield.auth", "login.lockout", Severity.High, ip: "10.0.0.2");
@@ -38,7 +38,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Events_filter_by_source_returns_only_matching_rows()
+    public async Task EventsFilterBySourceReturnsOnlyMatchingRows()
     {
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: "10.0.1.1");
         await SeedEventAsync("shield.crawler", "crawler.detected", Severity.Low, ip: "10.0.1.2");
@@ -54,7 +54,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Events_filter_by_ip_returns_only_matching_rows()
+    public async Task EventsFilterByIpReturnsOnlyMatchingRows()
     {
         string ip = "10.99.0." + Random.Shared.Next(1, 250);
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: ip);
@@ -71,7 +71,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Hosts_returns_distinct_hosts_with_counts()
+    public async Task HostsReturnsDistinctHostsWithCounts()
     {
         await SeedEventAsync(
             "fail2ban",

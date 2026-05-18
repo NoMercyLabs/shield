@@ -31,7 +31,7 @@ public sealed class NugetManifestEditorTests
     }
 
     [Fact]
-    public void Apply_updates_PackageVersion_in_DirectoryPackagesProps_when_ManifestPath_is_set()
+    public void ApplyUpdatesPackageVersionInDirectoryPackagesPropsWhenManifestPathIsSet()
     {
         string dir = TempDir();
         try
@@ -75,7 +75,7 @@ public sealed class NugetManifestEditorTests
     }
 
     [Fact]
-    public void Apply_with_ManifestPath_does_not_touch_other_csproj_files()
+    public void ApplyWithManifestPathDoesNotTouchOtherCsprojFiles()
     {
         string dir = TempDir();
         try
@@ -124,7 +124,7 @@ public sealed class NugetManifestEditorTests
     }
 
     [Fact]
-    public void Apply_without_ManifestPath_scans_all_manifests_under_root()
+    public void ApplyWithoutManifestPathScansAllManifestsUnderRoot()
     {
         string dir = TempDir();
         try
@@ -159,7 +159,7 @@ public sealed class NugetManifestEditorTests
     }
 
     [Fact]
-    public void Apply_with_csproj_ManifestPath_edits_only_that_file()
+    public void ApplyWithCsprojManifestPathEditsOnlyThatFile()
     {
         string dir = TempDir();
         try

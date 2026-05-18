@@ -9,7 +9,7 @@ public class GoModVersionComparerTests
     private readonly GoModVersionComparer _comparer = new();
 
     [Fact]
-    public void V_prefix_is_optional_for_matching()
+    public void VPrefixIsOptionalForMatching()
     {
         VersionRange exact = new(Exact: new[] { "v1.2.3" });
         _comparer.Satisfies("1.2.3", exact).Should().BeTrue();
@@ -17,7 +17,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Pseudo_version_orders_between_base_and_next_patch()
+    public void PseudoVersionOrdersBetweenBaseAndNextPatch()
     {
         // v0.0.0-20191023135150-abc1234def56 is treated as a pre-release of 0.0.0; sorts
         // below v0.0.1 and below v0.0.0 release.
@@ -30,7 +30,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Pseudo_versions_order_by_timestamp_segment()
+    public void PseudoVersionsOrderByTimestampSegment()
     {
         // Two pseudo-versions on the same base: the one with the later timestamp wins.
         VersionRange afterEarlier = new(
@@ -42,7 +42,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Incompatible_suffix_sorts_above_same_base()
+    public void IncompatibleSuffixSortsAboveSameBase()
     {
         // v2.0.0+incompatible > v2.0.0 — the suffix flags a non-/v2-path module and counts
         // for ordering, unlike normal SemVer build metadata.
@@ -52,7 +52,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_sorts_below_release()
+    public void PreReleaseSortsBelowRelease()
     {
         // SemVer 2 pre-release ordering: v1.0.0-alpha < v1.0.0-beta < v1.0.0
         VersionRange preReleaseRange = new(GtOrEq: "1.0.0-alpha", Lt: "1.0.0");
@@ -62,7 +62,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Numeric_pre_release_identifiers_sort_below_alphanumeric()
+    public void NumericPreReleaseIdentifiersSortBelowAlphanumeric()
     {
         // Per SemVer 2 §11.4.3, numeric identifier "1" < alphanumeric "alpha".
         VersionRange exact = new(Exact: new[] { "1.0.0-1" });
@@ -74,7 +74,7 @@ public class GoModVersionComparerTests
     }
 
     [Fact]
-    public void Bare_major_is_v_dot_zero_dot_zero()
+    public void BareMajorIsVDotZeroDotZero()
     {
         VersionRange exact = new(Exact: new[] { "v1.0.0" });
         _comparer.Satisfies("v1", exact).Should().BeTrue();

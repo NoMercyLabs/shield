@@ -8,7 +8,7 @@ namespace Shield.Parsers.Python.Tests;
 public class PoetryLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_PoetryLock_ReturnsPackages()
+    public async Task ParseAsyncPoetryLockReturnsPackages()
     {
         PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "poetry.lock"));

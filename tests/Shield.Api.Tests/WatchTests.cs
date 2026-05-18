@@ -20,7 +20,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Create_then_list_returns_the_watch()
+    public async Task CreateThenListReturnsTheWatch()
     {
         HttpClient client = _factory.CreateClient();
         string packageName = "lodash-" + Guid.NewGuid().ToString("n");
@@ -41,7 +41,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Duplicate_create_is_idempotent()
+    public async Task DuplicateCreateIsIdempotent()
     {
         HttpClient client = _factory.CreateClient();
         string packageName = "axios-" + Guid.NewGuid().ToString("n");
@@ -64,7 +64,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Delete_removes_the_watch()
+    public async Task DeleteRemovesTheWatch()
     {
         HttpClient client = _factory.CreateClient();
         string packageName = "to-delete-" + Guid.NewGuid().ToString("n");
@@ -86,7 +86,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Summary_aggregates_open_findings_by_severity()
+    public async Task SummaryAggregatesOpenFindingsBySeverity()
     {
         string packageName = "summary-pkg-" + Guid.NewGuid().ToString("n");
         await SeedFindingForPackageAsync(packageName, Severity.Critical);

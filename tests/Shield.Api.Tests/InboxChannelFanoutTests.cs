@@ -49,7 +49,7 @@ public sealed class InboxChannelFanoutTests
     }
 
     [Fact]
-    public async Task Three_findings_two_admins_produces_six_notifications()
+    public async Task ThreeFindingsTwoAdminsProducesSixNotifications()
     {
         Guid admin1 = Guid.NewGuid();
         Guid admin2 = Guid.NewGuid();
@@ -83,7 +83,7 @@ public sealed class InboxChannelFanoutTests
     }
 
     [Fact]
-    public async Task Digest_threshold_two_admins_produces_two_digest_notifications()
+    public async Task DigestThresholdTwoAdminsProducesTwoDigestNotifications()
     {
         Guid admin1 = Guid.NewGuid();
         Guid admin2 = Guid.NewGuid();
@@ -125,7 +125,7 @@ public sealed class InboxChannelFanoutTests
     }
 
     [Fact]
-    public async Task Single_finding_notification_carries_finding_id_as_related()
+    public async Task SingleFindingNotificationCarriesFindingIdAsRelated()
     {
         Guid adminId = Guid.NewGuid();
 
@@ -152,7 +152,7 @@ public sealed class InboxChannelFanoutTests
     }
 
     [Fact]
-    public async Task Zero_admins_produces_no_notifications_but_still_writes_inbox()
+    public async Task ZeroAdminsProducesNoNotificationsButStillWritesInbox()
     {
         IInboxStore store = Substitute.For<IInboxStore>();
         INotificationPublisher publisher = Substitute.For<INotificationPublisher>();

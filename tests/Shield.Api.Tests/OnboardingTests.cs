@@ -10,7 +10,7 @@ namespace Shield.Api.Tests;
 public sealed class OnboardingTests
 {
     [Fact]
-    public async Task Status_returns_not_completed_on_fresh_db()
+    public async Task StatusReturnsNotCompletedOnFreshDb()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -28,7 +28,7 @@ public sealed class OnboardingTests
     }
 
     [Fact]
-    public async Task Status_returns_completed_when_at_least_one_source_and_channel_exist()
+    public async Task StatusReturnsCompletedWhenAtLeastOneSourceAndChannelExist()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -71,7 +71,7 @@ public sealed class OnboardingTests
     }
 
     [Fact]
-    public async Task Dismiss_marks_completed_even_without_sources_or_channels()
+    public async Task DismissMarksCompletedEvenWithoutSourcesOrChannels()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();

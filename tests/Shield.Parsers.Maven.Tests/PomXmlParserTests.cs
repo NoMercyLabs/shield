@@ -8,7 +8,7 @@ namespace Shield.Parsers.Maven.Tests;
 public class PomXmlParserTests
 {
     [Fact]
-    public async Task ParseAsync_PomXml_ReturnsDirectDepsAndSkipsDependencyManagement()
+    public async Task ParseAsyncPomXmlReturnsDirectDepsAndSkipsDependencyManagement()
     {
         PomXmlParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "pom.xml"));

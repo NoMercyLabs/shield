@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using NSubstitute;
-using Shield.Api.Services;
+using Shield.Api.Services.FixApply;
 using Shield.Api.Services.ManifestEditors;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
@@ -18,7 +18,7 @@ public sealed class CleanupBehaviorTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task Npm_ApplyLocal_DeletesPackageLockAndNodeModules()
+    public async Task NpmApplyLocalDeletesPackageLockAndNodeModules()
     {
         string rootPath = TempDir();
         try
@@ -26,9 +26,9 @@ public sealed class CleanupBehaviorTests
             WritePackageJson(rootPath, "lodash", "^4.17.20");
             string lockfile = Path.Combine(rootPath, "package-lock.json");
             string nodeModules = Path.Combine(rootPath, "node_modules");
-            File.WriteAllText(lockfile, "{}");
+            await File.WriteAllTextAsync(lockfile, "{}");
             Directory.CreateDirectory(nodeModules);
-            File.WriteAllText(Path.Combine(nodeModules, "dummy.js"), "");
+            await File.WriteAllTextAsync(Path.Combine(nodeModules, "dummy.js"), "");
 
             ApplyFixResult result = await ApplyLocalAsync(
                 Ecosystem.Npm,
@@ -50,7 +50,7 @@ public sealed class CleanupBehaviorTests
     }
 
     [Fact]
-    public async Task Npm_ApplyLocal_DeletesYarnLockAndNodeModules()
+    public async Task NpmApplyLocalDeletesYarnLockAndNodeModules()
     {
         string rootPath = TempDir();
         try
@@ -58,7 +58,7 @@ public sealed class CleanupBehaviorTests
             WritePackageJson(rootPath, "lodash", "^4.17.20");
             string yarnLock = Path.Combine(rootPath, "yarn.lock");
             string nodeModules = Path.Combine(rootPath, "node_modules");
-            File.WriteAllText(yarnLock, "# yarn");
+            await File.WriteAllTextAsync(yarnLock, "# yarn");
             Directory.CreateDirectory(nodeModules);
 
             ApplyFixResult result = await ApplyLocalAsync(
@@ -81,7 +81,7 @@ public sealed class CleanupBehaviorTests
     }
 
     [Fact]
-    public async Task Npm_ApplyLocal_DeletesPnpmLockAndNodeModules()
+    public async Task NpmApplyLocalDeletesPnpmLockAndNodeModules()
     {
         string rootPath = TempDir();
         try
@@ -89,7 +89,7 @@ public sealed class CleanupBehaviorTests
             WritePackageJson(rootPath, "lodash", "^4.17.20");
             string pnpmLock = Path.Combine(rootPath, "pnpm-lock.yaml");
             string nodeModules = Path.Combine(rootPath, "node_modules");
-            File.WriteAllText(pnpmLock, "lockfileVersion: 9");
+            await File.WriteAllTextAsync(pnpmLock, "lockfileVersion: 9");
             Directory.CreateDirectory(nodeModules);
 
             ApplyFixResult result = await ApplyLocalAsync(
@@ -111,7 +111,7 @@ public sealed class CleanupBehaviorTests
     }
 
     [Fact]
-    public async Task Npm_ApplyLocal_NoLockfileOrNodeModules_CleanedListsEmpty()
+    public async Task NpmApplyLocalNoLockfileOrNodeModulesCleanedListsEmpty()
     {
         string rootPath = TempDir();
         try
@@ -140,7 +140,7 @@ public sealed class CleanupBehaviorTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task Composer_ApplyLocal_DeletesComposerLockAndVendor()
+    public async Task ComposerApplyLocalDeletesComposerLockAndVendor()
     {
         string rootPath = TempDir();
         try
@@ -148,9 +148,9 @@ public sealed class CleanupBehaviorTests
             WriteComposerJson(rootPath, "monolog/monolog", "^2.0");
             string lockfile = Path.Combine(rootPath, "composer.lock");
             string vendorDir = Path.Combine(rootPath, "vendor");
-            File.WriteAllText(lockfile, "{}");
+            await File.WriteAllTextAsync(lockfile, "{}");
             Directory.CreateDirectory(vendorDir);
-            File.WriteAllText(Path.Combine(vendorDir, "autoload.php"), "<?php");
+            await File.WriteAllTextAsync(Path.Combine(vendorDir, "autoload.php"), "<?php");
 
             ApplyFixResult result = await ApplyLocalAsync(
                 Ecosystem.Composer,
@@ -172,7 +172,7 @@ public sealed class CleanupBehaviorTests
     }
 
     [Fact]
-    public async Task Composer_ApplyLocal_NoLockfileOrVendor_CleanedListsEmpty()
+    public async Task ComposerApplyLocalNoLockfileOrVendorCleanedListsEmpty()
     {
         string rootPath = TempDir();
         try
@@ -206,7 +206,7 @@ public sealed class CleanupBehaviorTests
     [InlineData(Ecosystem.Go)]
     [InlineData(Ecosystem.Rust)]
     [InlineData(Ecosystem.Gradle)]
-    public void NonCleanupEcosystem_Editor_ReturnsEmptyCleanedLists(Ecosystem ecosystem)
+    public void NonCleanupEcosystemEditorReturnsEmptyCleanedLists(Ecosystem ecosystem)
     {
         IManifestEditor editor = BuildEditor(ecosystem);
         InventoryItem item = new()
@@ -229,7 +229,7 @@ public sealed class CleanupBehaviorTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task PrStrategy_NeverDeletesLocalFiles()
+    public async Task PrStrategyNeverDeletesLocalFiles()
     {
         string rootPath = TempDir();
         try
@@ -237,7 +237,7 @@ public sealed class CleanupBehaviorTests
             // Create files that would be cleaned on the local strategy.
             string lockfile = Path.Combine(rootPath, "package-lock.json");
             string nodeModules = Path.Combine(rootPath, "node_modules");
-            File.WriteAllText(lockfile, "{}");
+            await File.WriteAllTextAsync(lockfile, "{}");
             Directory.CreateDirectory(nodeModules);
 
             // PR strategy requires a GitHub source + token. Without valid Octokit creds the

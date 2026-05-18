@@ -14,7 +14,7 @@ public sealed class DataProtectionTests
     private static byte[] MakeKey(string secret) => SHA256.HashData(Encoding.UTF8.GetBytes(secret));
 
     [Fact]
-    public void Round_trip_wrap_unwrap_returns_original_xml()
+    public void RoundTripWrapUnwrapReturnsOriginalXml()
     {
         byte[] key = MakeKey("test-master-key-32-chars-long-abc");
         MasterKeyXmlEncryptor encryptor = new(key);
@@ -45,7 +45,7 @@ public sealed class DataProtectionTests
     }
 
     [Fact]
-    public void Decrypt_falls_back_to_plaintext_passthrough_when_envelope_missing()
+    public void DecryptFallsBackToPlaintextPassthroughWhenEnvelopeMissing()
     {
         byte[] key = MakeKey("legacy-fallback-secret-also-32chrs");
         ServiceCollection services = [];
@@ -64,7 +64,7 @@ public sealed class DataProtectionTests
     }
 
     [Fact]
-    public void Decrypt_with_wrong_master_key_throws()
+    public void DecryptWithWrongMasterKeyThrows()
     {
         byte[] writeKey = MakeKey("write-key-must-also-be-32-chars!!");
         byte[] readKey = MakeKey("different-read-key-32-chars-long-x");
@@ -86,7 +86,7 @@ public sealed class DataProtectionTests
     }
 
     [Fact]
-    public void Encryptor_rejects_non_32_byte_key()
+    public void EncryptorRejectsNon32ByteKey()
     {
         Action act = () => _ = new MasterKeyXmlEncryptor(new byte[16]);
         act.Should().Throw<ArgumentException>();

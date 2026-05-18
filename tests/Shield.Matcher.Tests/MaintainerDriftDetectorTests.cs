@@ -26,7 +26,7 @@ public class MaintainerDriftDetectorTests
         };
 
     [Fact]
-    public void New_maintainer_plus_recent_publish_emits_high_severity_drift()
+    public void NewMaintainerPlusRecentPublishEmitsHighSeverityDrift()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""["alice"]""");
@@ -47,7 +47,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void New_maintainer_with_no_recent_publish_emits_nothing()
+    public void NewMaintainerWithNoRecentPublishEmitsNothing()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""["alice"]""");
@@ -65,7 +65,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void Dropped_maintainer_emits_medium_severity_drift()
+    public void DroppedMaintainerEmitsMediumSeverityDrift()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""["alice","bob"]""");
@@ -84,7 +84,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void Deprecation_flip_emits_low_severity_drift()
+    public void DeprecationFlipEmitsLowSeverityDrift()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""["alice"]""", deprecated: false);
@@ -103,7 +103,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void No_change_emits_nothing()
+    public void NoChangeEmitsNothing()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""["alice","bob"]""");
@@ -121,7 +121,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void Null_previous_emits_nothing_first_observation()
+    public void NullPreviousEmitsNothingFirstObservation()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta current = Meta("""["alice","bob"]""", publishedAt: now);
@@ -138,7 +138,7 @@ public class MaintainerDriftDetectorTests
     }
 
     [Fact]
-    public void Object_form_maintainers_with_name_property_parsed_correctly()
+    public void ObjectFormMaintainersWithNamePropertyParsedCorrectly()
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""[{"name":"alice"}]""");

@@ -8,7 +8,7 @@ namespace Shield.Parsers.Go.Tests;
 public class GoModParserTests
 {
     [Fact]
-    public async Task ParseAsync_GoMod_MarksIndirectFlag()
+    public async Task ParseAsyncGoModMarksIndirectFlag()
     {
         GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.mod"));

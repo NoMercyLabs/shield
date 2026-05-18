@@ -3,7 +3,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Scanning;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -22,7 +22,7 @@ public sealed class ScanQueueTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Worker_drains_three_enqueued_rows_to_completion()
+    public async Task WorkerDrainsThreeEnqueuedRowsToCompletion()
     {
         // Force host start so the hosted ScanQueueWorker is actually pumping.
         _ = _factory.CreateClient();
@@ -59,7 +59,7 @@ public sealed class ScanQueueTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Worker_records_error_when_scanner_throws()
+    public async Task WorkerRecordsErrorWhenScannerThrows()
     {
         _ = _factory.CreateClient();
 
@@ -90,7 +90,7 @@ public sealed class ScanQueueTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Status_endpoint_reports_recent_failures()
+    public async Task StatusEndpointReportsRecentFailures()
     {
         HttpClient client = _factory.CreateClient();
 

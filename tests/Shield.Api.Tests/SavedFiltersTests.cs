@@ -16,7 +16,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Create_then_list_roundtrips_the_filter()
+    public async Task CreateThenListRoundtripsTheFilter()
     {
         HttpClient client = _factory.CreateClient();
         string name = "critical-lodash-" + Guid.NewGuid().ToString("n");
@@ -40,7 +40,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Saving_same_name_overwrites_existing_query()
+    public async Task SavingSameNameOverwritesExistingQuery()
     {
         HttpClient client = _factory.CreateClient();
         string name = "overwrite-" + Guid.NewGuid().ToString("n");
@@ -66,7 +66,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Delete_removes_the_filter()
+    public async Task DeleteRemovesTheFilter()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage created = await client.PostAsJsonAsync(
@@ -90,7 +90,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Create_with_empty_name_returns_400()
+    public async Task CreateWithEmptyNameReturns400()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
@@ -101,7 +101,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task List_by_kind_filters_to_that_kind_only()
+    public async Task ListByKindFiltersToThatKindOnly()
     {
         HttpClient client = _factory.CreateClient();
         string unique = Guid.NewGuid().ToString("n");

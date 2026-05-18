@@ -2,7 +2,6 @@ using System.Data.Common;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Shield.Data;
 using Xunit;
 
 namespace Shield.Data.Tests;
@@ -45,7 +44,7 @@ public class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ShieldContext_CreatesExpectedTables()
+    public async Task ShieldContextCreatesExpectedTables()
     {
         IEnumerable<string> tables = await GetTableNamesAsync(_shieldConnection!);
         tables
@@ -64,14 +63,14 @@ public class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FeedsContext_CreatesExpectedTables()
+    public async Task FeedsContextCreatesExpectedTables()
     {
         IEnumerable<string> tables = await GetTableNamesAsync(_feedsConnection!);
         tables.Should().Contain(["Advisories", "PackageMetas", "FeedSyncStates"]);
     }
 
     [Fact]
-    public async Task ShieldContext_FindingDedupKeyIndexIsUnique()
+    public async Task ShieldContextFindingDedupKeyIndexIsUnique()
     {
         IEnumerable<string> indexes = await GetIndexesAsync(_shieldConnection!, "Findings");
         indexes
@@ -80,7 +79,7 @@ public class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FeedsContext_AdvisoryFeedExternalIdIndexExists()
+    public async Task FeedsContextAdvisoryFeedExternalIdIndexExists()
     {
         IEnumerable<string> indexes = await GetIndexesAsync(_feedsConnection!, "Advisories");
         indexes

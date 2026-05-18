@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -25,7 +24,7 @@ public sealed class Fail2BanIngestTests : IClassFixture<Fail2BanIngestTests.Inge
     }
 
     [Fact]
-    public async Task Post_without_secret_returns_401()
+    public async Task PostWithoutSecretReturns401()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
@@ -43,7 +42,7 @@ public sealed class Fail2BanIngestTests : IClassFixture<Fail2BanIngestTests.Inge
     }
 
     [Fact]
-    public async Task Post_with_wrong_secret_returns_401()
+    public async Task PostWithWrongSecretReturns401()
     {
         HttpClient client = _factory.CreateClient();
         HttpRequestMessage request = new(HttpMethod.Post, "/api/security/fail2ban/event")
@@ -68,7 +67,7 @@ public sealed class Fail2BanIngestTests : IClassFixture<Fail2BanIngestTests.Inge
     }
 
     [Fact]
-    public async Task Ban_event_writes_securityevent_and_upserts_reputation()
+    public async Task BanEventWritesSecurityeventAndUpsertsReputation()
     {
         HttpClient client = _factory.CreateClient();
         string ip = "9.8.7." + Random.Shared.Next(1, 250);
@@ -97,7 +96,7 @@ public sealed class Fail2BanIngestTests : IClassFixture<Fail2BanIngestTests.Inge
     }
 
     [Fact]
-    public async Task Ban_then_unban_then_ban_keeps_currently_banned_in_sync()
+    public async Task BanThenUnbanThenBanKeepsCurrentlyBannedInSync()
     {
         HttpClient client = _factory.CreateClient();
         string ip = "9.7.6." + Random.Shared.Next(1, 250);

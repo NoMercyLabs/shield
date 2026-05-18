@@ -8,7 +8,7 @@ namespace Shield.Parsers.Gradle.Tests;
 public class GradleLockfileParserTests
 {
     [Fact]
-    public async Task ParseAsync_GradleLockfile_ReturnsCoordinates()
+    public async Task ParseAsyncGradleLockfileReturnsCoordinates()
     {
         GradleLockfileParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "gradle.lockfile"));
@@ -41,7 +41,7 @@ public class GradleLockfileParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_BuildGradleKtsFallback_FlagsLockfileMissingAndExtractsImplementations()
+    public async Task ParseAsyncBuildGradleKtsFallbackFlagsLockfileMissingAndExtractsImplementations()
     {
         GradleLockfileParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "build.gradle.kts"));

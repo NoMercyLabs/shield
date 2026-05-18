@@ -27,7 +27,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task LocalFolder_npm_finding_is_auto_eligible_not_pr_eligible()
+    public async Task LocalFolderNpmFindingIsAutoEligibleNotPrEligible()
     {
         string dir = TempDir();
         try
@@ -47,7 +47,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task GithubRepo_npm_finding_is_pr_eligible_not_auto_eligible()
+    public async Task GithubRepoNpmFindingIsPrEligibleNotAutoEligible()
     {
         string dir = TempDir();
         try
@@ -67,7 +67,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task LocalFolder_python_finding_is_auto_not_eligible_no_editor()
+    public async Task LocalFolderPythonFindingIsAutoNotEligibleNoEditor()
     {
         string dir = TempDir();
         try
@@ -90,7 +90,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task GithubRepo_composer_finding_is_pr_eligible()
+    public async Task GithubRepoComposerFindingIsPrEligible()
     {
         string dir = TempDir();
         try
@@ -112,7 +112,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     // ------------------------------------------------------------------
 
     [Fact]
-    public void NpmManifestEditor_injects_overrides_for_transitive_dep()
+    public void NpmManifestEditorInjectsOverridesForTransitiveDep()
     {
         string dir = TempDir();
         try
@@ -150,7 +150,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void NpmManifestEditor_updates_existing_overrides_entry()
+    public void NpmManifestEditorUpdatesExistingOverridesEntry()
     {
         string dir = TempDir();
         try
@@ -183,7 +183,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void NpmManifestEditor_direct_dep_still_uses_direct_path()
+    public void NpmManifestEditorDirectDepStillUsesDirectPath()
     {
         string dir = TempDir();
         try
@@ -217,7 +217,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void NpmManifestEditor_transitive_dep_not_found_returns_unsupported_when_malformed_json()
+    public void NpmManifestEditorTransitiveDepNotFoundReturnsUnsupportedWhenMalformedJson()
     {
         string dir = TempDir();
         try
@@ -249,7 +249,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
     // ------------------------------------------------------------------
 
     [Fact]
-    public void ComposerManifestEditor_transitive_dep_returns_unsupported_reason()
+    public void ComposerManifestEditorTransitiveDepReturnsUnsupportedReason()
     {
         string dir = TempDir();
         try

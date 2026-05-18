@@ -2,14 +2,12 @@ using System.Net;
 using System.Text;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Shield.Api.Workers;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
-using Shield.Matcher;
 using Xunit;
 
 namespace Shield.Api.Tests;
@@ -28,7 +26,7 @@ public sealed class MatcherWorkerTests : IClassFixture<MatcherWorkerTests.OsvStu
     }
 
     [Fact]
-    public async Task Worker_emits_finding_for_lodash_via_OSV_query_path()
+    public async Task WorkerEmitsFindingForLodashViaOSVQueryPath()
     {
         // Force host start so the hosted MatcherWorker is actually pumping.
         _ = _factory.CreateClient();

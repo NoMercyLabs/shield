@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Data;
-using Shield.Feeds.Kev;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -28,7 +27,7 @@ public sealed class KevRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_on_429_returns_RateLimited()
+    public async Task SyncAsyncOn429ReturnsRateLimited()
     {
         _server
             .Given(

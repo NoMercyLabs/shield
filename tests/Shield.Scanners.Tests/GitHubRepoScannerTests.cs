@@ -5,20 +5,6 @@ using NSubstitute;
 using Octokit;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Parsers.Composer;
-using Shield.Parsers.Dart;
-using Shield.Parsers.Elixir;
-using Shield.Parsers.Go;
-using Shield.Parsers.Gradle;
-using Shield.Parsers.Maven;
-using Shield.Parsers.Npm;
-using Shield.Parsers.Nuget;
-using Shield.Parsers.Python;
-using Shield.Parsers.Ruby;
-using Shield.Parsers.Rust;
-using Shield.Parsers.Swift;
-using Shield.Parsers.Vcpkg;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Scanners.Tests;
@@ -60,7 +46,7 @@ public class GitHubRepoScannerTests
         );
 
     [Fact]
-    public async Task Scans_repo_tree_and_parses_recognized_blob()
+    public async Task ScansRepoTreeAndParsesRecognizedBlob()
     {
         IGitHubClient client = Substitute.For<IGitHubClient>();
         IRepositoriesClient repoClient = Substitute.For<IRepositoriesClient>();
@@ -125,7 +111,7 @@ public class GitHubRepoScannerTests
     }
 
     [Fact]
-    public async Task Missing_owner_or_repo_returns_failure()
+    public async Task MissingOwnerOrRepoReturnsFailure()
     {
         IGitHubClient client = Substitute.For<IGitHubClient>();
         GitHubRepoScanner scanner = new(

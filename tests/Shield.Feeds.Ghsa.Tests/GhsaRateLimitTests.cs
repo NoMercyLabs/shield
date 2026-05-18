@@ -1,9 +1,9 @@
+using System.Globalization;
 using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.Ghsa;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -27,7 +27,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_on_403_with_rate_limit_header_returns_RateLimited()
+    public async Task SyncAsyncOn403WithRateLimitHeaderReturnsRateLimited()
     {
         long resetEpoch = DateTimeOffset.UtcNow.AddMinutes(45).ToUnixTimeSeconds();
 
@@ -38,7 +38,10 @@ public sealed class GhsaRateLimitTests : IDisposable
                     .Create()
                     .WithStatusCode(HttpStatusCode.Forbidden)
                     .WithHeader("X-RateLimit-Remaining", "0")
-                    .WithHeader("X-RateLimit-Reset", resetEpoch.ToString())
+                    .WithHeader(
+                        "X-RateLimit-Reset",
+                        resetEpoch.ToString(CultureInfo.InvariantCulture)
+                    )
                     .WithBody("{\"message\":\"rate limit exceeded\"}")
             );
 
@@ -60,7 +63,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_on_403_without_rate_limit_header_returns_RateLimited_with_fallback_reset()
+    public async Task SyncAsyncOn403WithoutRateLimitHeaderReturnsRateLimitedWithFallbackReset()
     {
         _server
             .Given(Request.Create().WithPath("/graphql").UsingPost())
@@ -87,7 +90,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public void IsTransient_returns_false_for_403_without_rate_limit_remaining_zero()
+    public void IsTransientReturnsFalseFor403WithoutRateLimitRemainingZero()
     {
         HttpResponseMessage response = new(HttpStatusCode.Forbidden);
         response.Headers.Add("X-RateLimit-Remaining", "10");
@@ -96,7 +99,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public void IsTransient_returns_true_for_403_with_remaining_zero()
+    public void IsTransientReturnsTrueFor403WithRemainingZero()
     {
         HttpResponseMessage response = new(HttpStatusCode.Forbidden);
         response.Headers.Add("X-RateLimit-Remaining", "0");
@@ -105,7 +108,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public void IsTransient_returns_false_for_403_with_no_rate_limit_headers()
+    public void IsTransientReturnsFalseFor403WithNoRateLimitHeaders()
     {
         HttpResponseMessage response = new(HttpStatusCode.Forbidden);
 
@@ -113,7 +116,7 @@ public sealed class GhsaRateLimitTests : IDisposable
     }
 
     [Fact]
-    public void FeedSyncResult_RateLimited_factory_sets_expected_fields()
+    public void FeedSyncResultRateLimitedFactorySetsExpectedFields()
     {
         DateTimeOffset resetAt = DateTimeOffset.UtcNow.AddHours(1);
         FeedSyncResult result = FeedSyncResult.RateLimited(resetAt, cursor: "some-cursor");

@@ -9,7 +9,7 @@ public class GemVersionComparerTests
     private readonly GemVersionComparer _comparer = new();
 
     [Fact]
-    public void Pre_release_string_segments_sort_below_release()
+    public void PreReleaseStringSegmentsSortBelowRelease()
     {
         // 1.0.alpha < 1.0 — string segment makes it a pre-release.
         VersionRange beforeRelease = new(GtOrEq: "0.9", Lt: "1.0");
@@ -20,7 +20,7 @@ public class GemVersionComparerTests
     }
 
     [Fact]
-    public void String_segments_sort_lexically()
+    public void StringSegmentsSortLexically()
     {
         // 1.0.a < 1.0.b < 1.0.c — string segments compare via ordinal compare.
         VersionRange aOnly = new(GtOrEq: "1.0.a", Lt: "1.0.b");
@@ -29,7 +29,7 @@ public class GemVersionComparerTests
     }
 
     [Fact]
-    public void Trailing_zero_segments_are_equivalent()
+    public void TrailingZeroSegmentsAreEquivalent()
     {
         // 1.0 == 1.0.0 == 1.0.0.0
         VersionRange exact = new(Exact: new[] { "1.0" });
@@ -39,7 +39,7 @@ public class GemVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_with_number_orders_correctly()
+    public void PreReleaseWithNumberOrdersCorrectly()
     {
         // 1.0.alpha.1 < 1.0.alpha.2 < 1.0.beta.1 < 1.0
         VersionRange alphaRange = new(GtOrEq: "1.0.alpha.1", Lt: "1.0.beta");
@@ -49,7 +49,7 @@ public class GemVersionComparerTests
     }
 
     [Fact]
-    public void Integer_release_above_string_pre_release()
+    public void IntegerReleaseAboveStringPreRelease()
     {
         // 1.0 > 1.0.alpha — integer segment wins against string segment.
         VersionRange afterPre = new(GtOrEqExclusive: "1.0.alpha", Lt: "1.1");
@@ -58,7 +58,7 @@ public class GemVersionComparerTests
     }
 
     [Fact]
-    public void Letter_digit_transition_creates_token_boundary()
+    public void LetterDigitTransitionCreatesTokenBoundary()
     {
         // 1.0.a1 tokenises as [1, 0, "a", 1] not [1, 0, "a1"], so 1.0.a1 == 1.0.a.1.
         VersionRange exact = new(Exact: new[] { "1.0.a1" });

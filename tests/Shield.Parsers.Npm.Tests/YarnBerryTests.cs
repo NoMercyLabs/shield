@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Parsers.Npm;
 using Xunit;
 
 namespace Shield.Parsers.Npm.Tests;
@@ -9,7 +8,7 @@ namespace Shield.Parsers.Npm.Tests;
 public class YarnBerryTests
 {
     [Fact]
-    public async Task Parses_yarn_berry_lockfile()
+    public async Task ParsesYarnBerryLockfile()
     {
         NpmLockParser parser = new();
         using Stream stream = FixtureLoader.Open("yarn.berry.lock");

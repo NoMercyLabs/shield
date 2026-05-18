@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.AppSettings;
+using Shield.Api.Services.Auth;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -16,7 +17,7 @@ namespace Shield.Api.Tests;
 public sealed class GitHubDeviceFlowTests
 {
     [Fact]
-    public async Task Start_returns_flow_id_user_code_and_verification_uri()
+    public async Task StartReturnsFlowIdUserCodeAndVerificationUri()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -52,7 +53,7 @@ public sealed class GitHubDeviceFlowTests
     }
 
     [Fact]
-    public async Task Poll_returns_pending_while_user_has_not_authorized()
+    public async Task PollReturnsPendingWhileUserHasNotAuthorized()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -96,7 +97,7 @@ public sealed class GitHubDeviceFlowTests
     }
 
     [Fact]
-    public async Task Poll_returns_ok_and_writes_integration_token_on_success()
+    public async Task PollReturnsOkAndWritesIntegrationTokenOnSuccess()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -166,7 +167,7 @@ public sealed class GitHubDeviceFlowTests
     }
 
     [Fact]
-    public async Task Poll_returns_expired_and_drops_flow_on_expired_token()
+    public async Task PollReturnsExpiredAndDropsFlowOnExpiredToken()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -209,7 +210,7 @@ public sealed class GitHubDeviceFlowTests
     }
 
     [Fact]
-    public async Task Status_advertises_device_flow_available_when_default_client_id_resolves()
+    public async Task StatusAdvertisesDeviceFlowAvailableWhenDefaultClientIdResolves()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -222,7 +223,7 @@ public sealed class GitHubDeviceFlowTests
     }
 
     [Fact]
-    public async Task Per_user_client_id_override_wins_over_default()
+    public async Task PerUserClientIdOverrideWinsOverDefault()
     {
         using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();

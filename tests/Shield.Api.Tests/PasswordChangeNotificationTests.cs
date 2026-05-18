@@ -15,7 +15,7 @@ namespace Shield.Api.Tests;
 public sealed class PasswordChangeNotificationTests
 {
     [Fact]
-    public async Task ChangePassword_creates_notification_and_security_event()
+    public async Task ChangePasswordCreatesNotificationAndSecurityEvent()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();

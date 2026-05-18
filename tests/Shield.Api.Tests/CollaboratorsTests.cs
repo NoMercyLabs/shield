@@ -5,7 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
 using Shield.Core.Domain;
 using Xunit;
 
@@ -20,7 +20,7 @@ namespace Shield.Api.Tests;
 public sealed class CollaboratorsTests
 {
     [Fact]
-    public async Task List_orgs_returns_admin_token_orgs()
+    public async Task ListOrgsReturnsAdminTokenOrgs()
     {
         using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -66,7 +66,7 @@ public sealed class CollaboratorsTests
     }
 
     [Fact]
-    public async Task Members_paginated()
+    public async Task MembersPaginated()
     {
         using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -143,7 +143,7 @@ public sealed class CollaboratorsTests
     }
 
     [Fact]
-    public async Task Token_revoked_returns_409()
+    public async Task TokenRevokedReturns409()
     {
         using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();

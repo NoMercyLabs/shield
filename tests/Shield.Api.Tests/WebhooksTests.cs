@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -8,7 +7,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Shield.Api.Services;
+using Shield.Api.Services.Notifications;
+using Shield.Api.Services.Security;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -28,12 +28,12 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Github_webhook_rejects_request_with_invalid_signature()
+    public async Task GithubWebhookRejectsRequestWithInvalidSignature()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
         HttpClient client = _factory.CreateClient();
 
-        byte[] payload = Encoding.UTF8.GetBytes("{}");
+        byte[] payload = "{}"u8.ToArray();
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/github");
         request.Content = new ByteArrayContent(payload);
         request.Content.Headers.ContentType = new("application/json");
@@ -45,7 +45,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Github_webhook_with_missing_signature_returns_401()
+    public async Task GithubWebhookWithMissingSignatureReturns401()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
         HttpClient client = _factory.CreateClient();
@@ -57,7 +57,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Github_pull_request_with_valid_signature_invokes_pr_comment_service()
+    public async Task GithubPullRequestWithValidSignatureInvokesPrCommentService()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
 
@@ -114,12 +114,12 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Github_non_pullrequest_event_is_ignored_but_signature_still_required()
+    public async Task GithubNonPullrequestEventIsIgnoredButSignatureStillRequired()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
         HttpClient client = _factory.CreateClient();
 
-        byte[] payload = Encoding.UTF8.GetBytes("{}");
+        byte[] payload = "{}"u8.ToArray();
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/github");
         request.Content = new ByteArrayContent(payload);
         request.Content.Headers.ContentType = new("application/json");
@@ -133,7 +133,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Dependabot_alert_persists_advisory_row()
+    public async Task DependabotAlertPersistsAdvisoryRow()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
         HttpClient client = _factory.CreateClient();
@@ -194,7 +194,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Dependabot_with_bad_signature_returns_401_and_persists_nothing()
+    public async Task DependabotWithBadSignatureReturns401AndPersistsNothing()
     {
         await _factory.SetSecretsAsync(GithubSecret, DependabotSecret);
         HttpClient client = _factory.CreateClient();
@@ -206,7 +206,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Badge_endpoint_returns_not_watched_svg_when_source_is_missing()
+    public async Task BadgeEndpointReturnsNotWatchedSvgWhenSourceIsMissing()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/badge/unknown/repo.svg");
@@ -217,7 +217,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
     }
 
     [Fact]
-    public async Task Badge_endpoint_returns_finding_counts_for_known_source()
+    public async Task BadgeEndpointReturnsFindingCountsForKnownSource()
     {
         await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
         {

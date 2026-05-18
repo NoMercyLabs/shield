@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
@@ -20,7 +19,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Diff_returns_added_removed_and_version_changed()
+    public async Task DiffReturnsAddedRemovedAndVersionChanged()
     {
         HttpClient client = _factory.CreateClient();
         int sourceId = await SeedSourceAsync(client, "diff-shape-fixture");
@@ -72,7 +71,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Diff_returns_400_when_snapshot_ids_match()
+    public async Task DiffReturns400WhenSnapshotIdsMatch()
     {
         HttpClient client = _factory.CreateClient();
         int sourceId = await SeedSourceAsync(client, "diff-same-ids");
@@ -91,7 +90,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Diff_returns_404_when_snapshot_belongs_to_different_source()
+    public async Task DiffReturns404WhenSnapshotBelongsToDifferentSource()
     {
         HttpClient client = _factory.CreateClient();
         int sourceA = await SeedSourceAsync(client, "diff-source-a");
@@ -120,7 +119,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Snapshots_list_includes_prev_snapshot_id_chain()
+    public async Task SnapshotsListIncludesPrevSnapshotIdChain()
     {
         HttpClient client = _factory.CreateClient();
         int sourceId = await SeedSourceAsync(client, "snapshots-prev-chain");

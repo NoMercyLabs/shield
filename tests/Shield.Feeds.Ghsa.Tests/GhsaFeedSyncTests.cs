@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.Ghsa;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -27,7 +26,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_parses_five_advisories_and_advances_cursor()
+    public async Task SyncAsyncParsesFiveAdvisoriesAndAdvancesCursor()
     {
         const string graphqlBody = """
             {
@@ -175,7 +174,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void Feed_property_returns_Ghsa()
+    public void FeedPropertyReturnsGhsa()
     {
         HttpClient http = new() { BaseAddress = new("http://localhost/graphql") };
         GhsaGraphQLClient client = new(http);
@@ -187,7 +186,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void MapSeverity_moderate_to_medium()
+    public void MapSeverityModerateToMedium()
     {
         GhsaMapping.MapSeverity("MODERATE").Should().Be(Severity.Medium);
         GhsaMapping.MapSeverity("LOW").Should().Be(Severity.Low);
@@ -196,7 +195,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void MapEcosystem_maps_known_ecosystems()
+    public void MapEcosystemMapsKnownEcosystems()
     {
         GhsaMapping.MapEcosystem("NPM").Should().Be(Ecosystem.Npm);
         GhsaMapping.MapEcosystem("NUGET").Should().Be(Ecosystem.Nuget);

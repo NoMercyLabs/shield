@@ -4,7 +4,6 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
 using Shield.Api.Services.ManifestEditors;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -29,7 +28,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task DryRun_returns_planned_entries_without_creating_pr()
+    public async Task DryRunReturnsPlannedEntriesWithoutCreatingPr()
     {
         int sourceId = await SeedGithubSourceAsync("dry-run-fixture");
         await SeedFindingsAsync(sourceId, 3);
@@ -49,7 +48,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task DryRun_errors_not_null_for_unsupported_ecosystem()
+    public async Task DryRunErrorsNotNullForUnsupportedEcosystem()
     {
         int sourceId = await SeedGithubSourceAsync("dry-run-unsupported");
         await SeedFindingsAsync(sourceId, 1, ecosystem: Ecosystem.Nuget);
@@ -72,7 +71,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task Cooldown_returns_429_within_24h_of_last_apply()
+    public async Task CooldownReturns429Within24hOfLastApply()
     {
         int sourceId = await SeedGithubSourceAsync("cooldown-fixture");
         await SetLastBulkApplyAt(sourceId, DateTime.UtcNow.AddHours(-1));
@@ -86,7 +85,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Force_bypasses_cooldown()
+    public async Task ForceBypassesCooldown()
     {
         int sourceId = await SeedGithubSourceAsync("cooldown-force-fixture");
         await SetLastBulkApplyAt(sourceId, DateTime.UtcNow.AddHours(-1));
@@ -107,7 +106,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task LocalFolder_source_returns_400()
+    public async Task LocalFolderSourceReturns400()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage createResponse = await client.PostAsJsonAsync(
@@ -136,7 +135,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void DirectDep_bump_changes_at_most_2_lines()
+    public void DirectDepBumpChangesAtMost2Lines()
     {
         string dir = MakeTempDir();
         try
@@ -171,7 +170,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void TransitiveDep_overrides_inject_changes_at_most_6_lines()
+    public void TransitiveDepOverridesInjectChangesAtMost6Lines()
     {
         string dir = MakeTempDir();
         try
@@ -209,7 +208,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void TransitiveDep_existing_overrides_update_is_surgical()
+    public void TransitiveDepExistingOverridesUpdateIsSurgical()
     {
         string dir = MakeTempDir();
         try
@@ -394,7 +393,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task MajorBump_entries_land_in_majorBumps_not_entries_when_not_allowed()
+    public async Task MajorBumpEntriesLandInMajorBumpsNotEntriesWhenNotAllowed()
     {
         int sourceId = await SeedGithubSourceAsync("major-bump-gate");
         // Seed version 1.0.0 with fix 2.0.0 — clearly a major bump.
@@ -419,7 +418,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task MajorBump_entries_included_when_allowMajorBumps_is_true()
+    public async Task MajorBumpEntriesIncludedWhenAllowMajorBumpsIsTrue()
     {
         int sourceId = await SeedGithubSourceAsync("major-bump-allowed");
         await SeedFindingsWithFixAsync(
@@ -446,7 +445,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task ProductionSource_returns_409_when_confirmProduction_not_set()
+    public async Task ProductionSourceReturns409WhenConfirmProductionNotSet()
     {
         int sourceId = await SeedGithubSourceAsync("prod-gate-fixture");
         await MarkProduction(sourceId);
@@ -461,7 +460,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ProductionSource_dryRun_bypasses_409_gate()
+    public async Task ProductionSourceDryRunBypasses409Gate()
     {
         int sourceId = await SeedGithubSourceAsync("prod-dryrun-fixture");
         await MarkProduction(sourceId);
@@ -481,7 +480,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void ThreePackages_in_same_manifest_all_land_in_output()
+    public void ThreePackagesInSameManifestAllLandInOutput()
     {
         string dir = MakeTempDir();
         try
@@ -527,7 +526,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void Override_insert_does_not_double_quote_value()
+    public void OverrideInsertDoesNotDoubleQuoteValue()
     {
         string dir = MakeTempDir();
         try
@@ -569,7 +568,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void Override_insert_N_packages_changes_at_most_N_plus_1_lines()
+    public void OverrideInsertNPackagesChangesAtMostNPlus1Lines()
     {
         string dir = MakeTempDir();
         try

@@ -8,7 +8,7 @@ namespace Shield.Parsers.Nuget.Tests;
 public class NugetDependencyParserTests
 {
     [Fact]
-    public async Task ParseAsync_PackagesLockJson_ReturnsDirectAndTransitive()
+    public async Task ParseAsyncPackagesLockJsonReturnsDirectAndTransitive()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -38,7 +38,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_CsprojFallback_FlagsLockfileMissingAndReturnsDirects()
+    public async Task ParseAsyncCsprojFallbackFlagsLockfileMissingAndReturnsDirects()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -60,7 +60,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_DirectoryPackagesProps_EmitsThreeItemsAllDirect()
+    public async Task ParseAsyncDirectoryPackagesPropsEmitsThreeItemsAllDirect()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -90,7 +90,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_CpmCsproj_NoVersionAttribute_EmitsNothing()
+    public async Task ParseAsyncCpmCsprojNoVersionAttributeEmitsNothing()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -109,7 +109,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_LegacyCsproj_WithVersionAttribute_EmitsAsToday()
+    public async Task ParseAsyncLegacyCsprojWithVersionAttributeEmitsAsToday()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -137,7 +137,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_GlobalPackageReference_IsEmitted()
+    public async Task ParseAsyncGlobalPackageReferenceIsEmitted()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
@@ -167,7 +167,7 @@ public class NugetDependencyParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_EnvVariantPropsFilename_IsRecognisedAsCpm()
+    public async Task ParseAsyncEnvVariantPropsFilenameIsRecognisedAsCpm()
     {
         NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(

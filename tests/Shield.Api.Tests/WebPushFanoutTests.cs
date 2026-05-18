@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Shield.Api.Hubs;
-using Shield.Api.Services;
+using Shield.Api.Services.Notifications;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -23,7 +23,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
         DbContextOptions<ShieldDbContext> options = new DbContextOptionsBuilder<ShieldDbContext>()
             .UseSqlite($"Data Source=file:wpf-{Guid.NewGuid():n}?mode=memory&cache=shared")
             .Options;
-        _db = new ShieldDbContext(options);
+        _db = new(options);
         _db.Database.EnsureCreated();
     }
 
@@ -40,12 +40,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
         hub.Clients.Returns(clients);
         clients.All.Returns(proxy);
 
-        return new NotificationPublisher(
-            _db,
-            hub,
-            push,
-            NullLogger<NotificationPublisher>.Instance
-        );
+        return new(_db, hub, push, NullLogger<NotificationPublisher>.Instance);
     }
 
     private static Notification SampleNotification(Guid? userId = null) =>
@@ -61,7 +56,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
         };
 
     [Fact]
-    public async Task PublishAsync_with_2_subscriptions_sends_to_both()
+    public async Task PublishAsyncWith2SubscriptionsSendsToBoth()
     {
         Guid userId = Guid.NewGuid();
         IWebPushSender push = Substitute.For<IWebPushSender>();
@@ -85,7 +80,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_with_no_subscription_succeeds_silently()
+    public async Task PublishAsyncWithNoSubscriptionSucceedsSilently()
     {
         IWebPushSender push = Substitute.For<IWebPushSender>();
         push.DispatchAsync(Arg.Any<PushPayload>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -103,7 +98,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_on_push_error_does_not_block_db_write()
+    public async Task PublishAsyncOnPushErrorDoesNotBlockDbWrite()
     {
         // WebPushSender handles 410 internally (deletes the subscription row). At the
         // NotificationPublisher level, any exception from the sender must be swallowed so the
@@ -124,7 +119,7 @@ public sealed class WebPushFanoutTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task PushSendFailure_does_not_block_db_write()
+    public async Task PushSendFailureDoesNotBlockDbWrite()
     {
         IWebPushSender push = Substitute.For<IWebPushSender>();
         push.DispatchAsync(Arg.Any<PushPayload>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())

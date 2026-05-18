@@ -8,7 +8,7 @@ namespace Shield.Parsers.Vcpkg.Tests;
 public class VcpkgJsonParserTests
 {
     [Fact]
-    public async Task ParseAsync_VcpkgJson_ReturnsDependenciesWithOverrideAndWildcardFallback()
+    public async Task ParseAsyncVcpkgJsonReturnsDependenciesWithOverrideAndWildcardFallback()
     {
         VcpkgJsonParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "vcpkg.json"));

@@ -8,7 +8,7 @@ namespace Shield.Parsers.Rust.Tests;
 public class CargoTomlParserTests
 {
     [Fact]
-    public async Task ParseAsync_CargoToml_ReturnsDirectDependenciesWithoutVersions()
+    public async Task ParseAsyncCargoTomlReturnsDirectDependenciesWithoutVersions()
     {
         RustDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Cargo.toml"));

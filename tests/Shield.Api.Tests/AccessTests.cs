@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
@@ -16,7 +15,7 @@ namespace Shield.Api.Tests;
 public sealed class AccessTests
 {
     [Fact]
-    public async Task Maintainer_sees_only_granted_sources_in_list()
+    public async Task MaintainerSeesOnlyGrantedSourcesInList()
     {
         using MultiUserAccessFactory factory = new();
         (int sourceA, int sourceB, int sourceC, Guid maintainerId, _) = await SeedAclScenarioAsync(
@@ -41,7 +40,7 @@ public sealed class AccessTests
     }
 
     [Fact]
-    public async Task Maintainer_cannot_get_unauthorized_source_returns_404()
+    public async Task MaintainerCannotGetUnauthorizedSourceReturns404()
     {
         using MultiUserAccessFactory factory = new();
         (_, _, int sourceC, _, _) = await SeedAclScenarioAsync(factory);
@@ -57,7 +56,7 @@ public sealed class AccessTests
     }
 
     [Fact]
-    public async Task Maintainer_with_triage_can_ack_finding()
+    public async Task MaintainerWithTriageCanAckFinding()
     {
         using MultiUserAccessFactory factory = new();
         (_, int sourceB, _, _, _) = await SeedAclScenarioAsync(factory);
@@ -77,7 +76,7 @@ public sealed class AccessTests
     }
 
     [Fact]
-    public async Task Maintainer_with_read_cannot_ack_finding_returns_403()
+    public async Task MaintainerWithReadCannotAckFindingReturns403()
     {
         using MultiUserAccessFactory factory = new();
         (int sourceA, _, _, _, _) = await SeedAclScenarioAsync(factory);
@@ -97,7 +96,7 @@ public sealed class AccessTests
     }
 
     [Fact]
-    public async Task Group_grant_propagates_to_member()
+    public async Task GroupGrantPropagatesToMember()
     {
         using MultiUserAccessFactory factory = new();
         await SeedAdminAsync(factory);
@@ -176,7 +175,7 @@ public sealed class AccessTests
     }
 
     [Fact]
-    public async Task Admin_sees_all_sources_regardless_of_grants()
+    public async Task AdminSeesAllSourcesRegardlessOfGrants()
     {
         using MultiUserAccessFactory factory = new();
         (int sourceA, int sourceB, int sourceC, _, _) = await SeedAclScenarioAsync(factory);

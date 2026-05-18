@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Shield.Api.Services;
+using Shield.Api.Services.Rendering;
 using Xunit;
 
 namespace Shield.Api.Tests;
@@ -9,7 +9,7 @@ public sealed class BadgeRendererTests
     private readonly BadgeRenderer _renderer = new();
 
     [Fact]
-    public void Render_with_no_findings_returns_green_no_findings_badge()
+    public void RenderWithNoFindingsReturnsGreenNoFindingsBadge()
     {
         string svg = _renderer.Render(0, 0, 0, 0);
         svg.Should().Contain("<svg");
@@ -19,7 +19,7 @@ public sealed class BadgeRendererTests
     }
 
     [Fact]
-    public void Render_with_critical_finding_uses_red_color()
+    public void RenderWithCriticalFindingUsesRedColor()
     {
         string svg = _renderer.Render(1, 2, 3, 4);
         svg.Should().Contain("1C 2H 3M 4L");
@@ -27,7 +27,7 @@ public sealed class BadgeRendererTests
     }
 
     [Fact]
-    public void Render_with_high_but_no_critical_uses_orange_color()
+    public void RenderWithHighButNoCriticalUsesOrangeColor()
     {
         string svg = _renderer.Render(0, 2, 3, 4);
         svg.Should().Contain("#fe7d37");
@@ -35,21 +35,21 @@ public sealed class BadgeRendererTests
     }
 
     [Fact]
-    public void Render_with_medium_but_no_high_or_critical_uses_yellow()
+    public void RenderWithMediumButNoHighOrCriticalUsesYellow()
     {
         string svg = _renderer.Render(0, 0, 3, 4);
         svg.Should().Contain("#dfb317");
     }
 
     [Fact]
-    public void Render_with_only_low_uses_blue()
+    public void RenderWithOnlyLowUsesBlue()
     {
         string svg = _renderer.Render(0, 0, 0, 4);
         svg.Should().Contain("#007ec6");
     }
 
     [Fact]
-    public void RenderNotWatched_uses_grey_color_and_not_watched_text()
+    public void RenderNotWatchedUsesGreyColorAndNotWatchedText()
     {
         string svg = _renderer.RenderNotWatched();
         svg.Should().Contain("not watched");
@@ -57,7 +57,7 @@ public sealed class BadgeRendererTests
     }
 
     [Fact]
-    public void Rendered_svg_is_well_formed_with_image_namespace_and_root_close()
+    public void RenderedSvgIsWellFormedWithImageNamespaceAndRootClose()
     {
         string svg = _renderer.Render(0, 1, 0, 0);
         svg.Should().StartWith("<svg xmlns=\"http://www.w3.org/2000/svg\"");
@@ -65,7 +65,7 @@ public sealed class BadgeRendererTests
     }
 
     [Fact]
-    public void Rendered_svg_html_escapes_label_and_value_segments()
+    public void RenderedSvgHtmlEscapesLabelAndValueSegments()
     {
         // Defence-in-depth — if counts ever became user-influenced the SVG must not break.
         // Just assert that ampersand/lt/gt never appear unescaped in the no-findings render.

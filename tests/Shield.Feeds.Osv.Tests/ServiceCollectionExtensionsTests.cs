@@ -2,7 +2,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
-using Shield.Feeds.Osv;
 using Shield.Feeds.Osv.Extensions;
 using Xunit;
 
@@ -11,7 +10,7 @@ namespace Shield.Feeds.Osv.Tests;
 public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddOsvFeed_RegistersIFeedSync_AndOsvFeedSync()
+    public void AddOsvFeedRegistersIFeedSyncAndOsvFeedSync()
     {
         ServiceCollection services = [];
         services.AddOsvFeed();
@@ -27,7 +26,7 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddOsvFeed_RegistersHttpClient_WithCorrectBaseAddress()
+    public void AddOsvFeedRegistersHttpClientWithCorrectBaseAddress()
     {
         ServiceCollection services = [];
         services.AddOsvFeed();

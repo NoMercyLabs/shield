@@ -1,14 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
-using System.Text;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
 using Shield.Data.Identity;
 using Xunit;
 
@@ -17,7 +16,7 @@ namespace Shield.Api.Tests;
 public sealed class TwoFactorTests
 {
     [Fact]
-    public async Task Enrollment_returns_provisioning_uri_and_recovery_codes()
+    public async Task EnrollmentReturnsProvisioningUriAndRecoveryCodes()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -37,7 +36,7 @@ public sealed class TwoFactorTests
     }
 
     [Fact]
-    public async Task Verify_marks_user_2fa_enabled()
+    public async Task VerifyMarksUser2faEnabled()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -126,7 +125,7 @@ public sealed class TwoFactorTests
     }
 
     [Fact]
-    public async Task Require2Fa_setting_blocks_non_2fa_user_from_api()
+    public async Task Require2FaSettingBlocksNon2faUserFromApi()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();

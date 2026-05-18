@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
 using Shield.Core.Domain;
 using Shield.Data;
 using Shield.Data.Identity;
@@ -27,7 +26,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ApplyAllFixes_admin_can_reach_endpoint()
+    public async Task ApplyAllFixesAdminCanReachEndpoint()
     {
         int sourceId = await SeedGithubSourceAsync("ctrl-admin-fixture");
 
@@ -42,7 +41,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ApplyAllFixes_non_admin_returns_403()
+    public async Task ApplyAllFixesNonAdminReturns403()
     {
         using ViewerRoleFactory factory = new();
 
@@ -93,7 +92,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ApplyAllFixes_api_token_bearer_returns_403()
+    public async Task ApplyAllFixesApiTokenBearerReturns403()
     {
         int sourceId = await SeedGithubSourceAsync("ctrl-apitoken-fixture");
 
@@ -120,7 +119,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ApplyAllFixes_unknown_source_returns_404()
+    public async Task ApplyAllFixesUnknownSourceReturns404()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
@@ -131,7 +130,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task ApplyAllFixes_local_folder_source_returns_400()
+    public async Task ApplyAllFixesLocalFolderSourceReturns400()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage create = await client.PostAsJsonAsync(

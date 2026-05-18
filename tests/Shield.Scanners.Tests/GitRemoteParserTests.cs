@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Scanners.Tests;
@@ -25,7 +24,7 @@ public class GitRemoteParserTests
         "shield"
     )]
     [InlineData("git://github.com/foo/bar.git", "github.com", "foo", "bar")]
-    public void Parses_github_urls(string url, string host, string owner, string repo)
+    public void ParsesGithubUrls(string url, string host, string owner, string repo)
     {
         DetectedRemote? parsed = GitRemoteParser.ParseRemoteUrl(url);
         parsed.Should().NotBeNull();
@@ -44,7 +43,7 @@ public class GitRemoteParserTests
     )]
     [InlineData("git@gitlab.com:group/sub/repo.git", "gitlab.com", "group/sub", "repo")]
     [InlineData("https://bitbucket.org/team/proj", "bitbucket.org", "team", "proj")]
-    public void Parses_non_github_hosts(string url, string host, string owner, string repo)
+    public void ParsesNonGithubHosts(string url, string host, string owner, string repo)
     {
         DetectedRemote? parsed = GitRemoteParser.ParseRemoteUrl(url);
         parsed.Should().NotBeNull();
@@ -62,13 +61,13 @@ public class GitRemoteParserTests
     [InlineData("https://github.com/onlyone")]
     [InlineData("git@github.com")]
     [InlineData("ftp://github.com/owner/repo")]
-    public void Rejects_malformed_urls(string? url)
+    public void RejectsMalformedUrls(string? url)
     {
         GitRemoteParser.ParseRemoteUrl(url).Should().BeNull();
     }
 
     [Fact]
-    public void DetectFromWorkingTree_returns_null_when_no_dot_git()
+    public void DetectFromWorkingTreeReturnsNullWhenNoDotGit()
     {
         string root = Path.Combine(
             Path.GetTempPath(),
@@ -86,7 +85,7 @@ public class GitRemoteParserTests
     }
 
     [Fact]
-    public void DetectFromWorkingTree_parses_origin_block()
+    public void DetectFromWorkingTreeParsesOriginBlock()
     {
         string root = Path.Combine(
             Path.GetTempPath(),
@@ -115,7 +114,7 @@ public class GitRemoteParserTests
     }
 
     [Fact]
-    public void DetectFromWorkingTree_returns_null_when_no_origin_block()
+    public void DetectFromWorkingTreeReturnsNullWhenNoOriginBlock()
     {
         string root = Path.Combine(
             Path.GetTempPath(),

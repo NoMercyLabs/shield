@@ -23,7 +23,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task List_returns_enriched_finding_with_package_and_advisory_fields()
+    public async Task ListReturnsEnrichedFindingWithPackageAndAdvisoryFields()
     {
         string fixtureDir = Path.Combine(
             Path.GetTempPath(),
@@ -69,7 +69,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Ack_flips_finding_state_to_acked()
+    public async Task AckFlipsFindingStateToAcked()
     {
         Guid id = await SeedFindingAsync();
 
@@ -83,7 +83,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Apply_fix_local_folder_bumps_package_json()
+    public async Task ApplyFixLocalFolderBumpsPackageJson()
     {
         string fixtureDir = Path.Combine(
             Path.GetTempPath(),
@@ -144,7 +144,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Get_finding_returns_fix_suggestion_when_advisory_has_known_fix()
+    public async Task GetFindingReturnsFixSuggestionWhenAdvisoryHasKnownFix()
     {
         string fixtureDir = Path.Combine(
             Path.GetTempPath(),
@@ -187,7 +187,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Apply_fix_pr_strategy_rejected_for_local_folder()
+    public async Task ApplyFixPrStrategyRejectedForLocalFolder()
     {
         string fixtureDir = Path.Combine(
             Path.GetTempPath(),
@@ -228,7 +228,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Apply_fix_requires_admin()
+    public async Task ApplyFixRequiresAdmin()
     {
         using ViewerFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -301,7 +301,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Bulk_ack_flips_multiple_findings_in_one_call()
+    public async Task BulkAckFlipsMultipleFindingsInOneCall()
     {
         Guid first = await SeedFindingAsync();
         Guid second = await SeedFindingAsync();
@@ -331,7 +331,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Bulk_resolve_returns_notFound_for_missing_id()
+    public async Task BulkResolveReturnsNotFoundForMissingId()
     {
         Guid real = await SeedFindingAsync();
         Guid missing = Guid.NewGuid();
@@ -351,7 +351,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Multi_severity_filter_returns_high_and_critical_only()
+    public async Task MultiSeverityFilterReturnsHighAndCriticalOnly()
     {
         using (IServiceScope scope = _factory.Services.CreateScope())
         {
@@ -485,7 +485,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Sort_by_severity_asc_returns_lowest_first()
+    public async Task SortBySeverityAscReturnsLowestFirst()
     {
         string prefix = "sort-sev-asc-" + Guid.NewGuid().ToString("n") + "-";
         DateTime baseTime = DateTime.UtcNow;
@@ -519,7 +519,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Sort_by_discoveredAt_desc_returns_newest_first()
+    public async Task SortByDiscoveredAtDescReturnsNewestFirst()
     {
         string prefix = "sort-disc-" + Guid.NewGuid().ToString("n") + "-";
         DateTime baseTime = DateTime.UtcNow;
@@ -527,7 +527,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         {
             ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
             db.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -541,7 +541,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 }
             );
             db.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -575,7 +575,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Advisory_query_filters_by_external_id_substring()
+    public async Task AdvisoryQueryFiltersByExternalIdSubstring()
     {
         string unique = Guid.NewGuid().ToString("n")[..8];
         string externalId = "GHSA-test-" + unique + "-xxxx";
@@ -585,7 +585,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         {
             FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = advisoryId,
                     ExternalId = externalId,
@@ -604,7 +604,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
 
             ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
             shieldDb.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -634,7 +634,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Kev_only_filter_restricts_to_kev_advisories()
+    public async Task KevOnlyFilterRestrictsToKevAdvisories()
     {
         string unique = Guid.NewGuid().ToString("n")[..8];
         Guid kevAdvisoryId = Guid.NewGuid();
@@ -644,7 +644,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         {
             FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = kevAdvisoryId,
                     ExternalId = "GHSA-kev-" + unique,
@@ -661,7 +661,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 }
             );
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = nonKevAdvisoryId,
                     ExternalId = "GHSA-nokev-" + unique,
@@ -681,7 +681,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
 
             ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
             shieldDb.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -695,7 +695,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 }
             );
             shieldDb.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -724,7 +724,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Epss_min_filter_restricts_to_advisories_above_threshold()
+    public async Task EpssMinFilterRestrictsToAdvisoriesAboveThreshold()
     {
         string unique = Guid.NewGuid().ToString("n")[..8];
         Guid highEpssAdvisoryId = Guid.NewGuid();
@@ -734,7 +734,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         {
             FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = highEpssAdvisoryId,
                     ExternalId = "GHSA-epss-high-" + unique,
@@ -751,7 +751,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 }
             );
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = lowEpssAdvisoryId,
                     ExternalId = "GHSA-epss-low-" + unique,
@@ -771,7 +771,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
 
             ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
             shieldDb.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -785,7 +785,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 }
             );
             shieldDb.Findings.Add(
-                new Finding
+                new()
                 {
                     Id = Guid.NewGuid(),
                     SourceId = 9999,
@@ -815,7 +815,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Has_fix_true_returns_only_findings_with_a_known_fix()
+    public async Task HasFixTrueReturnsOnlyFindingsWithAKnownFix()
     {
         string fixtureDir = Path.Combine(
             Path.GetTempPath(),

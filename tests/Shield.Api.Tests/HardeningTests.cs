@@ -23,7 +23,7 @@ public sealed class HardeningTests
         new StubHostEnvironment("Production");
 
     [Fact]
-    public void Production_throws_when_single_user_mode_enabled_without_override()
+    public void ProductionThrowsWhenSingleUserModeEnabledWithoutOverride()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -44,7 +44,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public void Production_throws_when_swagger_enabled()
+    public void ProductionThrowsWhenSwaggerEnabled()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -62,7 +62,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public void Public_throws_when_https_not_required()
+    public void PublicThrowsWhenHttpsNotRequired()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -82,7 +82,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public void Public_throws_when_master_key_is_dev_default()
+    public void PublicThrowsWhenMasterKeyIsDevDefault()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -101,7 +101,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public void Production_throws_when_jwt_signing_key_too_short()
+    public void ProductionThrowsWhenJwtSigningKeyTooShort()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -119,7 +119,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public void Development_skips_all_checks()
+    public void DevelopmentSkipsAllChecks()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -141,7 +141,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public async Task Login_rate_limit_blocks_after_10_attempts_per_minute()
+    public async Task LoginRateLimitBlocksAfter10AttemptsPerMinute()
     {
         using LimitTestFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -171,7 +171,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public async Task Security_headers_present_on_static_files_when_required()
+    public async Task SecurityHeadersPresentOnStaticFilesWhenRequired()
     {
         using HttpsRequiredFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -193,7 +193,7 @@ public sealed class HardeningTests
     }
 
     [Fact]
-    public async Task Hsts_omitted_when_https_not_required()
+    public async Task HstsOmittedWhenHttpsNotRequired()
     {
         // Default factory does NOT require HTTPS — HSTS would pin browsers to a non-existent
         // TLS endpoint, so the middleware must omit it.

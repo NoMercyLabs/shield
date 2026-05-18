@@ -7,7 +7,6 @@ using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Data;
-using Shield.Feeds.Epss;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -31,7 +30,7 @@ public sealed class EpssFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_streams_csv_and_updates_score_and_percentile_on_matching_advisories()
+    public async Task SyncAsyncStreamsCsvAndUpdatesScoreAndPercentileOnMatchingAdvisories()
     {
         string csv = string.Concat(
             "#model_version:v2025.03.14,score_date:2026-05-15T00:00:00+0000\n",
@@ -107,7 +106,7 @@ public sealed class EpssFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task CsvParser_skips_header_and_comment_lines()
+    public async Task CsvParserSkipsHeaderAndCommentLines()
     {
         string csv = string.Concat(
             "#model_version:v2\n",
@@ -131,7 +130,7 @@ public sealed class EpssFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_returns_failure_on_5xx()
+    public async Task SyncAsyncReturnsFailureOn5xx()
     {
         _server
             .Given(Request.Create().WithPath("/epss_scores-current.csv.gz").UsingGet())
@@ -156,7 +155,7 @@ public sealed class EpssFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void Feed_property_returns_Epss()
+    public void FeedPropertyReturnsEpss()
     {
         using HttpClient http = new() { BaseAddress = new("http://localhost/") };
         DbContextOptions<FeedsDbContext> options = new DbContextOptionsBuilder<FeedsDbContext>()

@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Shield.Api.Services;
+using Shield.Api.Services.FixApply;
 using Shield.Core.Domain;
 using Xunit;
 
@@ -10,7 +10,7 @@ public sealed class FixSuggesterTests
     // ── SuggestForPackage — single advisory, existing behaviour ───────────────
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_no_fix_events_in_range()
+    public void SuggestForPackageReturnsNullWhenNoFixEventsInRange()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory("GHSA-aaa", "[{\"events\":[{\"introduced\":\"0\"}]}]");
@@ -27,7 +27,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_fix_is_not_greater_than_current()
+    public void SuggestForPackageReturnsNullWhenFixIsNotGreaterThanCurrent()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
@@ -47,7 +47,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_picks_highest_qualifying_fix_within_single_advisory()
+    public void SuggestForPackagePicksHighestQualifyingFixWithinSingleAdvisory()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
@@ -71,7 +71,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_skips_fix_events_below_current_version()
+    public void SuggestForPackageSkipsFixEventsBelowCurrentVersion()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
@@ -93,7 +93,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_advisory_has_no_fix_events()
+    public void SuggestForPackageReturnsNullWhenAdvisoryHasNoFixEvents()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory("GHSA-aaa", "[]");
@@ -110,7 +110,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_handles_nuget_versions_via_fallback_comparer()
+    public void SuggestForPackageHandlesNugetVersionsViaFallbackComparer()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
@@ -134,7 +134,7 @@ public sealed class FixSuggesterTests
     // ── SuggestForPackage — aggregate across multiple advisories ──────────────
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_advisory_list_is_empty()
+    public void SuggestForPackageReturnsNullWhenAdvisoryListIsEmpty()
     {
         FixSuggester suggester = new();
 
@@ -144,7 +144,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_no_advisory_qualifies()
+    public void SuggestForPackageReturnsNullWhenNoAdvisoryQualifies()
     {
         FixSuggester suggester = new();
         Advisory advisory = MakeAdvisory(
@@ -163,7 +163,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_picks_highest_version_across_three_advisories()
+    public void SuggestForPackagePicksHighestVersionAcrossThreeAdvisories()
     {
         FixSuggester suggester = new();
 
@@ -197,7 +197,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_skips_advisory_whose_fix_is_below_current_version()
+    public void SuggestForPackageSkipsAdvisoryWhoseFixIsBelowCurrentVersion()
     {
         FixSuggester suggester = new();
 
@@ -225,7 +225,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_notes_says_singular_advisory_when_only_one_qualifies()
+    public void SuggestForPackageNotesSaysSingularAdvisoryWhenOnlyOneQualifies()
     {
         FixSuggester suggester = new();
 
@@ -248,7 +248,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_picks_higher_version_than_old_single_advisory_logic_would_have()
+    public void SuggestForPackagePicksHigherVersionThanOldSingleAdvisoryLogicWouldHave()
     {
         // Old Suggest(advisory, item) picked the LOWEST qualifying fix from one advisory.
         // SuggestForPackage picks the HIGHEST across all advisories.
@@ -282,7 +282,7 @@ public sealed class FixSuggesterTests
     // ── Suggested-version-itself-vulnerable check (Gap 7) ─────────────────────
 
     [Fact]
-    public void SuggestForPackage_skips_suggested_version_that_is_itself_vulnerable()
+    public void SuggestForPackageSkipsSuggestedVersionThatIsItselfVulnerable()
     {
         // Advisory A: fix at 1.2.0
         // Advisory B: 1.2.0 is still vulnerable (its range includes 1.2.0), fix at 1.3.0
@@ -318,7 +318,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void SuggestForPackage_returns_null_when_all_fix_candidates_are_themselves_vulnerable()
+    public void SuggestForPackageReturnsNullWhenAllFixCandidatesAreThemselvesVulnerable()
     {
         FixSuggester suggester = new();
 
@@ -345,7 +345,7 @@ public sealed class FixSuggesterTests
     }
 
     [Fact]
-    public void IsVersionVulnerable_returns_true_when_version_falls_in_range()
+    public void IsVersionVulnerableReturnsTrueWhenVersionFallsInRange()
     {
         string rangesJson = "[{\"events\":[{\"introduced\":\"1.0.0\"},{\"fixed\":\"1.3.0\"}]}]";
 

@@ -2,20 +2,6 @@ using System.Text.Json;
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Parsers.Composer;
-using Shield.Parsers.Dart;
-using Shield.Parsers.Elixir;
-using Shield.Parsers.Go;
-using Shield.Parsers.Gradle;
-using Shield.Parsers.Maven;
-using Shield.Parsers.Npm;
-using Shield.Parsers.Nuget;
-using Shield.Parsers.Python;
-using Shield.Parsers.Ruby;
-using Shield.Parsers.Rust;
-using Shield.Parsers.Swift;
-using Shield.Parsers.Vcpkg;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Scanners.Tests;
@@ -73,7 +59,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task Scans_recognized_lockfiles_and_ignores_node_modules()
+    public async Task ScansRecognizedLockfilesAndIgnoresNodeModules()
     {
         string root = CopyFixtureTree();
         try
@@ -117,7 +103,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task ContentsSha_is_stable_across_rescans()
+    public async Task ContentsShaIsStableAcrossRescans()
     {
         string root = CopyFixtureTree();
         try
@@ -146,7 +132,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task Custom_ignore_globs_replace_defaults()
+    public async Task CustomIgnoreGlobsReplaceDefaults()
     {
         string root = CopyFixtureTree();
         try
@@ -173,7 +159,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task ManifestPath_is_set_to_relative_forward_slash_path_for_root_lockfile()
+    public async Task ManifestPathIsSetToRelativeForwardSlashPathForRootLockfile()
     {
         string root = CopyFixtureTree();
         try
@@ -206,7 +192,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task ManifestPath_uses_forward_slashes_for_subdirectory_manifests()
+    public async Task ManifestPathUsesForwardSlashesForSubdirectoryManifests()
     {
         string root = Path.Combine(
             Path.GetTempPath(),
@@ -216,7 +202,7 @@ public class LocalFolderScannerTests
         string subDir = Path.Combine(root, "packages", "core");
         Directory.CreateDirectory(subDir);
 
-        File.WriteAllText(
+        await File.WriteAllTextAsync(
             Path.Combine(subDir, "package-lock.json"),
             "{\"lockfileVersion\":3,\"packages\":{\"\":{\"dependencies\":{\"react\":\"^18.0.0\"}},\"node_modules/react\":{\"version\":\"18.2.0\"}}}"
         );
@@ -244,7 +230,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task Missing_path_returns_failure()
+    public async Task MissingPathReturnsFailure()
     {
         LocalFolderScanner scanner = NewScanner();
         Source source = new()
@@ -261,7 +247,7 @@ public class LocalFolderScannerTests
     }
 
     [Fact]
-    public async Task Scan_populates_DetectedRemote_from_dot_git_config()
+    public async Task ScanPopulatesDetectedRemoteFromDotGitConfig()
     {
         string root = CopyFixtureTree();
         try

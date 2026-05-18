@@ -52,7 +52,7 @@ public sealed class MigrationTests : IAsyncLifetime
                 warnings.Ignore(RelationalEventId.PendingModelChangesWarning)
             )
             .Options;
-        return new ShieldDbContext(options);
+        return new(options);
     }
 
     private FeedsDbContext BuildFeedsContext()
@@ -63,11 +63,11 @@ public sealed class MigrationTests : IAsyncLifetime
                 warnings.Ignore(RelationalEventId.PendingModelChangesWarning)
             )
             .Options;
-        return new FeedsDbContext(options);
+        return new(options);
     }
 
     [Fact]
-    public async Task Shield_migrations_apply_cleanly_to_fresh_database()
+    public async Task ShieldMigrationsApplyCleanlyToFreshDatabase()
     {
         await using ShieldDbContext db = BuildShieldContext();
 
@@ -77,7 +77,7 @@ public sealed class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Feeds_migrations_apply_cleanly_to_fresh_database()
+    public async Task FeedsMigrationsApplyCleanlyToFreshDatabase()
     {
         await using FeedsDbContext db = BuildFeedsContext();
 
@@ -87,7 +87,7 @@ public sealed class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Shield_all_entity_tables_exist_after_migration()
+    public async Task ShieldAllEntityTablesExistAfterMigration()
     {
         await using ShieldDbContext db = BuildShieldContext();
         await db.Database.MigrateAsync();
@@ -143,7 +143,7 @@ public sealed class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Shield_migrations_are_idempotent_on_second_apply()
+    public async Task ShieldMigrationsAreIdempotentOnSecondApply()
     {
         // Running MigrateAsync twice must not throw — the __EFMigrationsHistory table
         // records what has been applied, so re-running against an already-migrated DB
@@ -157,7 +157,7 @@ public sealed class MigrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Shield_migration_history_records_all_migrations()
+    public async Task ShieldMigrationHistoryRecordsAllMigrations()
     {
         await using ShieldDbContext db = BuildShieldContext();
         await db.Database.MigrateAsync();

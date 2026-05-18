@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Parsers.Npm;
 using Xunit;
 
 namespace Shield.Parsers.Npm.Tests;
@@ -9,7 +8,7 @@ namespace Shield.Parsers.Npm.Tests;
 public class PnpmTests
 {
     [Fact]
-    public async Task Parses_pnpm_lockfile_with_direct_flag_from_importers()
+    public async Task ParsesPnpmLockfileWithDirectFlagFromImporters()
     {
         NpmLockParser parser = new();
         using Stream stream = FixtureLoader.Open("pnpm-lock.yaml");

@@ -32,6 +32,7 @@ public class NtfyChannelTests : IDisposable
         _server.Stop();
         _server.Dispose();
         _provider.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private static Finding NewFinding(Severity severity) =>

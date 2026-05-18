@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using FluentAssertions;
 using Xunit;
 
@@ -17,7 +16,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Default_og_image_returns_png_with_cache_header()
+    public async Task DefaultOgImageReturnsPngWithCacheHeader()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/og/default.png");
@@ -33,7 +32,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Instance_og_image_returns_png()
+    public async Task InstanceOgImageReturnsPng()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/og/instance.png");
@@ -45,7 +44,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Icon_endpoint_returns_png_for_whitelisted_size()
+    public async Task IconEndpointReturnsPngForWhitelistedSize()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/og/icon-192.png");
@@ -57,7 +56,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Icon_endpoint_rejects_non_whitelisted_size()
+    public async Task IconEndpointRejectsNonWhitelistedSize()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/og/icon-1234.png");
@@ -66,7 +65,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Discordbot_user_agent_gets_enriched_meta_for_root()
+    public async Task DiscordbotUserAgentGetsEnrichedMetaForRoot()
     {
         HttpClient client = _factory.CreateClient();
         HttpRequestMessage request = new(HttpMethod.Get, "/");
@@ -84,7 +83,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Discordbot_user_agent_gets_login_title_on_login_route()
+    public async Task DiscordbotUserAgentGetsLoginTitleOnLoginRoute()
     {
         HttpClient client = _factory.CreateClient();
         HttpRequestMessage request = new(HttpMethod.Get, "/login");
@@ -97,7 +96,7 @@ public sealed class OgTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Regular_browser_user_agent_falls_through_to_unmodified_spa_shell()
+    public async Task RegularBrowserUserAgentFallsThroughToUnmodifiedSpaShell()
     {
         HttpClient client = _factory.CreateClient();
         HttpRequestMessage request = new(HttpMethod.Get, "/");

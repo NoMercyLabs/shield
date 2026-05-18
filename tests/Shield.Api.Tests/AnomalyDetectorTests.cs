@@ -3,8 +3,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
-using Shield.Api.Workers;
+using Shield.Api.Services.Findings;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -21,7 +20,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_flags_brand_new_package()
+    public void EvaluateFlagsBrandNewPackage()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -51,7 +50,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_does_not_flag_brand_new_for_old_publish_date()
+    public void EvaluateDoesNotFlagBrandNewForOldPublishDate()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -82,7 +81,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_flags_typosquat_for_close_npm_name()
+    public void EvaluateFlagsTyposquatForCloseNpmName()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -101,7 +100,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_does_not_flag_known_popular_package_as_typosquat()
+    public void EvaluateDoesNotFlagKnownPopularPackageAsTyposquat()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -119,7 +118,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_flags_new_maintainer_this_version()
+    public void EvaluateFlagsNewMaintainerThisVersion()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -159,7 +158,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void Evaluate_flags_scope_mismatch_for_squatted_scoped_package()
+    public void EvaluateFlagsScopeMismatchForSquattedScopedPackage()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
@@ -177,7 +176,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Analyze_returns_zero_for_first_snapshot()
+    public async Task AnalyzeReturnsZeroForFirstSnapshot()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
@@ -228,7 +227,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Analyze_emits_synthetic_advisory_for_typosquat_addition()
+    public async Task AnalyzeEmitsSyntheticAdvisoryForTyposquatAddition()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();

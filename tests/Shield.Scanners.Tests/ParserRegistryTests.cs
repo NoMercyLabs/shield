@@ -13,7 +13,6 @@ using Shield.Parsers.Ruby;
 using Shield.Parsers.Rust;
 using Shield.Parsers.Swift;
 using Shield.Parsers.Vcpkg;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Scanners.Tests;
@@ -58,7 +57,7 @@ public class ParserRegistryTests
     [InlineData("pom.xml", typeof(PomXmlParser))]
     [InlineData("mix.lock", typeof(MixLockParser))]
     [InlineData("vcpkg.json", typeof(VcpkgJsonParser))]
-    public void FindFor_routes_filenames_to_correct_parser(string filename, Type expected)
+    public void FindForRoutesFilenamesToCorrectParser(string filename, Type expected)
     {
         ParserRegistry registry = NewRegistry();
 
@@ -69,7 +68,7 @@ public class ParserRegistryTests
     }
 
     [Fact]
-    public void FindFor_strips_directory_components()
+    public void FindForStripsDirectoryComponents()
     {
         ParserRegistry registry = NewRegistry();
 
@@ -79,7 +78,7 @@ public class ParserRegistryTests
     }
 
     [Fact]
-    public void FindFor_returns_null_for_unknown_filename()
+    public void FindForReturnsNullForUnknownFilename()
     {
         ParserRegistry registry = NewRegistry();
 
@@ -89,7 +88,7 @@ public class ParserRegistryTests
     }
 
     [Fact]
-    public void IsRecognized_matches_known_filenames_case_insensitively()
+    public void IsRecognizedMatchesKnownFilenamesCaseInsensitively()
     {
         ParserRegistry.IsRecognized("package-lock.json").Should().BeTrue();
         ParserRegistry.IsRecognized("Composer.Lock").Should().BeTrue();

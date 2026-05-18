@@ -4,8 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Shield.Api.Workers;
-using Shield.Core.Abstractions;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -32,7 +31,7 @@ public sealed class MatcherAutoResolveTests
     // First scan: pkg@4.17.20 → Finding is Open.
     // Second scan: pkg@4.17.22 → no match → Finding becomes AutoResolved.
     [Fact]
-    public async Task Open_finding_becomes_AutoResolved_when_version_bumped_past_fix()
+    public async Task OpenFindingBecomesAutoResolvedWhenVersionBumpedPastFix()
     {
         _ = _factory.CreateClient();
 
@@ -85,7 +84,7 @@ public sealed class MatcherAutoResolveTests
     // Same scenario but the finding was Acked.
     // Acked findings are also fair game for auto-resolve.
     [Fact]
-    public async Task Acked_finding_becomes_AutoResolved_when_version_bumped_past_fix()
+    public async Task AckedFindingBecomesAutoResolvedWhenVersionBumpedPastFix()
     {
         _ = _factory.CreateClient();
 
@@ -124,7 +123,7 @@ public sealed class MatcherAutoResolveTests
 
     // Operator manually resolved the finding. The matcher must not override that decision.
     [Fact]
-    public async Task Resolved_finding_stays_Resolved()
+    public async Task ResolvedFindingStaysResolved()
     {
         _ = _factory.CreateClient();
 
@@ -162,7 +161,7 @@ public sealed class MatcherAutoResolveTests
 
     // Operator suppressed the finding. The matcher must not override that decision.
     [Fact]
-    public async Task Suppressed_finding_stays_Suppressed()
+    public async Task SuppressedFindingStaysSuppressed()
     {
         _ = _factory.CreateClient();
 
@@ -201,7 +200,7 @@ public sealed class MatcherAutoResolveTests
     // The package was removed from the manifest entirely (no inventory item for it in the
     // new snapshot). That is a genuine resolution — the dep is gone.
     [Fact]
-    public async Task Finding_auto_resolves_when_package_deleted_from_manifest()
+    public async Task FindingAutoResolvesWhenPackageDeletedFromManifest()
     {
         _ = _factory.CreateClient();
 
@@ -232,7 +231,7 @@ public sealed class MatcherAutoResolveTests
 
     // Multiple findings for same package but different advisories — all auto-resolve in one pass.
     [Fact]
-    public async Task Multiple_findings_for_same_package_all_auto_resolve()
+    public async Task MultipleFindingsForSamePackageAllAutoResolve()
     {
         _ = _factory.CreateClient();
 
@@ -279,7 +278,7 @@ public sealed class MatcherAutoResolveTests
             if (exists)
                 return;
             shieldDb.Sources.Add(
-                new Source
+                new()
                 {
                     Id = sourceId,
                     Name = $"auto-resolve-test-{sourceId}",
@@ -304,7 +303,7 @@ public sealed class MatcherAutoResolveTests
             if (exists)
                 return;
             feedsDb.Advisories.Add(
-                new Advisory
+                new()
                 {
                     Id = id,
                     Feed = Feed.Osv,
@@ -344,7 +343,7 @@ public sealed class MatcherAutoResolveTests
             shieldDb.InventorySnapshots.Add(snapshot);
 
             shieldDb.InventoryItems.Add(
-                new InventoryItem
+                new()
                 {
                     SnapshotId = snapshotId,
                     Ecosystem = Ecosystem.Npm,
@@ -360,7 +359,7 @@ public sealed class MatcherAutoResolveTests
     private async Task TriggerMatchAsync(Guid snapshotId)
     {
         MatchQueue queue = _factory.Services.GetRequiredService<MatchQueue>();
-        await queue.EnqueueAsync(new MatchRequest(snapshotId, null, MatchAll: false));
+        await queue.EnqueueAsync(new(snapshotId, null, MatchAll: false));
     }
 
     private async Task WaitForFindingCountAsync(int sourceId, int expectedCount, int timeoutSeconds)

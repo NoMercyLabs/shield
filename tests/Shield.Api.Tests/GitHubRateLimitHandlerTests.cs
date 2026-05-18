@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shield.Api.Http;
@@ -15,7 +14,7 @@ namespace Shield.Api.Tests;
 public sealed class GitHubRateLimitHandlerTests
 {
     [Fact]
-    public async Task Retries_once_after_429_with_retry_after()
+    public async Task RetriesOnceAfter429WithRetryAfter()
     {
         StubHandler stub = new();
         // First response: 429 + Retry-After: 1. Second: 200.
@@ -35,7 +34,7 @@ public sealed class GitHubRateLimitHandlerTests
     }
 
     [Fact]
-    public async Task Retries_once_on_403_with_retry_after()
+    public async Task RetriesOnceOn403WithRetryAfter()
     {
         StubHandler stub = new();
         stub.Enqueue(BuildResponse(HttpStatusCode.Forbidden, retryAfterSeconds: 2));
@@ -52,7 +51,7 @@ public sealed class GitHubRateLimitHandlerTests
     }
 
     [Fact]
-    public async Task Sleeps_until_reset_on_primary_exhaustion()
+    public async Task SleepsUntilResetOnPrimaryExhaustion()
     {
         TestClock clock = new();
         long unixReset = clock.GetUtcNow().AddSeconds(5).ToUnixTimeSeconds();
@@ -74,7 +73,7 @@ public sealed class GitHubRateLimitHandlerTests
     }
 
     [Fact]
-    public async Task Proactively_sleeps_when_remaining_below_threshold()
+    public async Task ProactivelySleepsWhenRemainingBelowThreshold()
     {
         // First call returns 200 with remaining=10 — that primes the per-principal state.
         // Second call to the SAME principal must sleep before sending.
@@ -110,7 +109,7 @@ public sealed class GitHubRateLimitHandlerTests
     }
 
     [Fact]
-    public async Task Distinct_tokens_get_distinct_buckets()
+    public async Task DistinctTokensGetDistinctBuckets()
     {
         // Token A's bucket near-empty must not slow down Token B's call.
         TestClock clock = new();

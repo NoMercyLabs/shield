@@ -8,7 +8,7 @@ namespace Shield.Parsers.Swift.Tests;
 public class PackageResolvedParserTests
 {
     [Fact]
-    public async Task ParseAsync_PackageResolvedV2_ReturnsPinnedRepositories()
+    public async Task ParseAsyncPackageResolvedV2ReturnsPinnedRepositories()
     {
         PackageResolvedParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Package.resolved"));

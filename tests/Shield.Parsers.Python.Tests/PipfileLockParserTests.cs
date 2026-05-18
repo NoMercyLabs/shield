@@ -8,7 +8,7 @@ namespace Shield.Parsers.Python.Tests;
 public class PipfileLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_PipfileLock_StripsEqualsAndReturnsBothSections()
+    public async Task ParseAsyncPipfileLockStripsEqualsAndReturnsBothSections()
     {
         PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Pipfile.lock"));

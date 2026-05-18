@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using FluentAssertions;
@@ -5,7 +6,6 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Octokit;
 using Shield.Core.Domain;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Scanners.Tests;
@@ -13,7 +13,7 @@ namespace Shield.Scanners.Tests;
 public sealed class GitHubRepoScannerRateLimitTests
 {
     [Fact]
-    public async Task ScanAsync_throws_GitHubScanRateLimitedException_when_primary_limit_exhausted()
+    public async Task ScanAsyncThrowsGitHubScanRateLimitedExceptionWhenPrimaryLimitExhausted()
     {
         IGitHubClient client = Substitute.For<IGitHubClient>();
         IRepositoriesClient repoClient = Substitute.For<IRepositoriesClient>();
@@ -26,7 +26,7 @@ public sealed class GitHubRepoScannerRateLimitTests
         {
             ["X-RateLimit-Limit"] = "5000",
             ["X-RateLimit-Remaining"] = "0",
-            ["X-RateLimit-Reset"] = resetEpoch.ToString(),
+            ["X-RateLimit-Reset"] = resetEpoch.ToString(CultureInfo.InvariantCulture),
         };
 
         IResponse mockResponse = Substitute.For<IResponse>();
@@ -42,7 +42,7 @@ public sealed class GitHubRepoScannerRateLimitTests
             oauthScopes: [],
             acceptedOauthScopes: [],
             etag: null,
-            rateLimit: new RateLimit(headers)
+            rateLimit: new(headers)
         );
         mockResponse.ApiInfo.Returns(apiInfo);
 

@@ -1,9 +1,8 @@
-using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Shield.Api.Hubs;
-using Shield.Api.Services;
+using Shield.Api.Services.Findings;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -24,7 +23,7 @@ public sealed class FindingsHubTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task PublishNewAsync_emits_findings_new_with_expected_payload_shape()
+    public async Task PublishNewAsyncEmitsFindingsNewWithExpectedPayloadShape()
     {
         IHubContext<FindingsHub> hubContext = Substitute.For<IHubContext<FindingsHub>>();
         IHubClients clients = Substitute.For<IHubClients>();
@@ -72,7 +71,7 @@ public sealed class FindingsHubTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task PublishCountsAsync_emits_findings_counts_with_four_buckets()
+    public async Task PublishCountsAsyncEmitsFindingsCountsWithFourBuckets()
     {
         IHubContext<FindingsHub> hubContext = Substitute.For<IHubContext<FindingsHub>>();
         IHubClients clients = Substitute.For<IHubClients>();

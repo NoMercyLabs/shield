@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Data;
-using Shield.Feeds.Kev;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -28,7 +27,7 @@ public sealed class KevFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_flags_existing_advisory_and_inserts_thin_advisory_for_unmatched_cve()
+    public async Task SyncAsyncFlagsExistingAdvisoryAndInsertsThinAdvisoryForUnmatchedCve()
     {
         const string catalog = """
             {
@@ -133,7 +132,7 @@ public sealed class KevFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_returns_failure_on_5xx()
+    public async Task SyncAsyncReturnsFailureOn5xx()
     {
         _server
             .Given(
@@ -164,7 +163,7 @@ public sealed class KevFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void Feed_property_returns_Kev()
+    public void FeedPropertyReturnsKev()
     {
         using HttpClient http = new() { BaseAddress = new("http://localhost/") };
         DbContextOptions<FeedsDbContext> options = new DbContextOptionsBuilder<FeedsDbContext>()

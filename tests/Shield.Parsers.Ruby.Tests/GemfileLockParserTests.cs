@@ -8,7 +8,7 @@ namespace Shield.Parsers.Ruby.Tests;
 public class GemfileLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_GemfileLock_ReturnsGemsAndMarksDirect()
+    public async Task ParseAsyncGemfileLockReturnsGemsAndMarksDirect()
     {
         GemfileLockParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Gemfile.lock"));

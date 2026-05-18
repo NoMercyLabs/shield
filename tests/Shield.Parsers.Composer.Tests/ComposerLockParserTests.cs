@@ -8,7 +8,7 @@ namespace Shield.Parsers.Composer.Tests;
 public class ComposerLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_ComposerLock_ReturnsPackagesAndDevPackages()
+    public async Task ParseAsyncComposerLockReturnsPackagesAndDevPackages()
     {
         ComposerLockParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "composer.lock"));
@@ -35,7 +35,7 @@ public class ComposerLockParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_ComposerLock_AllItemsDefaultIsDirectTrue()
+    public async Task ParseAsyncComposerLockAllItemsDefaultIsDirectTrue()
     {
         ComposerLockParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "composer.lock"));

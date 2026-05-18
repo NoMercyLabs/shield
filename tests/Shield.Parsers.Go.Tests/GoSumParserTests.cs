@@ -8,7 +8,7 @@ namespace Shield.Parsers.Go.Tests;
 public class GoSumParserTests
 {
     [Fact]
-    public async Task ParseAsync_GoSum_DedupesPerPair()
+    public async Task ParseAsyncGoSumDedupesPerPair()
     {
         GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.sum"));
@@ -34,7 +34,7 @@ public class GoSumParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_GoSum_AllItemsAreTransitive()
+    public async Task ParseAsyncGoSumAllItemsAreTransitive()
     {
         GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.sum"));

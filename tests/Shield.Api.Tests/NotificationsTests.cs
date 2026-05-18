@@ -4,7 +4,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -22,7 +22,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Broadcast_appears_in_list_with_unread_count()
+    public async Task BroadcastAppearsInListWithUnreadCount()
     {
         string title = "scan-failed-" + Guid.NewGuid().ToString("n");
         using (IServiceScope scope = _factory.Services.CreateScope())
@@ -52,7 +52,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task MarkRead_sets_read_at_and_decrements_unread()
+    public async Task MarkReadSetsReadAtAndDecrementsUnread()
     {
         string title = "mark-read-" + Guid.NewGuid().ToString("n");
         using (IServiceScope scope = _factory.Services.CreateScope())
@@ -83,7 +83,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Archive_hides_from_default_list()
+    public async Task ArchiveHidesFromDefaultList()
     {
         string title = "archive-" + Guid.NewGuid().ToString("n");
         using (IServiceScope scope = _factory.Services.CreateScope())
@@ -115,7 +115,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task MarkAllRead_zeroes_unread_count()
+    public async Task MarkAllReadZeroesUnreadCount()
     {
         using (IServiceScope scope = _factory.Services.CreateScope())
         {
@@ -149,7 +149,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task OauthExpiryWatcher_emits_notification_for_token_expiring_within_window()
+    public async Task OauthExpiryWatcherEmitsNotificationForTokenExpiringWithinWindow()
     {
         using IServiceScope seedScope = _factory.Services.CreateScope();
         ShieldDbContext db = seedScope.ServiceProvider.GetRequiredService<ShieldDbContext>();

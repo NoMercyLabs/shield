@@ -4,7 +4,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Security;
 using Shield.Core.Domain;
 using Shield.Data;
 using Xunit;
@@ -21,7 +21,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
     }
 
     [Fact]
-    public async Task Multiple_internal_events_for_same_ip_accumulate_score_and_count()
+    public async Task MultipleInternalEventsForSameIpAccumulateScoreAndCount()
     {
         string ip = "203.0.113." + Random.Shared.Next(1, 250);
 
@@ -59,7 +59,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
     }
 
     [Fact]
-    public async Task Ip_appears_in_reputation_view_via_api()
+    public async Task IpAppearsInReputationViewViaApi()
     {
         string ip = "198.51.100." + Random.Shared.Next(1, 250);
 
@@ -86,7 +86,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
     }
 
     [Fact]
-    public async Task Ip_detail_returns_reputation_with_recent_events()
+    public async Task IpDetailReturnsReputationWithRecentEvents()
     {
         string ip = "192.0.2." + Random.Shared.Next(1, 250);
 
@@ -120,7 +120,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
     }
 
     [Fact]
-    public async Task Notes_can_be_attached_to_an_ip()
+    public async Task NotesCanBeAttachedToAnIp()
     {
         string ip = "172.16.99." + Random.Shared.Next(1, 250);
 

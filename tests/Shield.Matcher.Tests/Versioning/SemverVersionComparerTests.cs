@@ -10,7 +10,7 @@ public class SemverVersionComparerTests
     private readonly SemverVersionComparer _comparer = new(Ecosystem.Npm);
 
     [Fact]
-    public void Lt_excludes_boundary_version()
+    public void LtExcludesBoundaryVersion()
     {
         VersionRange range = new(Lt: "1.2.3");
 
@@ -19,7 +19,7 @@ public class SemverVersionComparerTests
     }
 
     [Fact]
-    public void GtOrEq_includes_boundary_version()
+    public void GtOrEqIncludesBoundaryVersion()
     {
         VersionRange range = new(GtOrEq: "1.0.0", Lt: "2.0.0");
 
@@ -30,7 +30,7 @@ public class SemverVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_is_lower_than_release()
+    public void PreReleaseIsLowerThanRelease()
     {
         // SemVer: 1.0.0-rc.1 < 1.0.0
         VersionRange range = new(GtOrEq: "1.0.0");
@@ -40,7 +40,7 @@ public class SemverVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_within_pre_release_range_matches()
+    public void PreReleaseWithinPreReleaseRangeMatches()
     {
         VersionRange range = new(GtOrEq: "1.0.0-alpha", Lt: "1.0.0-rc.5");
 
@@ -49,7 +49,7 @@ public class SemverVersionComparerTests
     }
 
     [Fact]
-    public void V_prefix_in_version_is_tolerated()
+    public void VPrefixInVersionIsTolerated()
     {
         VersionRange range = new(GtOrEq: "v1.0.0", Lt: "v2.0.0");
 
@@ -58,7 +58,7 @@ public class SemverVersionComparerTests
     }
 
     [Fact]
-    public void Garbage_version_does_not_match()
+    public void GarbageVersionDoesNotMatch()
     {
         VersionRange range = new(GtOrEq: "1.0.0");
 

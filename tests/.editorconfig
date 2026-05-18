@@ -1,0 +1,10 @@
+# Test project analyzer overrides
+[*.cs]
+# CA1861: Prefer static readonly fields over constant array arguments.
+# In test methods each [Fact] runs once — "called repeatedly" concern does not apply.
+dotnet_diagnostic.CA1861.severity = none
+
+# CA2012: ValueTask instances should be directly awaited.
+# NSubstitute .Returns(callInfo => ValueTask.FromResult(...)) is the correct pattern
+# for mocking ValueTask-returning methods; the analyzer flags it as a false positive.
+dotnet_diagnostic.CA2012.severity = none

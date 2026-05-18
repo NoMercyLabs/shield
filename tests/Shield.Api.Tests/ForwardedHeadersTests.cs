@@ -2,7 +2,6 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -19,7 +18,7 @@ namespace Shield.Api.Tests;
 public sealed class ForwardedHeadersTests
 {
     [Fact]
-    public void Loopback_is_always_in_known_proxies_even_without_config()
+    public void LoopbackIsAlwaysInKnownProxiesEvenWithoutConfig()
     {
         using ShieldWebAppFactory factory = new();
         // Force the host to materialise so Configure<ForwardedHeadersOptions> runs.
@@ -34,7 +33,7 @@ public sealed class ForwardedHeadersTests
     }
 
     [Fact]
-    public void Forward_limit_is_capped_at_configured_value()
+    public void ForwardLimitIsCappedAtConfiguredValue()
     {
         using ShieldWebAppFactory factory = new();
         _ = factory.CreateClient();
@@ -50,7 +49,7 @@ public sealed class ForwardedHeadersTests
     }
 
     [Fact]
-    public void Configured_known_proxies_are_added_alongside_loopback()
+    public void ConfiguredKnownProxiesAreAddedAlongsideLoopback()
     {
         using KnownProxyFactory factory = new();
         _ = factory.CreateClient();
@@ -66,7 +65,7 @@ public sealed class ForwardedHeadersTests
     }
 
     [Fact]
-    public void Configured_known_networks_are_parsed_from_cidr_csv()
+    public void ConfiguredKnownNetworksAreParsedFromCidrCsv()
     {
         using KnownNetworkFactory factory = new();
         _ = factory.CreateClient();
@@ -93,7 +92,7 @@ public sealed class ForwardedHeadersTests
     }
 
     [Fact]
-    public async Task Healthz_round_trip_is_unaffected_by_spoofed_xff_header()
+    public async Task HealthzRoundTripIsUnaffectedBySpoofedXffHeader()
     {
         // Behavioural smoke: TestServer's connection IP is null in-process. The middleware
         // must STILL accept the loopback shortcut (it has no immediate hop to evaluate) and

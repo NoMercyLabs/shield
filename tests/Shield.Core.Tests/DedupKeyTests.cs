@@ -8,7 +8,7 @@ namespace Shield.Core.Tests;
 public class DedupKeyTests
 {
     [Fact]
-    public void Compute_IsStable_AcrossCalls()
+    public void ComputeIsStableAcrossCalls()
     {
         string first = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-jf85-cpcp-j695");
         string second = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-jf85-cpcp-j695");
@@ -17,7 +17,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_ProducesSha256HexLength()
+    public void ComputeProducesSha256HexLength()
     {
         string key = DedupKey.Compute(42, Ecosystem.Nuget, "Newtonsoft.Json", "CVE-2024-0001");
 
@@ -26,7 +26,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_DifferentSourceId_ProducesDifferentHash()
+    public void ComputeDifferentSourceIdProducesDifferentHash()
     {
         string a = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-1");
         string b = DedupKey.Compute(2, Ecosystem.Npm, "lodash", "GHSA-1");
@@ -35,7 +35,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_DifferentEcosystem_ProducesDifferentHash()
+    public void ComputeDifferentEcosystemProducesDifferentHash()
     {
         string a = DedupKey.Compute(1, Ecosystem.Npm, "core", "GHSA-1");
         string b = DedupKey.Compute(1, Ecosystem.Nuget, "core", "GHSA-1");
@@ -44,7 +44,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_DifferentPackage_ProducesDifferentHash()
+    public void ComputeDifferentPackageProducesDifferentHash()
     {
         string a = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-1");
         string b = DedupKey.Compute(1, Ecosystem.Npm, "underscore", "GHSA-1");
@@ -53,7 +53,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_DifferentAdvisoryId_ProducesDifferentHash()
+    public void ComputeDifferentAdvisoryIdProducesDifferentHash()
     {
         string a = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-aaaa");
         string b = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-bbbb");
@@ -62,7 +62,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_KnownVector_MatchesExpectedSha256()
+    public void ComputeKnownVectorMatchesExpectedSha256()
     {
         // sha256("1|0|lodash|GHSA-jf85-cpcp-j695") computed out-of-band
         string key = DedupKey.Compute(1, Ecosystem.Npm, "lodash", "GHSA-jf85-cpcp-j695");
@@ -72,7 +72,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_NullPackage_Throws()
+    public void ComputeNullPackageThrows()
     {
         Action act = () => DedupKey.Compute(1, Ecosystem.Npm, null!, "GHSA-1");
 
@@ -80,7 +80,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_NullAdvisoryId_Throws()
+    public void ComputeNullAdvisoryIdThrows()
     {
         Action act = () => DedupKey.Compute(1, Ecosystem.Npm, "lodash", null!);
 
@@ -88,7 +88,7 @@ public class DedupKeyTests
     }
 
     [Fact]
-    public void Compute_CaseSensitivePackageName_ProducesDifferentHash()
+    public void ComputeCaseSensitivePackageNameProducesDifferentHash()
     {
         string lower = DedupKey.Compute(1, Ecosystem.Nuget, "newtonsoft.json", "CVE-1");
         string mixed = DedupKey.Compute(1, Ecosystem.Nuget, "Newtonsoft.Json", "CVE-1");

@@ -29,7 +29,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
 
     // DryRun must NOT emit a notification — the PR was never opened.
     [Fact]
-    public async Task DryRun_does_not_publish_notification()
+    public async Task DryRunDoesNotPublishNotification()
     {
         int sourceId = await SeedGithubSourceAsync("notif-dryrun");
         await SeedFindingsAsync(sourceId, 2);
@@ -52,7 +52,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
     // When a non-dry-run ends without a PR URL (no GitHub token in test env), the
     // controller returns success but no notification should be published.
     [Fact]
-    public async Task NonDryRun_without_pr_url_does_not_publish_notification()
+    public async Task NonDryRunWithoutPrUrlDoesNotPublishNotification()
     {
         int sourceId = await SeedGithubSourceAsync("notif-noPr");
         await SeedFindingsAsync(sourceId, 1);
@@ -78,7 +78,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
     // Verifies the notification shape written directly: RelatedType = "PullRequest",
     // RelatedId = the full PR URL, per-user (not broadcast/null UserId).
     [Fact]
-    public async Task Notification_shape_is_PullRequest_kind_with_pr_url_as_related_id()
+    public async Task NotificationShapeIsPullRequestKindWithPrUrlAsRelatedId()
     {
         string prUrl = $"https://github.com/test/repo/pull/{Guid.NewGuid():n}";
         string sourceName = "shape-test-" + Guid.NewGuid().ToString("n")[..6];
@@ -96,7 +96,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
         foreach (Guid adminId in adminIds)
         {
             await publisher.PublishAsync(
-                new Notification
+                new()
                 {
                     Id = Guid.NewGuid(),
                     UserId = adminId,
@@ -133,7 +133,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
     // Verifies that the controller's IAdminAudienceProvider wiring is registered — if the
     // dependency was missing the controller would throw 500, not 200 or 429.
     [Fact]
-    public async Task IAdminAudienceProvider_is_registered_in_DI()
+    public async Task IAdminAudienceProviderIsRegisteredInDI()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         Core.Abstractions.IAdminAudienceProvider? provider =

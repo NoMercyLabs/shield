@@ -25,7 +25,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
     }
 
     [Fact]
-    public async Task GetSubscriptions_always_returns_is_current_device_false()
+    public async Task GetSubscriptionsAlwaysReturnsIsCurrentDeviceFalse()
     {
         // Seed a subscription directly so we don't depend on the browser push stack.
         Guid userId = await SeedSubscriptionAsync(
@@ -54,7 +54,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
     }
 
     [Fact]
-    public async Task GetSubscriptions_returns_endpoint_hash_matching_sha256_prefix()
+    public async Task GetSubscriptionsReturnsEndpointHashMatchingSha256Prefix()
     {
         string testEndpoint =
             "https://fcm.googleapis.com/fcm/send/hash-test-" + Guid.NewGuid().ToString("n");
@@ -81,7 +81,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
     }
 
     [Fact]
-    public async Task GetSubscriptions_endpoint_hash_is_16_hex_chars()
+    public async Task GetSubscriptionsEndpointHashIs16HexChars()
     {
         string testEndpoint =
             "https://push.services.mozilla.com/wpush/v2/test-" + Guid.NewGuid().ToString("n");
@@ -121,7 +121,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
         admin.Should().NotBeNull("SingleUser factory must seed an admin");
 
         db.PushSubscriptions.Add(
-            new PushSubscription
+            new()
             {
                 Id = Guid.NewGuid(),
                 UserId = admin!.Id,

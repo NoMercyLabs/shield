@@ -21,7 +21,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Create_then_list_returns_created_source()
+    public async Task CreateThenListReturnsCreatedSource()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -46,7 +46,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Create_with_bad_config_returns_400()
+    public async Task CreateWithBadConfigReturns400()
     {
         HttpClient client = _factory.CreateClient();
         // LocalFolder requires a 'path' — empty object should fail validation.
@@ -63,7 +63,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Get_returns_empty_latest_snapshot_when_never_scanned()
+    public async Task GetReturnsEmptyLatestSnapshotWhenNeverScanned()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -88,7 +88,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Scan_now_returns_202_with_queued_payload_and_snapshot_appears()
+    public async Task ScanNowReturns202WithQueuedPayloadAndSnapshotAppears()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -150,7 +150,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task DetectedRemote_round_trips_through_source_detail()
+    public async Task DetectedRemoteRoundTripsThroughSourceDetail()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -193,7 +193,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Promote_to_github_creates_sibling_github_source()
+    public async Task PromoteToGithubCreatesSiblingGithubSource()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -242,7 +242,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Promote_to_github_rejects_source_without_detected_remote()
+    public async Task PromoteToGithubRejectsSourceWithoutDetectedRemote()
     {
         HttpClient client = _factory.CreateClient();
         object request = new
@@ -264,7 +264,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Bulk_local_folders_creates_and_skips_existing()
+    public async Task BulkLocalFoldersCreatesAndSkipsExisting()
     {
         HttpClient client = _factory.CreateClient();
 
@@ -322,7 +322,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Bulk_from_github_creates_sources_and_skips_existing()
+    public async Task BulkFromGithubCreatesSourcesAndSkipsExisting()
     {
         HttpClient client = _factory.CreateClient();
 
@@ -397,7 +397,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Bulk_from_github_rejects_empty_selections()
+    public async Task BulkFromGithubRejectsEmptySelections()
     {
         HttpClient client = _factory.CreateClient();
         object request = new { selections = Array.Empty<object>() };

@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.NpmRegistry;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -27,7 +26,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_extracts_time_maintainers_deprecated_and_shasum()
+    public async Task SyncAsyncExtractsTimeMaintainersDeprecatedAndShasum()
     {
         const string packageDoc = """
             {
@@ -94,7 +93,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_returns_success_on_missing_package()
+    public async Task SyncAsyncReturnsSuccessOnMissingPackage()
     {
         _server
             .Given(Request.Create().WithPath("/does-not-exist").UsingGet())
@@ -118,7 +117,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_returns_failure_on_5xx()
+    public async Task SyncAsyncReturnsFailureOn5xx()
     {
         _server
             .Given(Request.Create().WithPath("/boom").UsingGet())
@@ -141,7 +140,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
     }
 
     [Fact]
-    public void Feed_property_returns_NpmRegistry()
+    public void FeedPropertyReturnsNpmRegistry()
     {
         HttpClient http = new() { BaseAddress = new("http://localhost/") };
         NpmPackageClient client = new(http);

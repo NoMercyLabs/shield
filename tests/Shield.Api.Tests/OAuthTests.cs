@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Auth.OAuthProviders;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Xunit;
@@ -16,7 +16,7 @@ namespace Shield.Api.Tests;
 public sealed class OAuthTests
 {
     [Fact]
-    public async Task Status_returns_disconnected_when_nothing_persisted()
+    public async Task StatusReturnsDisconnectedWhenNothingPersisted()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -31,7 +31,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Status_returns_connected_when_token_saved()
+    public async Task StatusReturnsConnectedWhenTokenSaved()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -60,7 +60,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task TokenAccessor_returns_token_when_connected()
+    public async Task TokenAccessorReturnsTokenWhenConnected()
     {
         using ShieldWebAppFactory factory = new();
         // Force factory to spin up the host.
@@ -86,7 +86,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Tokens_are_encrypted_at_rest()
+    public async Task TokensAreEncryptedAtRest()
     {
         using ShieldWebAppFactory factory = new();
         factory.CreateClient();
@@ -117,7 +117,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Disconnect_clears_token()
+    public async Task DisconnectClearsToken()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -149,7 +149,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Start_returns_bad_request_when_client_id_not_configured()
+    public async Task StartReturnsBadRequestWhenClientIdNotConfigured()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -159,7 +159,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Start_returns_authorization_url_when_configured()
+    public async Task StartReturnsAuthorizationUrlWhenConfigured()
     {
         using ConfiguredOAuthFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -177,7 +177,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Callback_with_invalid_state_redirects_to_settings_with_error()
+    public async Task CallbackWithInvalidStateRedirectsToSettingsWithError()
     {
         using ConfiguredOAuthFactory factory = new();
         HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
@@ -215,7 +215,7 @@ public sealed class OAuthTests
     // -------- signin flow tests --------
 
     [Fact]
-    public async Task Providers_list_only_shows_configured()
+    public async Task ProvidersListOnlyShowsConfigured()
     {
         using SigninFactory factory = new(github: true, slack: false, google: false);
         HttpClient client = factory.CreateClient();
@@ -231,7 +231,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Signin_creates_first_user_as_admin()
+    public async Task SigninCreatesFirstUserAsAdmin()
     {
         using SigninFactory factory = new(
             github: true,
@@ -292,7 +292,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Signin_finds_existing_user_by_email()
+    public async Task SigninFindsExistingUserByEmail()
     {
         using SigninFactory factory = new(
             github: true,
@@ -355,7 +355,7 @@ public sealed class OAuthTests
     }
 
     [Fact]
-    public async Task Signin_rejected_when_registration_closed_and_no_match()
+    public async Task SigninRejectedWhenRegistrationClosedAndNoMatch()
     {
         using SigninFactory factory = new(
             github: true,

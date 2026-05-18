@@ -20,7 +20,7 @@ public sealed class ScanQueueWorkerDeferredTests : IClassFixture<ScanQueueWorker
     }
 
     [Fact]
-    public async Task Worker_skips_entry_whose_DeferredUntil_is_in_the_future()
+    public async Task WorkerSkipsEntryWhoseDeferredUntilIsInTheFuture()
     {
         _ = _factory.CreateClient();
 

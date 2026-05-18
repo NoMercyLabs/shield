@@ -7,7 +7,7 @@ namespace Shield.Matcher.Tests.Versioning;
 public class VersionRangeParsingTests
 {
     [Fact]
-    public void ParseOsvEvents_introduced_and_fixed_yields_half_open_range()
+    public void ParseOsvEventsIntroducedAndFixedYieldsHalfOpenRange()
     {
         const string events = """[ { "introduced": "1.0.0" }, { "fixed": "2.0.0" } ]""";
 
@@ -19,7 +19,7 @@ public class VersionRangeParsingTests
     }
 
     [Fact]
-    public void ParseOsvEvents_introduced_only_yields_open_lower_bound()
+    public void ParseOsvEventsIntroducedOnlyYieldsOpenLowerBound()
     {
         const string events = """[ { "introduced": "1.0.0" } ]""";
 
@@ -31,7 +31,7 @@ public class VersionRangeParsingTests
     }
 
     [Fact]
-    public void ParseOsvEvents_introduced_zero_treated_as_unbounded_lower()
+    public void ParseOsvEventsIntroducedZeroTreatedAsUnboundedLower()
     {
         const string events = """[ { "introduced": "0" }, { "fixed": "1.5.0" } ]""";
 
@@ -43,7 +43,7 @@ public class VersionRangeParsingTests
     }
 
     [Fact]
-    public void ParseOsvEvents_multiple_intervals_yields_multiple_ranges()
+    public void ParseOsvEventsMultipleIntervalsYieldsMultipleRanges()
     {
         const string events = """
             [
@@ -62,7 +62,7 @@ public class VersionRangeParsingTests
     }
 
     [Fact]
-    public void ParseOsvEvents_last_affected_yields_inclusive_upper()
+    public void ParseOsvEventsLastAffectedYieldsInclusiveUpper()
     {
         const string events = """[ { "introduced": "1.0.0" }, { "last_affected": "1.4.2" } ]""";
 

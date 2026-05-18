@@ -14,7 +14,7 @@ public sealed class HealthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Healthz_returns_200_with_ok_status()
+    public async Task HealthzReturns200WithOkStatus()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/healthz");

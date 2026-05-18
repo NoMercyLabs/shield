@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.NpmRegistry;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -27,7 +26,7 @@ public sealed class NpmRegistryRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_on_429_returns_RateLimited()
+    public async Task SyncAsyncOn429ReturnsRateLimited()
     {
         _server
             .Given(Request.Create().WithPath("/lodash").UsingGet())
@@ -60,7 +59,7 @@ public sealed class NpmRegistryRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_on_429_without_retry_after_uses_fallback_reset()
+    public async Task SyncAsyncOn429WithoutRetryAfterUsesFallbackReset()
     {
         _server
             .Given(Request.Create().WithPath("/express").UsingGet())

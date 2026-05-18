@@ -12,7 +12,7 @@ namespace Shield.Api.Tests;
 public sealed class SettingsTests
 {
     [Fact]
-    public async Task Get_returns_defaults_when_db_empty()
+    public async Task GetReturnsDefaultsWhenDbEmpty()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-reader");
@@ -38,7 +38,7 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public async Task GetSettings_returns_oauth_provider_config_masked()
+    public async Task GetSettingsReturnsOauthProviderConfigMasked()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-get");
@@ -63,7 +63,7 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public async Task PutSettings_persists_provider_credentials_and_masks_on_read_back()
+    public async Task PutSettingsPersistsProviderCredentialsAndMasksOnReadBack()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-put");
@@ -94,7 +94,7 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public async Task PutSettings_with_null_clientSecret_keeps_existing()
+    public async Task PutSettingsWithNullClientSecretKeepsExisting()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-keep");
@@ -120,7 +120,7 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public async Task PutSettings_with_empty_clientSecret_clears()
+    public async Task PutSettingsWithEmptyClientSecretClears()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-clear");
@@ -156,7 +156,7 @@ public sealed class SettingsTests
         );
 
     [Fact]
-    public async Task Put_persists_values_and_masks_secret_on_read_back()
+    public async Task PutPersistsValuesAndMasksSecretOnReadBack()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-writer");
@@ -196,7 +196,7 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public async Task Runtime_returns_environment_info()
+    public async Task RuntimeReturnsEnvironmentInfo()
     {
         using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-runtime");

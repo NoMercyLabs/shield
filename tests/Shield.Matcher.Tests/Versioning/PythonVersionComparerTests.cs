@@ -9,7 +9,7 @@ public class PythonVersionComparerTests
     private readonly PythonVersionComparer _comparer = new();
 
     [Fact]
-    public void Pre_release_sorts_below_release()
+    public void PreReleaseSortsBelowRelease()
     {
         // 1.0a1, 1.0b1, 1.0rc1 < 1.0 — the classic PEP 440 ordering.
         VersionRange beforeRelease = new(GtOrEq: "0.9", Lt: "1.0");
@@ -20,7 +20,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Post_release_sorts_above_release()
+    public void PostReleaseSortsAboveRelease()
     {
         // 1.0.post1 > 1.0 — unique to PEP 440 (SemVer has no equivalent).
         VersionRange afterRelease = new(GtOrEqExclusive: "1.0", Lt: "2.0");
@@ -30,7 +30,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Dev_release_sorts_below_everything()
+    public void DevReleaseSortsBelowEverything()
     {
         // 1.0.dev0 < 1.0a0 < 1.0
         VersionRange beforeAlpha = new(GtOrEq: "0", Lt: "1.0a0");
@@ -39,7 +39,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_label_aliases_normalise()
+    public void PreReleaseLabelAliasesNormalise()
     {
         // a == alpha, b == beta, c == rc == pre == preview
         VersionRange exact = new(Exact: new[] { "1.0a1" });
@@ -55,7 +55,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Epochs_dominate_release_numbering()
+    public void EpochsDominateReleaseNumbering()
     {
         // 1!1.0 > 9999.0 — epoch trumps everything.
         VersionRange afterEverything = new(GtOrEq: "1!0", Lt: "2!0");
@@ -64,7 +64,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Trailing_zero_segments_are_ignored()
+    public void TrailingZeroSegmentsAreIgnored()
     {
         // 1.0 == 1.0.0 == 1.0.0.0
         VersionRange exact = new(Exact: new[] { "1.0" });
@@ -73,7 +73,7 @@ public class PythonVersionComparerTests
     }
 
     [Fact]
-    public void Separator_variants_in_pre_release_are_equivalent()
+    public void SeparatorVariantsInPreReleaseAreEquivalent()
     {
         // PEP 440 permits "1.0a1", "1.0.a1", "1.0-a1", "1.0_a1" — all canonicalise.
         VersionRange exact = new(Exact: new[] { "1.0a1" });

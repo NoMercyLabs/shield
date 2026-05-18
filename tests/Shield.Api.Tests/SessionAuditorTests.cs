@@ -1,6 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
+using Shield.Api.Services.Security;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data.Identity;
@@ -62,7 +63,7 @@ public sealed class SessionAuditorTests
     [InlineData(SigninMethod.SlackOAuth, "Slack", "oauth.slack")]
     [InlineData(SigninMethod.InviteAcceptance, "invite", "invite")]
     [InlineData(SigninMethod.RecoveryCode, "recovery code", "recovery")]
-    public void SigninMethod_produces_correct_labels(
+    public void SigninMethodProducesCorrectLabels(
         SigninMethod method,
         string expectedHuman,
         string expectedAuditKey
@@ -73,7 +74,7 @@ public sealed class SessionAuditorTests
     }
 
     [Fact]
-    public async Task RecordSigninAsync_writes_audit_with_correct_method_key()
+    public async Task RecordSigninAsyncWritesAuditWithCorrectMethodKey()
     {
         (ISessionAuditor auditor, IAuditLogger audit, _, _, _) = BuildSut();
 
@@ -94,7 +95,7 @@ public sealed class SessionAuditorTests
     }
 
     [Fact]
-    public async Task RecordSigninAsync_emits_security_event_for_every_signin()
+    public async Task RecordSigninAsyncEmitsSecurityEventForEverySignin()
     {
         (ISessionAuditor auditor, _, _, _, ISecurityEventLogger securityLog) = BuildSut(
             sameDeviceRecently: true
@@ -119,7 +120,7 @@ public sealed class SessionAuditorTests
     }
 
     [Fact]
-    public async Task SameDevice_dedup_suppresses_notification_but_still_emits_security_event()
+    public async Task SameDeviceDedupSuppressesNotificationButStillEmitsSecurityEvent()
     {
         (
             ISessionAuditor auditor,
@@ -155,7 +156,7 @@ public sealed class SessionAuditorTests
     }
 
     [Fact]
-    public async Task New_device_sends_notification_with_human_label_in_body()
+    public async Task NewDeviceSendsNotificationWithHumanLabelInBody()
     {
         (ISessionAuditor auditor, _, _, INotificationPublisher notifications, _) = BuildSut(
             sameDeviceRecently: false
@@ -179,7 +180,7 @@ public sealed class SessionAuditorTests
     }
 
     [Fact]
-    public async Task RecoveryCode_signin_emits_high_severity_security_event()
+    public async Task RecoveryCodeSigninEmitsHighSeveritySecurityEvent()
     {
         (ISessionAuditor auditor, _, _, _, ISecurityEventLogger securityLog) = BuildSut();
 
@@ -207,7 +208,7 @@ public sealed class SessionAuditorTests
     [InlineData(SigninMethod.GoogleOAuth)]
     [InlineData(SigninMethod.SlackOAuth)]
     [InlineData(SigninMethod.InviteAcceptance)]
-    public async Task NonRecovery_signins_emit_low_severity_security_event(SigninMethod method)
+    public async Task NonRecoverySigninsEmitLowSeveritySecurityEvent(SigninMethod method)
     {
         (ISessionAuditor auditor, _, _, _, ISecurityEventLogger securityLog) = BuildSut();
 

@@ -2,7 +2,6 @@ using System.Net;
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.Osv;
 using Shield.Feeds.Osv.Models;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -27,7 +26,7 @@ public sealed class OsvRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryBatch_on_429_from_querybatch_returns_RateLimited()
+    public async Task QueryBatchOn429FromQuerybatchReturnsRateLimited()
     {
         _server
             .Given(Request.Create().WithPath("/v1/querybatch").UsingPost())
@@ -59,7 +58,7 @@ public sealed class OsvRateLimitTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryBatch_on_429_without_retry_after_uses_fallback_reset()
+    public async Task QueryBatchOn429WithoutRetryAfterUsesFallbackReset()
     {
         _server
             .Given(Request.Create().WithPath("/v1/querybatch").UsingPost())

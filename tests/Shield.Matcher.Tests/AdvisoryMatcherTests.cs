@@ -60,7 +60,7 @@ public class AdvisoryMatcherTests
         };
 
     [Fact]
-    public void Match_emits_finding_when_version_in_affected_range()
+    public void MatchEmitsFindingWhenVersionInAffectedRange()
     {
         AdvisoryMatcher matcher = BuildMatcher();
         InventorySnapshot snapshot = Snapshot();
@@ -87,7 +87,7 @@ public class AdvisoryMatcherTests
     }
 
     [Fact]
-    public void Match_skips_when_version_outside_range()
+    public void MatchSkipsWhenVersionOutsideRange()
     {
         AdvisoryMatcher matcher = BuildMatcher();
         InventorySnapshot snapshot = Snapshot();
@@ -111,7 +111,7 @@ public class AdvisoryMatcherTests
     }
 
     [Fact]
-    public void Match_returns_existing_finding_with_updated_LastSeenAt_for_dedup()
+    public void MatchReturnsExistingFindingWithUpdatedLastSeenAtForDedup()
     {
         AdvisoryMatcher matcher = BuildMatcher();
         InventorySnapshot snapshot = Snapshot();
@@ -145,7 +145,7 @@ public class AdvisoryMatcherTests
     }
 
     [Fact]
-    public void Match_dedup_key_matches_DedupKey_compute()
+    public void MatchDedupKeyMatchesDedupKeyCompute()
     {
         AdvisoryMatcher matcher = BuildMatcher();
         InventorySnapshot snapshot = Snapshot(sourceId: 42);
@@ -170,7 +170,7 @@ public class AdvisoryMatcherTests
     }
 
     [Fact]
-    public void Match_ignores_advisories_for_other_ecosystems()
+    public void MatchIgnoresAdvisoriesForOtherEcosystems()
     {
         AdvisoryMatcher matcher = BuildMatcher();
         InventorySnapshot snapshot = Snapshot();

@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Shield.Core.Domain;
 using Shield.Core.Results;
 using Xunit;
 
@@ -8,7 +7,7 @@ namespace Shield.Parsers.Python.Tests;
 public class RequirementsTxtParserTests
 {
     [Fact]
-    public async Task ParseAsync_RequirementsTxt_PinnedAndUnpinned()
+    public async Task ParseAsyncRequirementsTxtPinnedAndUnpinned()
     {
         PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "requirements.txt"));

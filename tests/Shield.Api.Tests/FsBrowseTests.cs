@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Shield.Api.Contracts;
@@ -19,7 +18,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Browse_with_no_path_returns_roots()
+    public async Task BrowseWithNoPathReturnsRoots()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/fs/browse");
@@ -32,7 +31,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Browse_returns_entries_and_flags_lockfile_dir()
+    public async Task BrowseReturnsEntriesAndFlagsLockfileDir()
     {
         string tempRoot = Path.Combine(
             Path.GetTempPath(),
@@ -83,7 +82,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Browse_rejects_unrooted_path()
+    public async Task BrowseRejectsUnrootedPath()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync(
@@ -93,7 +92,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Browse_rejects_traversal_outside_allowlist_when_configured()
+    public async Task BrowseRejectsTraversalOutsideAllowlistWhenConfigured()
     {
         string allowedRoot = Path.Combine(
             Path.GetTempPath(),

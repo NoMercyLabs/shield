@@ -9,7 +9,7 @@ public class VcpkgVersionComparerTests
     private readonly VcpkgVersionComparer _comparer = new();
 
     [Fact]
-    public void Port_version_breaks_ties_after_base_version()
+    public void PortVersionBreaksTiesAfterBaseVersion()
     {
         // 1.2.3 < 1.2.3#1 < 1.2.3#5 — port-version counts after the base compares equal.
         VersionRange afterBase = new(GtOrEqExclusive: "1.2.3", Lt: "1.2.4");
@@ -19,7 +19,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Port_version_zero_is_equivalent_to_no_port_version()
+    public void PortVersionZeroIsEquivalentToNoPortVersion()
     {
         VersionRange exact = new(Exact: new[] { "1.2.3" });
         _comparer.Satisfies("1.2.3#0", exact).Should().BeTrue();
@@ -27,7 +27,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Date_versions_compare_lexically()
+    public void DateVersionsCompareLexically()
     {
         // 2024-01-15 < 2024-03-20 < 2025-01-01 because yyyy-MM-dd is sortable as text.
         VersionRange range2024 = new(GtOrEq: "2024-01-01", Lt: "2025-01-01");
@@ -37,7 +37,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Date_versions_support_revision_suffix()
+    public void DateVersionsSupportRevisionSuffix()
     {
         // 2024-01-15.0 < 2024-01-15.2 < 2024-01-16
         VersionRange afterFirstRev = new(GtOrEqExclusive: "2024-01-15.0", Lt: "2024-01-16");
@@ -46,7 +46,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Semver_pre_release_sorts_below_release()
+    public void SemverPreReleaseSortsBelowRelease()
     {
         // 1.0.0-alpha < 1.0.0 in the version-semver scheme.
         VersionRange before = new(GtOrEq: "0.9.0", Lt: "1.0.0");
@@ -55,7 +55,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Relaxed_version_compares_segment_wise_numerically()
+    public void RelaxedVersionComparesSegmentWiseNumerically()
     {
         // Versions with no SemVer prerelease and arbitrary segment counts: 1.2 < 1.2.0.1
         VersionRange exact = new(Exact: new[] { "1.2" });
@@ -66,7 +66,7 @@ public class VcpkgVersionComparerTests
     }
 
     [Fact]
-    public void Port_version_with_date_version()
+    public void PortVersionWithDateVersion()
     {
         // 2024-01-15#3 > 2024-01-15
         VersionRange afterDate = new(GtOrEqExclusive: "2024-01-15", Lt: "2024-01-16");

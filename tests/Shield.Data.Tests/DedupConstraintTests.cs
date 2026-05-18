@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Shield.Core.Domain;
-using Shield.Data;
 using Xunit;
 
 namespace Shield.Data.Tests;
@@ -34,7 +33,7 @@ public class DedupConstraintTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DuplicateDedupKey_Throws()
+    public async Task DuplicateDedupKeyThrows()
     {
         Finding first = NewFinding("dedup-key-1");
         _db!.Findings.Add(first);
@@ -48,7 +47,7 @@ public class DedupConstraintTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DistinctDedupKeys_Persist()
+    public async Task DistinctDedupKeysPersist()
     {
         _db!.Findings.Add(NewFinding("dedup-a"));
         _db.Findings.Add(NewFinding("dedup-b"));

@@ -18,7 +18,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Me_in_single_user_mode_returns_admin_principal()
+    public async Task MeInSingleUserModeReturnsAdminPrincipal()
     {
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.GetAsync("/api/auth/me");
@@ -31,7 +31,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Register_first_user_becomes_admin()
+    public async Task RegisterFirstUserBecomesAdmin()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -56,7 +56,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Login_with_wrong_password_returns_401()
+    public async Task LoginWithWrongPasswordReturns401()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -74,7 +74,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Login_then_me_returns_authenticated_user()
+    public async Task LoginThenMeReturnsAuthenticatedUser()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -98,7 +98,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Logout_clears_cookie_and_me_returns_401()
+    public async Task LogoutClearsCookieAndMeReturns401()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();

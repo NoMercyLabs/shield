@@ -3,13 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 using Xunit;
 
 namespace Shield.Api.Tests;
@@ -94,7 +92,7 @@ public sealed class ChannelsTests
     }
 
     [Fact]
-    public async Task Slack_channel_create_with_channelId_succeeds()
+    public async Task SlackChannelCreateWithChannelIdSucceeds()
     {
         using RecordingFactory factory = new(ChannelType.Slack);
         HttpClient client = factory.CreateClient();
@@ -138,7 +136,7 @@ public sealed class ChannelsTests
     }
 
     [Fact]
-    public async Task Webhook_channel_with_body_template_renders_placeholders()
+    public async Task WebhookChannelWithBodyTemplateRendersPlaceholders()
     {
         using RecordingFactory factory = new(ChannelType.Webhook);
         HttpClient client = factory.CreateClient();
@@ -186,7 +184,7 @@ public sealed class ChannelsTests
     }
 
     [Fact]
-    public async Task Channel_response_includes_masked_parsed_config()
+    public async Task ChannelResponseIncludesMaskedParsedConfig()
     {
         using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();

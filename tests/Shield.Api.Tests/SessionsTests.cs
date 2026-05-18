@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Middleware;
 using Shield.Data;
 using Xunit;
 
@@ -15,7 +14,7 @@ namespace Shield.Api.Tests;
 public sealed class SessionsTests
 {
     [Fact]
-    public async Task Login_creates_session_row()
+    public async Task LoginCreatesSessionRow()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -28,7 +27,7 @@ public sealed class SessionsTests
     }
 
     [Fact]
-    public async Task Revoke_other_sessions_nukes_all_but_current()
+    public async Task RevokeOtherSessionsNukesAllButCurrent()
     {
         using MultiUserFactory factory = new();
         HttpClient currentClient = factory.CreateClient();
@@ -70,7 +69,7 @@ public sealed class SessionsTests
     }
 
     [Fact]
-    public async Task Revoked_cookie_returns_401_next_request()
+    public async Task RevokedCookieReturns401NextRequest()
     {
         using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();

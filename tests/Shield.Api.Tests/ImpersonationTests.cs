@@ -3,12 +3,9 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Core.Domain;
-using Shield.Data;
 using Shield.Data.Identity;
 using Xunit;
 
@@ -17,7 +14,7 @@ namespace Shield.Api.Tests;
 public sealed class ImpersonationTests
 {
     [Fact]
-    public async Task Start_as_admin_succeeds_and_me_returns_impersonated_identity()
+    public async Task StartAsAdminSucceedsAndMeReturnsImpersonatedIdentity()
     {
         using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
@@ -49,7 +46,7 @@ public sealed class ImpersonationTests
     }
 
     [Fact]
-    public async Task Start_as_non_admin_returns_403()
+    public async Task StartAsNonAdminReturns403()
     {
         using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
@@ -68,7 +65,7 @@ public sealed class ImpersonationTests
     }
 
     [Fact]
-    public async Task Mutating_endpoint_during_impersonation_returns_403_impersonation_blocked()
+    public async Task MutatingEndpointDuringImpersonationReturns403ImpersonationBlocked()
     {
         using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
@@ -98,7 +95,7 @@ public sealed class ImpersonationTests
     }
 
     [Fact]
-    public async Task Stop_restores_admin_identity()
+    public async Task StopRestoresAdminIdentity()
     {
         using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);

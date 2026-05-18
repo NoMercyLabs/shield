@@ -3,7 +3,6 @@ using System.Net;
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Feeds.Osv;
 using Shield.Feeds.Osv.Extensions;
 using Shield.Feeds.Osv.Models;
 using Xunit;
@@ -13,7 +12,7 @@ namespace Shield.Feeds.Osv.Tests;
 public class OsvFeedSyncTests
 {
     [Fact]
-    public async Task QueryBatch_ReturnsAdvisories_ForNpmAndNugetVulns()
+    public async Task QueryBatchReturnsAdvisoriesForNpmAndNugetVulns()
     {
         using OsvServerFixture fixture = new();
         fixture.StubBatch(OsvServerFixture.ReadFixture("querybatch-response.json"));
@@ -64,7 +63,7 @@ public class OsvFeedSyncTests
     [InlineData("vuln-nuget-high.json", Severity.High, 7.5)]
     [InlineData("vuln-medium-no-score.json", Severity.Medium, null)]
     [InlineData("vuln-low-default.json", Severity.Low, null)]
-    public async Task SeverityMapping_CoversAllFourLevels(
+    public async Task SeverityMappingCoversAllFourLevels(
         string fixtureFile,
         Severity expected,
         double? expectedCvss
@@ -98,7 +97,7 @@ public class OsvFeedSyncTests
     }
 
     [Fact]
-    public async Task IncrementalSync_AdvancesCursor_ToLatestModifiedTimestamp()
+    public async Task IncrementalSyncAdvancesCursorToLatestModifiedTimestamp()
     {
         using OsvServerFixture fixture = new();
         fixture.StubBatch(OsvServerFixture.ReadFixture("querybatch-response.json"));
@@ -131,7 +130,7 @@ public class OsvFeedSyncTests
     }
 
     [Fact]
-    public async Task Retries_OnHttp429_ViaPollyPolicy()
+    public async Task RetriesOnHttp429ViaPollyPolicy()
     {
         using OsvServerFixture fixture = new();
         string batchBody =
@@ -167,7 +166,7 @@ public class OsvFeedSyncTests
     }
 
     [Fact]
-    public async Task SyncAsync_IsNoOp_ReturnsCurrentCursor()
+    public async Task SyncAsyncIsNoOpReturnsCurrentCursor()
     {
         using OsvServerFixture fixture = new();
         OsvFeedSync sync = new(fixture.Client);
@@ -181,7 +180,7 @@ public class OsvFeedSyncTests
     }
 
     [Fact]
-    public async Task SyncAllAsync_ThrowsNotImplemented_InPhase1()
+    public async Task SyncAllAsyncThrowsNotImplementedInPhase1()
     {
         using OsvServerFixture fixture = new();
         OsvFeedSync sync = new(fixture.Client);
@@ -193,7 +192,7 @@ public class OsvFeedSyncTests
     }
 
     [Fact]
-    public void Feed_Property_IsOsv()
+    public void FeedPropertyIsOsv()
     {
         using OsvServerFixture fixture = new();
         OsvFeedSync sync = new(fixture.Client);

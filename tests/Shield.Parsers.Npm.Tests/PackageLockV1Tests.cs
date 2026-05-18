@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Parsers.Npm;
 using Xunit;
 
 namespace Shield.Parsers.Npm.Tests;
@@ -9,7 +8,7 @@ namespace Shield.Parsers.Npm.Tests;
 public class PackageLockV1Tests
 {
     [Fact]
-    public async Task Parses_v1_lockfile_with_nested_deps()
+    public async Task ParsesV1LockfileWithNestedDeps()
     {
         NpmLockParser parser = new();
         using Stream stream = FixtureLoader.Open("package-lock.v1.json");

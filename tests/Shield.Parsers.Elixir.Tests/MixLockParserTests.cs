@@ -8,7 +8,7 @@ namespace Shield.Parsers.Elixir.Tests;
 public class MixLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_MixLock_ReturnsHexPackagesWithVersions()
+    public async Task ParseAsyncMixLockReturnsHexPackagesWithVersions()
     {
         MixLockParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "mix.lock"));

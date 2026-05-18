@@ -8,7 +8,7 @@ namespace Shield.Parsers.Dart.Tests;
 public class PubspecLockParserTests
 {
     [Fact]
-    public async Task ParseAsync_PubspecLock_ReturnsPackagesWithDirectFlag()
+    public async Task ParseAsyncPubspecLockReturnsPackagesWithDirectFlag()
     {
         PubspecLockParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "pubspec.lock"));

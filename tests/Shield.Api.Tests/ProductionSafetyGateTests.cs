@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NSubstitute;
 using Shield.Api.Hardening;
 using Xunit;
 
@@ -47,7 +46,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_when_master_key_absent()
+    public void RefusesWhenMasterKeyAbsent()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:DataProtectionMasterKey"] = string.Empty;
@@ -58,7 +57,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Refuses_when_master_key_shorter_than_32_chars()
+    public void RefusesWhenMasterKeyShorterThan32Chars()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:DataProtectionMasterKey"] = new('m', 16);
@@ -73,7 +72,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_when_jwt_key_shorter_than_48_chars()
+    public void RefusesWhenJwtKeyShorterThan48Chars()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:JwtSigningKey"] = new('k', 47);
@@ -84,7 +83,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_jwt_key_at_exactly_48_chars()
+    public void AllowsJwtKeyAtExactly48Chars()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:JwtSigningKey"] = new('k', 48);
@@ -99,7 +98,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_single_user_in_production_without_override()
+    public void RefusesSingleUserInProductionWithoutOverride()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:SingleUser"] = "true";
@@ -113,7 +112,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_single_user_when_production_override_set()
+    public void AllowsSingleUserWhenProductionOverrideSet()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:SingleUser"] = "true";
@@ -129,7 +128,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_public_without_https()
+    public void RefusesPublicWithoutHttps()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Public"] = "true";
@@ -146,7 +145,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_public_without_cookie_domain()
+    public void RefusesPublicWithoutCookieDomain()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Public"] = "true";
@@ -159,7 +158,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_public_with_https_and_cookie_domain()
+    public void AllowsPublicWithHttpsAndCookieDomain()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Public"] = "true";
@@ -176,7 +175,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_oauth_redirect_base_http_when_https_required()
+    public void RefusesOauthRedirectBaseHttpWhenHttpsRequired()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:RequireHttps"] = "true";
@@ -188,7 +187,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_oauth_redirect_base_https_when_https_required()
+    public void AllowsOauthRedirectBaseHttpsWhenHttpsRequired()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:RequireHttps"] = "true";
@@ -200,7 +199,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_oauth_redirect_base_http_when_https_not_required()
+    public void AllowsOauthRedirectBaseHttpWhenHttpsNotRequired()
     {
         // Internal LAN deploy — https not required, http redirect base is fine.
         Dictionary<string, string?> config = GreenConfig();
@@ -213,7 +212,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     [Fact]
-    public void Allows_absent_oauth_redirect_base_when_https_required()
+    public void AllowsAbsentOauthRedirectBaseWhenHttpsRequired()
     {
         // No OAuthRedirectBase configured — falls back to request-derived at runtime.
         Dictionary<string, string?> config = GreenConfig();
@@ -229,7 +228,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_when_api_token_pepper_absent()
+    public void RefusesWhenApiTokenPepperAbsent()
     {
         Dictionary<string, string?> config = GreenConfig();
         config.Remove("Shield:Auth:ApiTokenPepper");
@@ -244,7 +243,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Refuses_dev_default_master_key()
+    public void RefusesDevDefaultMasterKey()
     {
         Dictionary<string, string?> config = GreenConfig();
         config["Shield:Auth:DataProtectionMasterKey"] = "dev-master-key-at-least-32-chars-long-xx";
@@ -259,7 +258,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Testing_environment_skips_all_checks()
+    public void TestingEnvironmentSkipsAllChecks()
     {
         IConfiguration badConfig = BuildConfig(
             new()
@@ -285,7 +284,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void Multiple_failures_are_aggregated_into_one_exception()
+    public void MultipleFailuresAreAggregatedIntoOneException()
     {
         IConfiguration config = BuildConfig(
             new()
@@ -310,7 +309,7 @@ public sealed class ProductionSafetyGateTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task Posture_banner_is_logged_at_boot()
+    public async Task PostureBannerIsLoggedAtBoot()
     {
         // Use a fresh factory so the banner logger fires in a controlled scope.
         // The factory runs in Testing environment, which skips the gate entirely

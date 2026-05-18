@@ -9,7 +9,7 @@ public class GradleVersionComparerTests
     private readonly GradleVersionComparer _comparer = new();
 
     [Fact]
-    public void Two_segment_maven_versions_normalize_to_three_segments()
+    public void TwoSegmentMavenVersionsNormalizeToThreeSegments()
     {
         VersionRange range = new(GtOrEq: "1.0", Lt: "2.0");
 
@@ -18,7 +18,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Snapshot_qualifier_is_treated_as_pre_release()
+    public void SnapshotQualifierIsTreatedAsPreRelease()
     {
         // 1.0-SNAPSHOT < 1.0 under Maven qualifier ordering, so it's outside [1.0, 2.0).
         VersionRange range = new(GtOrEq: "1.0", Lt: "2.0");
@@ -30,7 +30,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Maven_qualifier_order_alpha_beta_milestone_rc_release_sp()
+    public void MavenQualifierOrderAlphaBetaMilestoneRcReleaseSp()
     {
         // 1.0-alpha < 1.0-beta < 1.0-milestone < 1.0-rc < 1.0 (== 1.0-ga == 1.0-final) < 1.0-sp1
         VersionRange beforeRelease = new(GtOrEq: "1.0-alpha", Lt: "1.0");
@@ -42,7 +42,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Final_ga_release_are_equivalent_to_no_qualifier()
+    public void FinalGaReleaseAreEquivalentToNoQualifier()
     {
         VersionRange exact = new(Exact: new[] { "1.0" });
         _comparer.Satisfies("1.0", exact).Should().BeTrue();
@@ -52,7 +52,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Sp_qualifier_sorts_after_release()
+    public void SpQualifierSortsAfterRelease()
     {
         // 1.0-sp1 > 1.0 — SP (Service Pack) is the only qualifier above the release rank.
         VersionRange afterRelease = new(GtOrEqExclusive: "1.0", Lt: "1.1");
@@ -62,7 +62,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Trailing_zero_segments_are_equivalent()
+    public void TrailingZeroSegmentsAreEquivalent()
     {
         VersionRange exact = new(Exact: new[] { "1.0" });
         _comparer.Satisfies("1.0.0", exact).Should().BeTrue();
@@ -70,7 +70,7 @@ public class GradleVersionComparerTests
     }
 
     [Fact]
-    public void Dot_and_dash_qualifier_separators_are_equivalent()
+    public void DotAndDashQualifierSeparatorsAreEquivalent()
     {
         VersionRange exact = new(Exact: new[] { "1.0-alpha-1" });
         _comparer.Satisfies("1.0.alpha.1", exact).Should().BeTrue();

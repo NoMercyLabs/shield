@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Shield.Core.Domain;
-using Shield.Data;
 using Xunit;
 
 namespace Shield.Data.Tests;
@@ -34,7 +33,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpsertAsync_Persists_NewAdvisories_Into_FeedsDb()
+    public async Task UpsertAsyncPersistsNewAdvisoriesIntoFeedsDb()
     {
         EfAdvisorySink sink = new(_db!);
         Advisory incoming = MakeAdvisory(
@@ -54,7 +53,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpsertAsync_Is_Idempotent_On_FeedAndExternalId()
+    public async Task UpsertAsyncIsIdempotentOnFeedAndExternalId()
     {
         EfAdvisorySink sink = new(_db!);
         Advisory first = MakeAdvisory(Feed.Osv, "GHSA-test-bbbb", "lodash", "[]");

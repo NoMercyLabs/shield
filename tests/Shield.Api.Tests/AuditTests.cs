@@ -20,7 +20,7 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Ack_finding_records_audit_entry_with_finding_ack_action()
+    public async Task AckFindingRecordsAuditEntryWithFindingAckAction()
     {
         Guid findingId = await SeedFindingAsync();
 
@@ -51,7 +51,7 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task List_returns_audit_entries_filtered_by_action()
+    public async Task ListReturnsAuditEntriesFilteredByAction()
     {
         Guid first = await SeedFindingAsync();
         Guid second = await SeedFindingAsync();
@@ -73,7 +73,7 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public async Task Get_findings_does_not_record_audit_entry()
+    public async Task GetFindingsDoesNotRecordAuditEntry()
     {
         long beforeCount;
         using (IServiceScope scope = _factory.Services.CreateScope())

@@ -13,7 +13,7 @@ public class CargoVersionComparerTests
     private readonly SemverVersionComparer _comparer = new(Ecosystem.Rust);
 
     [Fact]
-    public void Cargo_versions_compare_under_semver_rules()
+    public void CargoVersionsCompareUnderSemverRules()
     {
         // Standard ordering: 1.0.0 < 1.0.1 < 1.1.0 < 2.0.0
         VersionRange exact = new(Exact: new[] { "1.2.3" });
@@ -22,7 +22,7 @@ public class CargoVersionComparerTests
     }
 
     [Fact]
-    public void Pre_release_sorts_below_release()
+    public void PreReleaseSortsBelowRelease()
     {
         VersionRange beforeRelease = new(GtOrEq: "0.9.0", Lt: "1.0.0");
         _comparer.Satisfies("1.0.0-alpha", beforeRelease).Should().BeTrue();
@@ -31,7 +31,7 @@ public class CargoVersionComparerTests
     }
 
     [Fact]
-    public void Build_metadata_is_ignored_for_ordering()
+    public void BuildMetadataIsIgnoredForOrdering()
     {
         // SemVer 2 §10: build metadata MUST be ignored when determining version precedence.
         // 1.0.0+abc == 1.0.0+def == 1.0.0
@@ -41,7 +41,7 @@ public class CargoVersionComparerTests
     }
 
     [Fact]
-    public void Numeric_pre_release_identifiers_sort_below_alphanumeric()
+    public void NumericPreReleaseIdentifiersSortBelowAlphanumeric()
     {
         // SemVer 2 §11.4.3 — numeric ID "1" < alphanumeric "alpha".
         VersionRange between = new(GtOrEq: "1.0.0-1", Lt: "1.0.0-alpha");
@@ -51,7 +51,7 @@ public class CargoVersionComparerTests
     }
 
     [Fact]
-    public void Multi_segment_pre_release_compares_segment_wise()
+    public void MultiSegmentPreReleaseComparesSegmentWise()
     {
         // 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta
         VersionRange exact = new(Exact: new[] { "1.0.0-alpha.beta" });

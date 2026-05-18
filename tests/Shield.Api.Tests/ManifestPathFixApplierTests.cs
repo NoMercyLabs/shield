@@ -33,7 +33,7 @@ public sealed class ManifestPathFixApplierTests
     }
 
     [Fact]
-    public void NpmEditor_edits_subfolder_package_json_when_ManifestPath_is_set()
+    public void NpmEditorEditsSubfolderPackageJsonWhenManifestPathIsSet()
     {
         string root = TempDir();
         try
@@ -83,7 +83,7 @@ public sealed class ManifestPathFixApplierTests
     }
 
     [Fact]
-    public void NpmEditor_falls_back_to_root_package_json_when_ManifestPath_is_null()
+    public void NpmEditorFallsBackToRootPackageJsonWhenManifestPathIsNull()
     {
         string root = TempDir();
         try
@@ -116,7 +116,7 @@ public sealed class ManifestPathFixApplierTests
     }
 
     [Fact]
-    public void NpmEditor_returns_clear_error_when_ManifestPath_file_does_not_exist()
+    public void NpmEditorReturnsClearErrorWhenManifestPathFileDoesNotExist()
     {
         string root = TempDir();
         try
@@ -143,7 +143,7 @@ public sealed class ManifestPathFixApplierTests
     }
 
     [Fact]
-    public void ComposerEditor_edits_subfolder_composer_json_when_ManifestPath_is_set()
+    public void ComposerEditorEditsSubfolderComposerJsonWhenManifestPathIsSet()
     {
         string root = TempDir();
         try

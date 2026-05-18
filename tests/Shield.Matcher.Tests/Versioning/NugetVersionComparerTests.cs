@@ -9,7 +9,7 @@ public class NugetVersionComparerTests
     private readonly NugetVersionComparer _comparer = new();
 
     [Fact]
-    public void Bracket_inclusive_lower_paren_exclusive_upper_matches_correctly()
+    public void BracketInclusiveLowerParenExclusiveUpperMatchesCorrectly()
     {
         // [1.0,2.0) means >= 1.0 and < 2.0
         VersionRange? range = NugetVersionComparer.ParseNuGetRangeNotation("[1.0,2.0)");
@@ -22,7 +22,7 @@ public class NugetVersionComparerTests
     }
 
     [Fact]
-    public void Paren_exclusive_lower_bracket_inclusive_upper_matches_correctly()
+    public void ParenExclusiveLowerBracketInclusiveUpperMatchesCorrectly()
     {
         // (1.0,2.0] means > 1.0 and <= 2.0
         VersionRange? range = NugetVersionComparer.ParseNuGetRangeNotation("(1.0,2.0]");
@@ -35,7 +35,7 @@ public class NugetVersionComparerTests
     }
 
     [Fact]
-    public void Open_lower_only_matches_anything_below_upper()
+    public void OpenLowerOnlyMatchesAnythingBelowUpper()
     {
         // (,2.0) means anything < 2.0
         VersionRange? range = NugetVersionComparer.ParseNuGetRangeNotation("(,2.0)");
@@ -47,7 +47,7 @@ public class NugetVersionComparerTests
     }
 
     [Fact]
-    public void Direct_VersionRange_with_introduced_and_fixed_works()
+    public void DirectVersionRangeWithIntroducedAndFixedWorks()
     {
         VersionRange range = new(GtOrEq: "1.0.0", Lt: "2.0.0");
 

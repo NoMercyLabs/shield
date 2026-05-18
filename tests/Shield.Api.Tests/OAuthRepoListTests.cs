@@ -5,7 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
-using Shield.Api.Services;
+using Shield.Api.Services.Auth;
 using Shield.Core.Domain;
 using Xunit;
 
@@ -21,7 +21,7 @@ namespace Shield.Api.Tests;
 public sealed class OAuthRepoListTests
 {
     [Fact]
-    public async Task Repos_returns_400_when_github_not_connected()
+    public async Task ReposReturns400WhenGithubNotConnected()
     {
         using GitHubReposFactory factory = new();
         HttpClient client = factory.CreateClient();
@@ -31,7 +31,7 @@ public sealed class OAuthRepoListTests
     }
 
     [Fact]
-    public async Task Repos_follows_link_header_and_returns_paginated_results()
+    public async Task ReposFollowsLinkHeaderAndReturnsPaginatedResults()
     {
         using GitHubReposFactory factory = new();
         // Force host startup so the singleton handler we registered is reachable.
@@ -143,7 +143,7 @@ public sealed class OAuthRepoListTests
     }
 
     [Fact]
-    public async Task Repos_response_is_cached_per_user_for_five_minutes()
+    public async Task ReposResponseIsCachedPerUserForFiveMinutes()
     {
         using GitHubReposFactory factory = new();
         HttpClient client = factory.CreateClient();
