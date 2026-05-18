@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using Shield.Core.Options;
@@ -110,7 +111,10 @@ public sealed class AppSettingsService : IAppSettingsService
             Write(AppSettingKeys.OidcIssuer, patch.OidcIssuer ?? "");
             Write(AppSettingKeys.OidcClientId, patch.OidcClientId ?? "");
             Write(AppSettingKeys.AlertSeverityFloor, patch.AlertSeverityFloor.ToString());
-            Write(AppSettingKeys.RetentionDays, patch.RetentionDays.ToString());
+            Write(
+                AppSettingKeys.RetentionDays,
+                patch.RetentionDays.ToString(CultureInfo.InvariantCulture)
+            );
             Write(AppSettingKeys.RegistrationOpen, patch.RegistrationOpen ? "true" : "false");
             Write(AppSettingKeys.OAuthRedirectBase, patch.OAuthRedirectBase ?? "");
 

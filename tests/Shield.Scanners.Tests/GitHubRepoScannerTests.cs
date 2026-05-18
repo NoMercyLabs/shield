@@ -26,21 +26,21 @@ namespace Shield.Scanners.Tests;
 public class GitHubRepoScannerTests
 {
     private const string PackageLockJson = """
-                                           {
-                                             "name": "demo",
-                                             "version": "1.0.0",
-                                             "lockfileVersion": 3,
-                                             "requires": true,
-                                             "packages": {
-                                               "": { "name": "demo", "version": "1.0.0", "dependencies": { "lodash": "^4.17.21" } },
-                                               "node_modules/lodash": {
-                                                 "version": "4.17.21",
-                                                 "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz",
-                                                 "integrity": "sha512-aaa"
-                                               }
-                                             }
-                                           }
-                                           """;
+        {
+          "name": "demo",
+          "version": "1.0.0",
+          "lockfileVersion": 3,
+          "requires": true,
+          "packages": {
+            "": { "name": "demo", "version": "1.0.0", "dependencies": { "lodash": "^4.17.21" } },
+            "node_modules/lodash": {
+              "version": "4.17.21",
+              "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz",
+              "integrity": "sha512-aaa"
+            }
+          }
+        }
+        """;
 
     private static ParserRegistry NewParserRegistry() =>
         new(
@@ -96,7 +96,10 @@ public class GitHubRepoScannerTests
         treesClient.GetRecursive(repoId, "sha-commit").Returns(tree);
         blobsClient.Get(repoId, "blob-sha-1").Returns(lockfileBlob);
 
-        GitHubRepoScanner scanner = new(new AnonymousGitHubScannerClientFactory(client), NewParserRegistry());
+        GitHubRepoScanner scanner = new(
+            new AnonymousGitHubScannerClientFactory(client),
+            NewParserRegistry()
+        );
         Source source = new()
         {
             Id = 11,
@@ -125,7 +128,10 @@ public class GitHubRepoScannerTests
     public async Task Missing_owner_or_repo_returns_failure()
     {
         IGitHubClient client = Substitute.For<IGitHubClient>();
-        GitHubRepoScanner scanner = new(new AnonymousGitHubScannerClientFactory(client), NewParserRegistry());
+        GitHubRepoScanner scanner = new(
+            new AnonymousGitHubScannerClientFactory(client),
+            NewParserRegistry()
+        );
 
         Source source = new()
         {
@@ -205,12 +211,7 @@ public class GitHubRepoScannerTests
             repository: null!,
             type: TaggedType.Commit
         );
-        return new(
-            @ref,
-            "node-ref",
-            $"https://api.github.com/repos/x/y/git/refs/{@ref}",
-            obj
-        );
+        return new(@ref, "node-ref", $"https://api.github.com/repos/x/y/git/refs/{@ref}", obj);
     }
 
     private static TreeItem BuildTreeItem(string path, string sha, TreeType type) =>

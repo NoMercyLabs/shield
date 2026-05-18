@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Mail;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -8,6 +9,11 @@ namespace Shield.Api.Services.Notifications;
 
 public sealed class InviteEmailSender : IInviteEmailSender
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly ShieldDbContext _db;
     private readonly ISmtpSender _smtpSender;
     private readonly ILogger<InviteEmailSender> _log;
@@ -48,7 +54,7 @@ public sealed class InviteEmailSender : IInviteEmailSender
 
         SmtpConfig? config = JsonSerializer.Deserialize<SmtpConfig>(
             smtpChannel.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            JsonOptions
         );
         if (config is null || !config.IsValid())
         {
@@ -122,7 +128,10 @@ public sealed class InviteEmailSender : IInviteEmailSender
     )
     {
         StringBuilder sb = new();
-        sb.AppendLine($"You've been invited to Shield by {inviterLogin}.");
+        sb.AppendLine(
+            CultureInfo.InvariantCulture,
+            $"You've been invited to Shield by {inviterLogin}."
+        );
         sb.AppendLine();
         sb.AppendLine(
             "Shield is a self-hosted dependency vulnerability watcher. "
@@ -133,10 +142,13 @@ public sealed class InviteEmailSender : IInviteEmailSender
         {
             sb.AppendLine();
             foreach (string name in sourceGroupNames)
-                sb.AppendLine($"  - {name}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"  - {name}");
         }
         sb.AppendLine();
-        sb.AppendLine($"Accept the invite (link expires {invite.ExpiresAt:yyyy-MM-dd HH:mm} UTC):");
+        sb.AppendLine(
+            CultureInfo.InvariantCulture,
+            $"Accept the invite (link expires {invite.ExpiresAt:yyyy-MM-dd HH:mm} UTC):"
+        );
         sb.AppendLine(acceptUrl);
         sb.AppendLine();
         sb.AppendLine("If you weren't expecting this, ignore the email.");
@@ -186,7 +198,7 @@ public sealed class InviteEmailSender : IInviteEmailSender
             "\" style=\"display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px\">Accept invitation</a></p>"
         );
         sb.Append("<p style=\"color:#64748b;font-size:13px\">Link expires ");
-        sb.Append(invite.ExpiresAt.ToString("yyyy-MM-dd HH:mm"));
+        sb.Append(invite.ExpiresAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
         sb.Append(" UTC. If you weren't expecting this, ignore the email.</p>");
         sb.Append("</body></html>");
         return sb.ToString();

@@ -24,7 +24,7 @@ internal static class GoModParser
 
             if (inRequireBlock)
             {
-                if (line.StartsWith(")"))
+                if (line.StartsWith(')'))
                 {
                     inRequireBlock = false;
                     continue;
@@ -33,12 +33,12 @@ internal static class GoModParser
                 continue;
             }
 
-            if (line.StartsWith("require") && line.Contains("("))
+            if (line.StartsWith("require", StringComparison.Ordinal) && line.Contains('('))
             {
                 inRequireBlock = true;
                 continue;
             }
-            if (line.StartsWith("require "))
+            if (line.StartsWith("require ", StringComparison.Ordinal))
             {
                 AddRequireLine(line["require ".Length..].Trim(), indirect, items);
             }

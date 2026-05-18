@@ -154,7 +154,11 @@ public sealed class FindingsController : ControllerBase
 
         // Apply sort before paging. Unknown sort values fall back to severity desc.
         string sort = (sortBy ?? "severity").Trim().ToLowerInvariant();
-        bool descending = (sortDir ?? "desc").Trim().ToLowerInvariant() != "asc";
+        bool descending = !string.Equals(
+            (sortDir ?? "desc").Trim(),
+            "asc",
+            StringComparison.OrdinalIgnoreCase
+        );
 
         query = sort switch
         {

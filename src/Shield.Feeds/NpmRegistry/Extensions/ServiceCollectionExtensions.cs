@@ -29,7 +29,9 @@ public static class ServiceCollectionExtensions
             .AddHttpClient<NpmPackageClient>(
                 (sp, client) =>
                 {
-                    NpmRegistryOptions options = sp.GetRequiredService<IOptions<NpmRegistryOptions>>().Value;
+                    NpmRegistryOptions options = sp.GetRequiredService<
+                        IOptions<NpmRegistryOptions>
+                    >().Value;
                     client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent);
                 }

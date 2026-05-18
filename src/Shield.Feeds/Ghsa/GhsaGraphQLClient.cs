@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -56,7 +57,10 @@ public sealed class GhsaGraphQLClient
             Variables = new Dictionary<string, object?>
             {
                 ["first"] = pageSize,
-                ["publishedSince"] = publishedSinceUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                ["publishedSince"] = publishedSinceUtc.ToString(
+                    "yyyy-MM-ddTHH:mm:ssZ",
+                    CultureInfo.InvariantCulture
+                ),
                 ["after"] = afterCursor,
             },
         };

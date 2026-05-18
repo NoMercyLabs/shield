@@ -17,26 +17,10 @@ namespace Shield.Data.Migrations.Shield
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Endpoint = table.Column<string>(
-                        type: "TEXT",
-                        maxLength: 2000,
-                        nullable: false
-                    ),
-                    P256dh = table.Column<string>(
-                        type: "TEXT",
-                        maxLength: 200,
-                        nullable: false
-                    ),
-                    Auth = table.Column<string>(
-                        type: "TEXT",
-                        maxLength: 200,
-                        nullable: false
-                    ),
-                    UserAgent = table.Column<string>(
-                        type: "TEXT",
-                        maxLength: 500,
-                        nullable: true
-                    ),
+                    Endpoint = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    P256dh = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Auth = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    UserAgent = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastDeliveredAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                 },

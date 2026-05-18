@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Identity;
 
 namespace Shield.Api.Controllers;
@@ -160,7 +161,7 @@ public sealed class AuditController : ControllerBase
                 .Select(source => new ValueTuple<int, string>(source.Id, source.Name))
                 .ToListAsync(ct);
             foreach ((int id, string name) in sources)
-                result[("Source", id.ToString())] = name;
+                result[("Source", id.ToString(CultureInfo.InvariantCulture))] = name;
         }
         if (inviteIds.Count > 0)
         {

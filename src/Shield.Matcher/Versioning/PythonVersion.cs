@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Shield.Matcher.Versioning;
@@ -67,7 +68,9 @@ internal readonly struct PythonVersion : IComparable<PythonVersion>
         if (!match.Success)
             return false;
 
-        int epoch = match.Groups["epoch"].Success ? int.Parse(match.Groups["epoch"].Value) : 0;
+        int epoch = match.Groups["epoch"].Success
+            ? int.Parse(match.Groups["epoch"].Value, CultureInfo.InvariantCulture)
+            : 0;
 
         int[] release = match
             .Groups["release"]
@@ -78,20 +81,24 @@ internal readonly struct PythonVersion : IComparable<PythonVersion>
         PreSegment? pre = null;
         if (match.Groups["preL"].Success)
         {
-            int number = match.Groups["preN"].Success ? int.Parse(match.Groups["preN"].Value) : 0;
+            int number = match.Groups["preN"].Success
+                ? int.Parse(match.Groups["preN"].Value, CultureInfo.InvariantCulture)
+                : 0;
             pre = new(NormalisePreLabel(match.Groups["preL"].Value), number);
         }
 
         int? post = null;
         if (match.Groups["postN1"].Success)
-            post = int.Parse(match.Groups["postN1"].Value);
+            post = int.Parse(match.Groups["postN1"].Value, CultureInfo.InvariantCulture);
         else if (match.Groups["postN2"].Success)
-            post = int.Parse(match.Groups["postN2"].Value);
+            post = int.Parse(match.Groups["postN2"].Value, CultureInfo.InvariantCulture);
         else if (match.Groups["postL"].Success)
             // Bare ".post" or "-post" with no number means post0.
             post = 0;
 
-        int? dev = match.Groups["devN"].Success ? int.Parse(match.Groups["devN"].Value) : null;
+        int? dev = match.Groups["devN"].Success
+            ? int.Parse(match.Groups["devN"].Value, CultureInfo.InvariantCulture)
+            : null;
         if (match.Groups["devL"].Success && dev is null)
             dev = 0;
 

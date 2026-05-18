@@ -101,10 +101,7 @@ public sealed class PomXmlParser : IParser
     {
         if (string.IsNullOrEmpty(value))
             return value;
-        if (
-            !value.StartsWith("${", StringComparison.Ordinal)
-            || !value.EndsWith("}", StringComparison.Ordinal)
-        )
+        if (!value.StartsWith("${", StringComparison.Ordinal) || !value.EndsWith('}'))
             return value;
         string key = value[2..^1];
         return properties.TryGetValue(key, out string? resolved) ? resolved : value;

@@ -6,7 +6,31 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
-    <NoWarn>CS1591</NoWarn>
+    <!-- Default AnalysisMode leaves many perf/correctness rules off (CA1869 — cache
+         JsonSerializerOptions — being a notable one). Recommended turns on the perf +
+         correctness rule set; combined with TreatWarningsAsErrors this is the safety net
+         that surfaces "wrong-by-default" code at build time, not just in the IDE. -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <!-- Suppressed rules:
+         CS1591  — missing XML doc on public member (not running a doc-generated build)
+         CA1848  — LoggerMessage delegates: real perf, but rewriting hundreds of log call
+                   sites earns negligible win at our throughput. Revisit when hot paths
+                   profile-show logging overhead.
+         CA1822  — "mark as static" on instance methods: noisy in DI-injected services
+                   where today's-no-instance-data isn't tomorrow's.
+         CA1859  — concrete type vs interface return: micro-perf, breaks contract intent.
+         CA1873  — log-arg boxing: real perf but per-callsite IsEnabled guards are invasive
+                   and earn little without a hot-path profile. Revisit with measurement.
+         CA1711  — type name reserved suffix (Queue, Flags): our queues ARE queues and our
+                   Flags enums are [Flags]; the warning is the wrong default.
+         CA1716  — identifier matches reserved keyword in another language: we don't ship
+                   VB.NET / F# consumers, so `For` etc. is fine on internal interfaces.
+         CA1001  — type owns IDisposable field without implementing IDisposable: our services
+                   are DI singletons with process-lifetime locks. Disposal isn't useful.
+         CA1863  — cache CompositeFormat: micro-perf on low-frequency paths.
+         CA1846  — AsSpan over Substring: micro-perf. -->
+    <NoWarn>CS1591;CA1848;CA1822;CA1859;CA1873;CA1711;CA1716;CA1001;CA1863;CA1846</NoWarn>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NeutralLanguage>en</NeutralLanguage>
     <Company>NoMercy Entertainment</Company>

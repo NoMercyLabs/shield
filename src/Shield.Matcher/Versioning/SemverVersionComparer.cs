@@ -17,7 +17,7 @@ public sealed class SemverVersionComparer : IVersionComparer
         ArgumentNullException.ThrowIfNull(version);
         ArgumentNullException.ThrowIfNull(range);
 
-        if (!TryParse(version, out SemVersion? candidate))
+        if (!TryParse(version, out SemVersion candidate))
             return false;
 
         if (range.Exact is { Count: > 0 })
@@ -25,7 +25,7 @@ public sealed class SemverVersionComparer : IVersionComparer
             foreach (string exact in range.Exact)
             {
                 if (
-                    TryParse(exact, out SemVersion? exactVersion)
+                    TryParse(exact, out SemVersion exactVersion)
                     && candidate.ComparePrecedenceTo(exactVersion) == 0
                 )
                     return true;
@@ -35,7 +35,7 @@ public sealed class SemverVersionComparer : IVersionComparer
 
         if (range.GtOrEq is not null)
         {
-            if (!TryParse(range.GtOrEq, out SemVersion? lower))
+            if (!TryParse(range.GtOrEq, out SemVersion lower))
                 return false;
             if (candidate.ComparePrecedenceTo(lower) < 0)
                 return false;
@@ -43,7 +43,7 @@ public sealed class SemverVersionComparer : IVersionComparer
 
         if (range.GtOrEqExclusive is not null)
         {
-            if (!TryParse(range.GtOrEqExclusive, out SemVersion? lowerExclusive))
+            if (!TryParse(range.GtOrEqExclusive, out SemVersion lowerExclusive))
                 return false;
             if (candidate.ComparePrecedenceTo(lowerExclusive) <= 0)
                 return false;
@@ -51,7 +51,7 @@ public sealed class SemverVersionComparer : IVersionComparer
 
         if (range.Lt is not null)
         {
-            if (!TryParse(range.Lt, out SemVersion? upper))
+            if (!TryParse(range.Lt, out SemVersion upper))
                 return false;
             if (candidate.ComparePrecedenceTo(upper) >= 0)
                 return false;
@@ -59,7 +59,7 @@ public sealed class SemverVersionComparer : IVersionComparer
 
         if (range.LtOrEq is not null)
         {
-            if (!TryParse(range.LtOrEq, out SemVersion? upperInclusive))
+            if (!TryParse(range.LtOrEq, out SemVersion upperInclusive))
                 return false;
             if (candidate.ComparePrecedenceTo(upperInclusive) > 0)
                 return false;

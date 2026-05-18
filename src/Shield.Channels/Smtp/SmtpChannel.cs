@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Mail;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -42,7 +43,7 @@ public sealed class SmtpChannel : IAlertChannel
 
         SmtpConfig? config = JsonSerializer.Deserialize<SmtpConfig>(
             cfg.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            ChannelJson.Options
         );
 
         if (config is null || !config.IsValid())
@@ -108,7 +109,10 @@ public sealed class SmtpChannel : IAlertChannel
     {
         StringBuilder sb = new();
         sb.Append("<html><body style=\"font-family:Segoe UI,Arial,sans-serif\">");
-        sb.Append($"<h2 style=\"color:{HtmlColorFor(finding.Severity)}\">Shield · ");
+        sb.Append(
+            CultureInfo.InvariantCulture,
+            $"<h2 style=\"color:{HtmlColorFor(finding.Severity)}\">Shield · "
+        );
         sb.Append(HtmlEncoder.Default.Encode(finding.Severity.ToString()));
         sb.Append(" finding</h2>");
         sb.Append("<table style=\"border-collapse:collapse\" cellpadding=\"6\">");
@@ -132,6 +136,7 @@ public sealed class SmtpChannel : IAlertChannel
         StringBuilder sb = new();
         sb.Append("<html><body style=\"font-family:Segoe UI,Arial,sans-serif\">");
         sb.Append(
+            CultureInfo.InvariantCulture,
             $"<h2 style=\"color:{HtmlColorFor(max)}\">Shield digest · {findings.Count} findings</h2>"
         );
         sb.Append("<ul>");
@@ -146,7 +151,7 @@ public sealed class SmtpChannel : IAlertChannel
         }
         sb.Append("</ul>");
         if (extra > 0)
-            sb.Append($"<p>and {extra} more</p>");
+            sb.Append(CultureInfo.InvariantCulture, $"<p>and {extra} more</p>");
         sb.Append("</body></html>");
         return sb.ToString();
     }

@@ -70,12 +70,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         InMemoryPackageMetaSink sink = new();
         InMemoryPackageNameSource nameSource = new(["left-pad"]);
         NpmRegistryOptions options = new() { MaxRequestsPerSecond = 50 };
-        using NpmRegistryFeedSync feedSync = new(
-            client,
-            sink,
-            nameSource,
-            Options.Create(options)
-        );
+        using NpmRegistryFeedSync feedSync = new(client, sink, nameSource, Options.Create(options));
 
         FeedSyncState state = new() { Feed = Feed.NpmRegistry };
         FeedSyncResult result = await feedSync.SyncAsync(state, CancellationToken.None);
@@ -110,12 +105,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         InMemoryPackageMetaSink sink = new();
         InMemoryPackageNameSource nameSource = new(["does-not-exist"]);
         NpmRegistryOptions options = new();
-        using NpmRegistryFeedSync feedSync = new(
-            client,
-            sink,
-            nameSource,
-            Options.Create(options)
-        );
+        using NpmRegistryFeedSync feedSync = new(client, sink, nameSource, Options.Create(options));
 
         FeedSyncResult result = await feedSync.SyncAsync(
             new() { Feed = Feed.NpmRegistry },
@@ -139,12 +129,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         InMemoryPackageMetaSink sink = new();
         InMemoryPackageNameSource nameSource = new(["boom"]);
         NpmRegistryOptions options = new();
-        using NpmRegistryFeedSync feedSync = new(
-            client,
-            sink,
-            nameSource,
-            Options.Create(options)
-        );
+        using NpmRegistryFeedSync feedSync = new(client, sink, nameSource, Options.Create(options));
 
         FeedSyncResult result = await feedSync.SyncAsync(
             new() { Feed = Feed.NpmRegistry },
@@ -163,12 +148,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         InMemoryPackageMetaSink sink = new();
         InMemoryPackageNameSource nameSource = new([]);
         NpmRegistryOptions options = new();
-        using NpmRegistryFeedSync feedSync = new(
-            client,
-            sink,
-            nameSource,
-            Options.Create(options)
-        );
+        using NpmRegistryFeedSync feedSync = new(client, sink, nameSource, Options.Create(options));
 
         feedSync.Feed.Should().Be(Feed.NpmRegistry);
     }

@@ -14,7 +14,11 @@ public class PackageLockV1Tests
         NpmLockParser parser = new();
         using Stream stream = FixtureLoader.Open("package-lock.v1.json");
 
-        ParseResult result = await parser.ParseAsync(stream, "package-lock.json", CancellationToken.None);
+        ParseResult result = await parser.ParseAsync(
+            stream,
+            "package-lock.json",
+            CancellationToken.None
+        );
 
         result.Success.Should().BeTrue(result.Error);
         result.Items.Should().HaveCount(5);

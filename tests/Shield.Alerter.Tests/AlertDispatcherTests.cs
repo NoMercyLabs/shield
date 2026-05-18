@@ -10,32 +10,34 @@ namespace Shield.Alerter.Tests;
 
 public class AlertDispatcherTests
 {
-    private static Finding NewFinding(Severity severity, string? dedup = null) => new()
-    {
-        Id = Guid.NewGuid(),
-        SourceId = 1,
-        InventoryItemId = 1,
-        AdvisoryRefId = Guid.NewGuid(),
-        Severity = severity,
-        FirstSeenAt = DateTime.UtcNow,
-        LastSeenAt = DateTime.UtcNow,
-        State = FindingState.Open,
-        DedupKey = dedup ?? Guid.NewGuid().ToString("N"),
-    };
+    private static Finding NewFinding(Severity severity, string? dedup = null) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            SourceId = 1,
+            InventoryItemId = 1,
+            AdvisoryRefId = Guid.NewGuid(),
+            Severity = severity,
+            FirstSeenAt = DateTime.UtcNow,
+            LastSeenAt = DateTime.UtcNow,
+            State = FindingState.Open,
+            DedupKey = dedup ?? Guid.NewGuid().ToString("N"),
+        };
 
     private static AlertChannel NewChannel(
         ChannelType type,
         Severity minSeverity = Severity.Low,
         bool enabled = true
-    ) => new()
-    {
-        Id = Guid.NewGuid(),
-        Type = type,
-        Name = type.ToString(),
-        ConfigJsonEncrypted = "{}",
-        MinSeverity = minSeverity,
-        Enabled = enabled,
-    };
+    ) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            Type = type,
+            Name = type.ToString(),
+            ConfigJsonEncrypted = "{}",
+            MinSeverity = minSeverity,
+            Enabled = enabled,
+        };
 
     private static IAlertChannel StubChannel(
         ChannelType type,
@@ -46,7 +48,11 @@ public class AlertDispatcherTests
         IAlertChannel channel = Substitute.For<IAlertChannel>();
         channel.ChannelType.Returns(type);
         channel
-            .SendAsync(Arg.Any<AlertChannel>(), Arg.Any<IReadOnlyList<Finding>>(), Arg.Any<CancellationToken>())
+            .SendAsync(
+                Arg.Any<AlertChannel>(),
+                Arg.Any<IReadOnlyList<Finding>>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(callInfo =>
             {
                 IReadOnlyList<Finding> findings = callInfo.ArgAt<IReadOnlyList<Finding>>(1);
@@ -87,7 +93,8 @@ public class AlertDispatcherTests
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
         AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
-        List<Finding> findings = Enumerable.Range(0, 6)
+        List<Finding> findings = Enumerable
+            .Range(0, 6)
             .Select(_ => NewFinding(Severity.High))
             .ToList();
         AlertChannel channel = NewChannel(ChannelType.Inbox);
@@ -101,8 +108,10 @@ public class AlertDispatcherTests
         sent.Should().HaveCount(1);
         sent[0].Should().HaveCount(6);
         events.Should().HaveCount(6);
-        events.Select(alertEvent => alertEvent.FindingId)
-            .Should().BeEquivalentTo(findings.Select(finding => finding.Id));
+        events
+            .Select(alertEvent => alertEvent.FindingId)
+            .Should()
+            .BeEquivalentTo(findings.Select(finding => finding.Id));
     }
 
     [Fact]
@@ -112,7 +121,8 @@ public class AlertDispatcherTests
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
         AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
-        List<Finding> findings = Enumerable.Range(0, 4)
+        List<Finding> findings = Enumerable
+            .Range(0, 4)
             .Select(_ => NewFinding(Severity.High))
             .ToList();
         AlertChannel channel = NewChannel(ChannelType.Inbox);
@@ -134,10 +144,7 @@ public class AlertDispatcherTests
         IAlertChannel failing = StubChannel(ChannelType.Discord, AlertResult.Fail("boom"));
         List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel ok = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
-        AlertDispatcher dispatcher = new(
-            [failing, ok],
-            NullLogger<AlertDispatcher>.Instance
-        );
+        AlertDispatcher dispatcher = new([failing, ok], NullLogger<AlertDispatcher>.Instance);
 
         Finding finding = NewFinding(Severity.Critical);
         AlertChannel discord = NewChannel(ChannelType.Discord);
@@ -151,12 +158,15 @@ public class AlertDispatcherTests
 
         sent.Should().HaveCount(1);
         events.Should().HaveCount(2);
-        events.Single(alertEvent => alertEvent.ChannelId == discord.Id).Status
-            .Should().Be(AlertStatus.Failed);
-        events.Single(alertEvent => alertEvent.ChannelId == discord.Id).Error
-            .Should().Be("boom");
-        events.Single(alertEvent => alertEvent.ChannelId == inbox.Id).Status
-            .Should().Be(AlertStatus.Sent);
+        events
+            .Single(alertEvent => alertEvent.ChannelId == discord.Id)
+            .Status.Should()
+            .Be(AlertStatus.Failed);
+        events.Single(alertEvent => alertEvent.ChannelId == discord.Id).Error.Should().Be("boom");
+        events
+            .Single(alertEvent => alertEvent.ChannelId == inbox.Id)
+            .Status.Should()
+            .Be(AlertStatus.Sent);
     }
 
     [Fact]
@@ -165,13 +175,14 @@ public class AlertDispatcherTests
         IAlertChannel throwing = Substitute.For<IAlertChannel>();
         throwing.ChannelType.Returns(ChannelType.Discord);
         throwing
-            .SendAsync(Arg.Any<AlertChannel>(), Arg.Any<IReadOnlyList<Finding>>(), Arg.Any<CancellationToken>())
+            .SendAsync(
+                Arg.Any<AlertChannel>(),
+                Arg.Any<IReadOnlyList<Finding>>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns<ValueTask<AlertResult>>(_ => throw new InvalidOperationException("kaboom"));
 
-        AlertDispatcher dispatcher = new(
-            [throwing],
-            NullLogger<AlertDispatcher>.Instance
-        );
+        AlertDispatcher dispatcher = new([throwing], NullLogger<AlertDispatcher>.Instance);
 
         Finding finding = NewFinding(Severity.Critical);
         AlertChannel discord = NewChannel(ChannelType.Discord);
@@ -210,10 +221,7 @@ public class AlertDispatcherTests
     [Fact]
     public async Task MissingChannelImplementationMarksFindingsFailed()
     {
-        AlertDispatcher dispatcher = new(
-            [],
-            NullLogger<AlertDispatcher>.Instance
-        );
+        AlertDispatcher dispatcher = new([], NullLogger<AlertDispatcher>.Instance);
 
         Finding finding = NewFinding(Severity.High);
         AlertChannel channel = NewChannel(ChannelType.Discord);

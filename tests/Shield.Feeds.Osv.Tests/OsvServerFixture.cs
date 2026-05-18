@@ -26,14 +26,26 @@ public sealed class OsvServerFixture : IDisposable
     {
         Server
             .Given(Request.Create().WithPath("/v1/querybatch").UsingPost())
-            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody(responseBody));
+            .RespondWith(
+                Response
+                    .Create()
+                    .WithStatusCode(200)
+                    .WithHeader("Content-Type", "application/json")
+                    .WithBody(responseBody)
+            );
     }
 
     public void StubVuln(string id, string responseBody, int statusCode = 200)
     {
         Server
             .Given(Request.Create().WithPath($"/v1/vulns/{id}").UsingGet())
-            .RespondWith(Response.Create().WithStatusCode(statusCode).WithHeader("Content-Type", "application/json").WithBody(responseBody));
+            .RespondWith(
+                Response
+                    .Create()
+                    .WithStatusCode(statusCode)
+                    .WithHeader("Content-Type", "application/json")
+                    .WithBody(responseBody)
+            );
     }
 
     public void StubBatchSuccess(string successBody) => StubBatch(successBody);
@@ -41,7 +53,11 @@ public sealed class OsvServerFixture : IDisposable
     public int CountBatchCalls() =>
         Server.LogEntries.Count(entry =>
             entry.RequestMessage.Method.Equals("POST", StringComparison.OrdinalIgnoreCase)
-            && entry.RequestMessage.AbsolutePath.EndsWith("/v1/querybatch", StringComparison.Ordinal));
+            && entry.RequestMessage.AbsolutePath.EndsWith(
+                "/v1/querybatch",
+                StringComparison.Ordinal
+            )
+        );
 
     public void Dispose()
     {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Shield.Api.Services.BulkFix;
@@ -472,7 +473,7 @@ public sealed class BulkFixApplier : IBulkFixApplier
         );
         foreach (IGrouping<string, BulkApplyEntry> group in byManifest)
         {
-            body.AppendLine($"**{group.Key}**\n");
+            body.AppendLine(CultureInfo.InvariantCulture, $"**{group.Key}**\n");
             foreach (BulkApplyEntry entry in group)
             {
                 string advisoryList = FormatAdvisoryIds(entry.AdvisoryIds);
@@ -482,6 +483,7 @@ public sealed class BulkFixApplier : IBulkFixApplier
                         ?.ChangelogUrl(entry.PackageName, entry.SuggestedVersion)
                     ?? entry.PackageName;
                 body.AppendLine(
+                    CultureInfo.InvariantCulture,
                     $"- `{entry.PackageName}` [`{entry.CurrentVersion}` → [{entry.SuggestedVersion}]({changelogLink})] — covers {entry.AdvisoryIds.Count} {(entry.AdvisoryIds.Count == 1 ? "advisory" : "advisories")} ({advisoryList})"
                 );
             }
@@ -492,11 +494,13 @@ public sealed class BulkFixApplier : IBulkFixApplier
         {
             body.AppendLine("---");
             body.AppendLine(
+                CultureInfo.InvariantCulture,
                 $"⚠️ **{majorBumps.Count} major-version {(majorBumps.Count == 1 ? "bump was" : "bumps were")} skipped** (re-submit with `allowMajorBumps: true` to include):\n"
             );
             foreach (BulkApplyEntry entry in majorBumps)
             {
                 body.AppendLine(
+                    CultureInfo.InvariantCulture,
                     $"- `{entry.PackageName}` `{entry.CurrentVersion}` → `{entry.SuggestedVersion}` (major)"
                 );
             }

@@ -48,7 +48,7 @@ public sealed class GemfileLockParser : IParser
                 continue;
 
             // Direct dep lines are indented with 2 spaces.
-            if (!line.StartsWith("  "))
+            if (!line.StartsWith("  ", StringComparison.Ordinal))
             {
                 inDeps = false;
                 continue;

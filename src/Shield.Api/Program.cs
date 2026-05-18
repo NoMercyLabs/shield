@@ -358,9 +358,7 @@ builder.Services.AddAntiforgery(options =>
         : CookieSecurePolicy.SameAsRequest;
 });
 
-builder.Services.AddControllers(options =>
-    options.Filters.Add<CookieAuthCsrfFilter>()
-);
+builder.Services.AddControllers(options => options.Filters.Add<CookieAuthCsrfFilter>());
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IFindingsBroadcaster, FindingsBroadcaster>();
 builder.Services.AddHttpClient();
@@ -795,11 +793,7 @@ if (enableOpenApi)
                 {
                     new()
                     {
-                        Reference = new()
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer",
-                        },
+                        Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
                     },
                     Array.Empty<string>()
                 },

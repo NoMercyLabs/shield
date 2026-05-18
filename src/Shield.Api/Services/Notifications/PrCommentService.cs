@@ -290,7 +290,10 @@ public sealed class PrCommentService : IPrCommentService
         sb.AppendLine(sentinel);
         sb.AppendLine("## :shield: Shield: vulnerabilities introduced by this PR");
         sb.AppendLine();
-        sb.AppendLine($"Found {findings.Count} advisory match(es) on newly added dependencies.");
+        sb.AppendLine(
+            CultureInfo.InvariantCulture,
+            $"Found {findings.Count} advisory match(es) on newly added dependencies."
+        );
         sb.AppendLine();
         sb.AppendLine("| Severity | Package | Version | Advisory | Fix |");
         sb.AppendLine("|---|---|---|---|---|");

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 
@@ -23,7 +24,7 @@ internal static class RequirementsTxtParser
             if (line.Length == 0)
                 continue;
             // Skip option lines (-r other.txt, --hash, -e .).
-            if (line.StartsWith("-"))
+            if (line.StartsWith('-'))
                 continue;
 
             // Strip environment markers (`pkg==1.0; python_version >= '3.8'`).
@@ -83,7 +84,7 @@ internal static class RequirementsTxtParser
         }
 
         if (unpinned > 0)
-            diagnostics["unpinned"] = unpinned.ToString();
+            diagnostics["unpinned"] = unpinned.ToString(CultureInfo.InvariantCulture);
         if (items.Count == 0)
             diagnostics["error"] = "noPackagesFound";
 

@@ -17,8 +17,13 @@ public class CargoTomlParserTests
 
         result.Success.Should().BeTrue(result.Error);
         result.Items.Should().HaveCount(3);
-        result.Items.Should().OnlyContain(item => item.Ecosystem == Ecosystem.Rust && item.IsDirect);
-        result.Items.Select(item => item.Name).Should().BeEquivalentTo(new[] { "serde", "tokio", "mockito" });
+        result
+            .Items.Should()
+            .OnlyContain(item => item.Ecosystem == Ecosystem.Rust && item.IsDirect);
+        result
+            .Items.Select(item => item.Name)
+            .Should()
+            .BeEquivalentTo(new[] { "serde", "tokio", "mockito" });
         result.Items.Should().OnlyContain(item => item.Version == string.Empty);
     }
 }

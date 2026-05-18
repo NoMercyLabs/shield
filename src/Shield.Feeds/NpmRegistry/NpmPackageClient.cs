@@ -7,6 +7,8 @@ namespace Shield.Feeds.NpmRegistry;
 
 public sealed class NpmPackageClient
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly HttpClient _http;
 
     public NpmPackageClient(HttpClient http)
@@ -30,7 +32,7 @@ public sealed class NpmPackageClient
 
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<NpmPackageDocument>(
-            options: new JsonSerializerOptions(JsonSerializerDefaults.Web),
+            options: JsonOptions,
             cancellationToken: ct
         );
     }

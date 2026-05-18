@@ -155,9 +155,7 @@ public sealed class GitHubRateLimitHandlerTests
                 resetUnix.Value.ToString()
             );
         if (retryAfterSeconds is not null)
-            response.Headers.RetryAfter = new(
-                TimeSpan.FromSeconds(retryAfterSeconds.Value)
-            );
+            response.Headers.RetryAfter = new(TimeSpan.FromSeconds(retryAfterSeconds.Value));
         return response;
     }
 

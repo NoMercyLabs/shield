@@ -77,11 +77,7 @@ public class WebhookChannelTests : IDisposable
             }
         );
 
-        AlertResult result = await channel.SendAsync(
-            cfg,
-            [finding],
-            CancellationToken.None
-        );
+        AlertResult result = await channel.SendAsync(cfg, [finding], CancellationToken.None);
 
         result.Success.Should().BeTrue();
         var entry = _server.LogEntries.ToList()[0];
@@ -113,11 +109,7 @@ public class WebhookChannelTests : IDisposable
             }
         );
 
-        AlertResult result = await channel.SendAsync(
-            cfg,
-            [finding],
-            CancellationToken.None
-        );
+        AlertResult result = await channel.SendAsync(cfg, [finding], CancellationToken.None);
 
         result.Success.Should().BeTrue();
         string body = _server.LogEntries.ToList()[0].RequestMessage.Body ?? "";

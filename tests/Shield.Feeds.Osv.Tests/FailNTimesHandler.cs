@@ -18,9 +18,13 @@ internal sealed class FailNTimesHandler : DelegatingHandler
         _pathSuffix = pathSuffix;
     }
 
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    )
     {
-        bool matchesPath = request.RequestUri is not null
+        bool matchesPath =
+            request.RequestUri is not null
             && request.RequestUri.AbsolutePath.EndsWith(_pathSuffix, StringComparison.Ordinal);
 
         if (matchesPath && _remainingFailures > 0)
@@ -30,7 +34,8 @@ internal sealed class FailNTimesHandler : DelegatingHandler
             return new(_failureStatus) { RequestMessage = request };
         }
 
-        if (matchesPath) SuccessCalls++;
+        if (matchesPath)
+            SuccessCalls++;
         return await base.SendAsync(request, cancellationToken);
     }
 }

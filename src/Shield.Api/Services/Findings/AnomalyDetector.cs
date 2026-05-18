@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
@@ -146,7 +147,7 @@ public sealed class AnomalyDetector : IAnomalyDetector
                     $"Source #{sourceId} inventory diff produced {synthesised} synthetic advisor"
                         + $"{(synthesised == 1 ? "y" : "ies")} (typosquat / brand-new / new maintainer).",
                     relatedType: "Source",
-                    relatedId: sourceId.ToString(),
+                    relatedId: sourceId.ToString(CultureInfo.InvariantCulture),
                     ct
                 );
             }

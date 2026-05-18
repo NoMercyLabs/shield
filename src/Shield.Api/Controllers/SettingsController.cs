@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -84,7 +85,7 @@ public sealed class SettingsController : ControllerBase
         updated[Keys.OidcIssuer] = request.OidcIssuer ?? "";
         updated[Keys.OidcClientId] = request.OidcClientId ?? "";
         updated[Keys.AlertSeverityFloor] = request.AlertSeverityFloor.ToString();
-        updated[Keys.RetentionDays] = request.RetentionDays.ToString();
+        updated[Keys.RetentionDays] = request.RetentionDays.ToString(CultureInfo.InvariantCulture);
         updated[Keys.OAuthRedirectBase] = request.OAuthRedirectBase ?? "";
 
         // Only overwrite the secret when caller supplies a non-empty value; otherwise preserve it.

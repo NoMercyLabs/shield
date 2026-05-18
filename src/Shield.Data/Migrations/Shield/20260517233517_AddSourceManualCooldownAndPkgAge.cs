@@ -15,26 +15,24 @@ namespace Shield.Data.Migrations.Shield
                 name: "LastManualBulkApplyAt",
                 table: "Sources",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<int>(
                 name: "MinPackageAgeHours",
                 table: "Sources",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 48);
+                defaultValue: 48
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "LastManualBulkApplyAt",
-                table: "Sources");
+            migrationBuilder.DropColumn(name: "LastManualBulkApplyAt", table: "Sources");
 
-            migrationBuilder.DropColumn(
-                name: "MinPackageAgeHours",
-                table: "Sources");
+            migrationBuilder.DropColumn(name: "MinPackageAgeHours", table: "Sources");
         }
     }
 }

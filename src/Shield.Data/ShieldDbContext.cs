@@ -35,32 +35,32 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
     public DbSet<IpReputation> IpReputations => Set<IpReputation>();
     public DbSet<PackageUpdate> PackageUpdates => Set<PackageUpdate>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfiguration(new Configurations.SourceConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.InventorySnapshotConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.InventoryItemConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.FindingConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.AlertChannelConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.AlertEventConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.AgentTokenConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.AppSettingConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.IntegrationTokenConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.AuditEntryConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.SourceGroupConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.SourceAccessConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.GroupMembershipConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.UserSessionConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.NotificationConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.PackageWatchConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.SavedFilterConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.ApiTokenConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.ScanQueueEntryConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.InviteConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.PushSubscriptionConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.SecurityEventConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.IpReputationConfiguration());
-        modelBuilder.ApplyConfiguration(new Configurations.PackageUpdateConfiguration());
+        base.OnModelCreating(builder);
+        builder.ApplyConfiguration(new Configurations.SourceConfiguration());
+        builder.ApplyConfiguration(new Configurations.InventorySnapshotConfiguration());
+        builder.ApplyConfiguration(new Configurations.InventoryItemConfiguration());
+        builder.ApplyConfiguration(new Configurations.FindingConfiguration());
+        builder.ApplyConfiguration(new Configurations.AlertChannelConfiguration());
+        builder.ApplyConfiguration(new Configurations.AlertEventConfiguration());
+        builder.ApplyConfiguration(new Configurations.AgentTokenConfiguration());
+        builder.ApplyConfiguration(new Configurations.AppSettingConfiguration());
+        builder.ApplyConfiguration(new Configurations.IntegrationTokenConfiguration());
+        builder.ApplyConfiguration(new Configurations.AuditEntryConfiguration());
+        builder.ApplyConfiguration(new Configurations.SourceGroupConfiguration());
+        builder.ApplyConfiguration(new Configurations.SourceAccessConfiguration());
+        builder.ApplyConfiguration(new Configurations.GroupMembershipConfiguration());
+        builder.ApplyConfiguration(new Configurations.UserSessionConfiguration());
+        builder.ApplyConfiguration(new Configurations.NotificationConfiguration());
+        builder.ApplyConfiguration(new Configurations.PackageWatchConfiguration());
+        builder.ApplyConfiguration(new Configurations.SavedFilterConfiguration());
+        builder.ApplyConfiguration(new Configurations.ApiTokenConfiguration());
+        builder.ApplyConfiguration(new Configurations.ScanQueueEntryConfiguration());
+        builder.ApplyConfiguration(new Configurations.InviteConfiguration());
+        builder.ApplyConfiguration(new Configurations.PushSubscriptionConfiguration());
+        builder.ApplyConfiguration(new Configurations.SecurityEventConfiguration());
+        builder.ApplyConfiguration(new Configurations.IpReputationConfiguration());
+        builder.ApplyConfiguration(new Configurations.PackageUpdateConfiguration());
     }
 }

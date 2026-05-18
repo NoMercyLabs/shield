@@ -107,8 +107,7 @@ public sealed class OAuthTests
 
         // Read raw row through DbContext — value must not equal the plaintext token.
         using IServiceScope scope = factory.Services.CreateScope();
-        Data.ShieldDbContext db =
-            scope.ServiceProvider.GetRequiredService<Data.ShieldDbContext>();
+        Data.ShieldDbContext db = scope.ServiceProvider.GetRequiredService<Data.ShieldDbContext>();
         IntegrationToken? row = db.IntegrationTokens.FirstOrDefault(t =>
             t.Provider == OAuthProvider.Slack
         );
@@ -181,12 +180,7 @@ public sealed class OAuthTests
     public async Task Callback_with_invalid_state_redirects_to_settings_with_error()
     {
         using ConfiguredOAuthFactory factory = new();
-        HttpClient client = factory.CreateClient(
-            new()
-            {
-                AllowAutoRedirect = false,
-            }
-        );
+        HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         HttpResponseMessage response = await client.GetAsync(
             "/api/oauth/github/callback?code=abc&state=bogus"
@@ -245,12 +239,7 @@ public sealed class OAuthTests
             google: false,
             singleUser: false
         );
-        HttpClient client = factory.CreateClient(
-            new()
-            {
-                AllowAutoRedirect = false,
-            }
-        );
+        HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         IOAuthStateStore stateStore = factory.Services.GetRequiredService<IOAuthStateStore>();
         const string state = "test-state-first";
@@ -311,12 +300,7 @@ public sealed class OAuthTests
             google: false,
             singleUser: false
         );
-        HttpClient client = factory.CreateClient(
-            new()
-            {
-                AllowAutoRedirect = false,
-            }
-        );
+        HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         // Seed a real user via the registration endpoint (first-user bootstrap path).
         await client.PostAsJsonAsync(
@@ -379,12 +363,7 @@ public sealed class OAuthTests
             google: false,
             singleUser: false
         );
-        HttpClient client = factory.CreateClient(
-            new()
-            {
-                AllowAutoRedirect = false,
-            }
-        );
+        HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         // Bootstrap an admin so we're past the "first user" branch; RegistrationOpen stays false.
         await client.PostAsJsonAsync(
@@ -433,9 +412,7 @@ public sealed class OAuthTests
         using IServiceScope scope = factory.Services.CreateScope();
         Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> users =
             scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
-        Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync(
-            "stranger@example.com"
-        );
+        Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync("stranger@example.com");
         rejected.Should().BeNull();
     }
 

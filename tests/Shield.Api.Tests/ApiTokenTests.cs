@@ -172,10 +172,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     private HttpClient NewBearerClient(string plaintext)
     {
         HttpClient client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new(
-            "Bearer",
-            plaintext
-        );
+        client.DefaultRequestHeaders.Authorization = new("Bearer", plaintext);
         return client;
     }
 

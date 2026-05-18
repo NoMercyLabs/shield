@@ -12,7 +12,9 @@ public static class ShieldUserAgent
     {
         Assembly assembly = Assembly.GetEntryAssembly() ?? typeof(ShieldUserAgent).Assembly;
         string version =
-            assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion
             ?? assembly.GetName().Version?.ToString()
             ?? "0.0.0";
         int plus = version.IndexOf('+');

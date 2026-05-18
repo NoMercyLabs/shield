@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -36,7 +37,7 @@ public sealed class NtfyChannel : IAlertChannel
 
         NtfyConfig? config = JsonSerializer.Deserialize<NtfyConfig>(
             cfg.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            ChannelJson.Options
         );
 
         if (config is null || !config.IsValid())
@@ -61,13 +62,13 @@ public sealed class NtfyChannel : IAlertChannel
         using StringContent content = new(body, Encoding.UTF8, "text/plain");
         using HttpRequestMessage request = new(HttpMethod.Post, config.Url) { Content = content };
         request.Headers.TryAddWithoutValidation("Title", title);
-        request.Headers.TryAddWithoutValidation("Priority", priority.ToString());
+        request.Headers.TryAddWithoutValidation(
+            "Priority",
+            priority.ToString(CultureInfo.InvariantCulture)
+        );
         request.Headers.TryAddWithoutValidation("Tags", tags);
         if (!string.IsNullOrWhiteSpace(config.AuthToken))
-            request.Headers.Authorization = new(
-                "Bearer",
-                config.AuthToken
-            );
+            request.Headers.Authorization = new("Bearer", config.AuthToken);
 
         HttpClient client = _httpClientFactory.CreateClient(HttpClientName);
         try

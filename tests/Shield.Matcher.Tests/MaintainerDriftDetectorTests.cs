@@ -8,8 +8,12 @@ public class MaintainerDriftDetectorTests
 {
     private readonly MaintainerDriftDetector _detector = new();
 
-    private static PackageMeta Meta(string maintainersJson, DateTime? publishedAt = null, bool deprecated = false)
-        => new()
+    private static PackageMeta Meta(
+        string maintainersJson,
+        DateTime? publishedAt = null,
+        bool deprecated = false
+    ) =>
+        new()
         {
             Id = Guid.NewGuid(),
             Ecosystem = Ecosystem.Npm,
@@ -28,7 +32,13 @@ public class MaintainerDriftDetectorTests
         PackageMeta previous = Meta("""["alice"]""");
         PackageMeta current = Meta("""["alice","mallory"]""", publishedAt: now.AddHours(-1));
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().HaveCount(1);
         drifts[0].Severity.Should().Be(Severity.High);
@@ -43,7 +53,13 @@ public class MaintainerDriftDetectorTests
         PackageMeta previous = Meta("""["alice"]""");
         PackageMeta current = Meta("""["alice","mallory"]""", publishedAt: now.AddDays(-30));
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().BeEmpty();
     }
@@ -55,7 +71,13 @@ public class MaintainerDriftDetectorTests
         PackageMeta previous = Meta("""["alice","bob"]""");
         PackageMeta current = Meta("""["alice"]""");
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().ContainSingle(advisory => advisory.Severity == Severity.Medium);
         drifts.Single().ExternalId.Should().Contain(":maintainer-dropped:");
@@ -68,7 +90,13 @@ public class MaintainerDriftDetectorTests
         PackageMeta previous = Meta("""["alice"]""", deprecated: false);
         PackageMeta current = Meta("""["alice"]""", deprecated: true);
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().ContainSingle(advisory => advisory.Severity == Severity.Low);
         drifts.Single().ExternalId.Should().Contain(":deprecated:");
@@ -81,7 +109,13 @@ public class MaintainerDriftDetectorTests
         PackageMeta previous = Meta("""["alice","bob"]""");
         PackageMeta current = Meta("""["alice","bob"]""");
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().BeEmpty();
     }
@@ -92,7 +126,13 @@ public class MaintainerDriftDetectorTests
         DateTime now = DateTime.UtcNow;
         PackageMeta current = Meta("""["alice","bob"]""", publishedAt: now);
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous: null, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous: null,
+            current,
+            now
+        );
 
         drifts.Should().BeEmpty();
     }
@@ -102,9 +142,18 @@ public class MaintainerDriftDetectorTests
     {
         DateTime now = DateTime.UtcNow;
         PackageMeta previous = Meta("""[{"name":"alice"}]""");
-        PackageMeta current = Meta("""[{"name":"alice"},{"name":"mallory"}]""", publishedAt: now.AddMinutes(-30));
+        PackageMeta current = Meta(
+            """[{"name":"alice"},{"name":"mallory"}]""",
+            publishedAt: now.AddMinutes(-30)
+        );
 
-        IReadOnlyList<Advisory> drifts = _detector.Detect(Ecosystem.Npm, "lodash", previous, current, now);
+        IReadOnlyList<Advisory> drifts = _detector.Detect(
+            Ecosystem.Npm,
+            "lodash",
+            previous,
+            current,
+            now
+        );
 
         drifts.Should().ContainSingle(advisory => advisory.Severity == Severity.High);
     }

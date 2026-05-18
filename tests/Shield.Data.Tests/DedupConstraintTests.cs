@@ -27,8 +27,10 @@ public class DedupConstraintTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        if (_db is not null) await _db.DisposeAsync();
-        if (_connection is not null) await _connection.DisposeAsync();
+        if (_db is not null)
+            await _db.DisposeAsync();
+        if (_connection is not null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public class DedupConstraintTests : IAsyncLifetime
             FirstSeenAt = now,
             LastSeenAt = now,
             State = FindingState.Open,
-            DedupKey = dedupKey
+            DedupKey = dedupKey,
         };
     }
 }

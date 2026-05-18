@@ -17,7 +17,10 @@ public class OsvFeedSyncTests
     {
         using OsvServerFixture fixture = new();
         fixture.StubBatch(OsvServerFixture.ReadFixture("querybatch-response.json"));
-        fixture.StubVuln("GHSA-npm-critical", OsvServerFixture.ReadFixture("vuln-npm-critical.json"));
+        fixture.StubVuln(
+            "GHSA-npm-critical",
+            OsvServerFixture.ReadFixture("vuln-npm-critical.json")
+        );
         fixture.StubVuln("GHSA-nuget-high", OsvServerFixture.ReadFixture("vuln-nuget-high.json"));
 
         OsvFeedSync sync = new(fixture.Client);
@@ -26,14 +29,32 @@ public class OsvFeedSyncTests
         [
             new(Ecosystem.Npm, "lodash", "4.17.20"),
             new(Ecosystem.Nuget, "Some.Nuget.Package", "1.2.0"),
-            new(Ecosystem.Npm, "clean", "1.0.0")
+            new(Ecosystem.Npm, "clean", "1.0.0"),
         ];
 
-        (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
+        (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(
+            state,
+            queries,
+            CancellationToken.None
+        );
 
         advisories.Should().HaveCount(2);
-        advisories.Should().Contain(a => a.ExternalId == "GHSA-npm-critical" && a.Ecosystem == Ecosystem.Npm && a.PackageName == "lodash" && a.Severity == Severity.Critical);
-        advisories.Should().Contain(a => a.ExternalId == "GHSA-nuget-high" && a.Ecosystem == Ecosystem.Nuget && a.PackageName == "Some.Nuget.Package" && a.Severity == Severity.High);
+        advisories
+            .Should()
+            .Contain(a =>
+                a.ExternalId == "GHSA-npm-critical"
+                && a.Ecosystem == Ecosystem.Npm
+                && a.PackageName == "lodash"
+                && a.Severity == Severity.Critical
+            );
+        advisories
+            .Should()
+            .Contain(a =>
+                a.ExternalId == "GHSA-nuget-high"
+                && a.Ecosystem == Ecosystem.Nuget
+                && a.PackageName == "Some.Nuget.Package"
+                && a.Severity == Severity.High
+            );
         result.Error.Should().BeNull();
         result.AdvisoriesIngested.Should().Be(2);
     }
@@ -43,12 +64,17 @@ public class OsvFeedSyncTests
     [InlineData("vuln-nuget-high.json", Severity.High, 7.5)]
     [InlineData("vuln-medium-no-score.json", Severity.Medium, null)]
     [InlineData("vuln-low-default.json", Severity.Low, null)]
-    public async Task SeverityMapping_CoversAllFourLevels(string fixtureFile, Severity expected, double? expectedCvss)
+    public async Task SeverityMapping_CoversAllFourLevels(
+        string fixtureFile,
+        Severity expected,
+        double? expectedCvss
+    )
     {
         using OsvServerFixture fixture = new();
         string vulnJson = OsvServerFixture.ReadFixture(fixtureFile);
         string vulnId = ExtractId(vulnJson);
-        string batchBody = $"{{\"results\":[{{\"vulns\":[{{\"id\":\"{vulnId}\",\"modified\":\"2026-04-10T12:00:00Z\"}}]}}]}}";
+        string batchBody =
+            $"{{\"results\":[{{\"vulns\":[{{\"id\":\"{vulnId}\",\"modified\":\"2026-04-10T12:00:00Z\"}}]}}]}}";
 
         fixture.StubBatch(batchBody);
         fixture.StubVuln(vulnId, vulnJson);
@@ -57,12 +83,18 @@ public class OsvFeedSyncTests
         FeedSyncState state = new() { Feed = Feed.Osv };
         OsvQuery[] queries = [new(Ecosystem.Npm, "any", "1.0.0")];
 
-        (IReadOnlyList<Advisory> advisories, FeedSyncResult _) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
+        (IReadOnlyList<Advisory> advisories, FeedSyncResult _) = await sync.QueryBatchAsync(
+            state,
+            queries,
+            CancellationToken.None
+        );
 
         advisories.Should().NotBeEmpty();
         advisories[0].Severity.Should().Be(expected);
-        if (expectedCvss is not null) advisories[0].Cvss.Should().Be(expectedCvss);
-        else advisories[0].Cvss.Should().BeNull();
+        if (expectedCvss is not null)
+            advisories[0].Cvss.Should().Be(expectedCvss);
+        else
+            advisories[0].Cvss.Should().BeNull();
     }
 
     [Fact]
@@ -70,7 +102,10 @@ public class OsvFeedSyncTests
     {
         using OsvServerFixture fixture = new();
         fixture.StubBatch(OsvServerFixture.ReadFixture("querybatch-response.json"));
-        fixture.StubVuln("GHSA-npm-critical", OsvServerFixture.ReadFixture("vuln-npm-critical.json"));
+        fixture.StubVuln(
+            "GHSA-npm-critical",
+            OsvServerFixture.ReadFixture("vuln-npm-critical.json")
+        );
         fixture.StubVuln("GHSA-nuget-high", OsvServerFixture.ReadFixture("vuln-nuget-high.json"));
 
         OsvFeedSync sync = new(fixture.Client);
@@ -78,14 +113,20 @@ public class OsvFeedSyncTests
         FeedSyncState state = new()
         {
             Feed = Feed.Osv,
-            Cursor = initialCursor.ToString("O", CultureInfo.InvariantCulture)
+            Cursor = initialCursor.ToString("O", CultureInfo.InvariantCulture),
         };
         OsvQuery[] queries = [new(Ecosystem.Npm, "lodash", "4.17.20")];
 
-        (IReadOnlyList<Advisory> _, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
+        (IReadOnlyList<Advisory> _, FeedSyncResult result) = await sync.QueryBatchAsync(
+            state,
+            queries,
+            CancellationToken.None
+        );
 
         result.NextCursor.Should().NotBeNull();
-        DateTime parsed = DateTime.Parse(result.NextCursor!, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind).ToUniversalTime();
+        DateTime parsed = DateTime
+            .Parse(result.NextCursor!, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+            .ToUniversalTime();
         parsed.Should().Be(new(2026, 5, 1, 8, 30, 0, DateTimeKind.Utc));
     }
 
@@ -93,13 +134,17 @@ public class OsvFeedSyncTests
     public async Task Retries_OnHttp429_ViaPollyPolicy()
     {
         using OsvServerFixture fixture = new();
-        string batchBody = "{\"results\":[{\"vulns\":[{\"id\":\"GHSA-npm-critical\",\"modified\":\"2026-04-10T12:00:00Z\"}]}]}";
+        string batchBody =
+            "{\"results\":[{\"vulns\":[{\"id\":\"GHSA-npm-critical\",\"modified\":\"2026-04-10T12:00:00Z\"}]}]}";
         fixture.StubBatch(batchBody);
-        fixture.StubVuln("GHSA-npm-critical", OsvServerFixture.ReadFixture("vuln-npm-critical.json"));
+        fixture.StubVuln(
+            "GHSA-npm-critical",
+            OsvServerFixture.ReadFixture("vuln-npm-critical.json")
+        );
 
         FailNTimesHandler failer = new(2, HttpStatusCode.TooManyRequests, "/v1/querybatch")
         {
-            InnerHandler = new HttpClientHandler()
+            InnerHandler = new HttpClientHandler(),
         };
         PollyHttpRetryHandler polly = new() { InnerHandler = failer };
 
@@ -109,7 +154,11 @@ public class OsvFeedSyncTests
         FeedSyncState state = new() { Feed = Feed.Osv };
         OsvQuery[] queries = [new(Ecosystem.Npm, "lodash", "4.17.20")];
 
-        (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
+        (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(
+            state,
+            queries,
+            CancellationToken.None
+        );
 
         result.Error.Should().BeNull();
         advisories.Should().ContainSingle(a => a.ExternalId == "GHSA-npm-critical");

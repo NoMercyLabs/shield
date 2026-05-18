@@ -43,7 +43,7 @@ public sealed class SlackChannel : IAlertChannel
 
         SlackConfig? config = JsonSerializer.Deserialize<SlackConfig>(
             cfg.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            ChannelJson.Options
         );
 
         if (config is null || !config.IsValid())
@@ -236,7 +236,9 @@ public sealed class SlackChannel : IAlertChannel
         int extra = findings.Count - previewCount;
         IEnumerable<string> lines = findings
             .Take(previewCount)
-            .Select(finding => $"• [{finding.Severity}] {finding.Notes ?? $"`{finding.DedupKey}`"}");
+            .Select(finding =>
+                $"• [{finding.Severity}] {finding.Notes ?? $"`{finding.DedupKey}`"}"
+            );
         string text = string.Join("\n", lines);
         if (extra > 0)
             text += $"\nand {extra} more";

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Shield.Core.Domain;
 using Shield.Core.Results;
@@ -31,7 +32,7 @@ internal static class PackageLockParser
             List<InventoryItem> items = new();
             Dictionary<string, string> diagnostics = new(StringComparer.Ordinal)
             {
-                ["lockfileVersion"] = lockfileVersion.ToString(),
+                ["lockfileVersion"] = lockfileVersion.ToString(CultureInfo.InvariantCulture),
             };
 
             if (

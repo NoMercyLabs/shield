@@ -28,13 +28,15 @@ public sealed class AlertDispatcher
 
         foreach (AlertChannel channel in configuredChannels)
         {
-            if (!channel.Enabled) continue;
+            if (!channel.Enabled)
+                continue;
 
             List<Finding> matched = pendingFindings
                 .Where(finding => finding.Severity >= channel.MinSeverity)
                 .ToList();
 
-            if (matched.Count == 0) continue;
+            if (matched.Count == 0)
+                continue;
 
             if (!_channels.TryGetValue(channel.Type, out IAlertChannel? impl))
             {
@@ -43,8 +45,14 @@ public sealed class AlertDispatcher
                     channel.Type,
                     channel.Id
                 );
-                events.AddRange(BuildEvents(matched, channel.Id, AlertStatus.Failed,
-                    $"No channel implementation for {channel.Type}"));
+                events.AddRange(
+                    BuildEvents(
+                        matched,
+                        channel.Id,
+                        AlertStatus.Failed,
+                        $"No channel implementation for {channel.Type}"
+                    )
+                );
                 continue;
             }
 
@@ -60,15 +68,17 @@ public sealed class AlertDispatcher
             {
                 AlertResult result = await SafeSendAsync(impl, channel, [finding], ct);
                 AlertStatus status = result.Success ? AlertStatus.Sent : AlertStatus.Failed;
-                events.Add(new()
-                {
-                    Id = Guid.NewGuid(),
-                    FindingId = finding.Id,
-                    ChannelId = channel.Id,
-                    SentAt = DateTime.UtcNow,
-                    Status = status,
-                    Error = result.Error,
-                });
+                events.Add(
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        FindingId = finding.Id,
+                        ChannelId = channel.Id,
+                        SentAt = DateTime.UtcNow,
+                        Status = status,
+                        Error = result.Error,
+                    }
+                );
             }
         }
 

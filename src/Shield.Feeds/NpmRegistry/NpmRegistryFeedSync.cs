@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shield.Core.Abstractions;
@@ -64,7 +65,10 @@ public sealed class NpmRegistryFeedSync : IFeedSync, IDisposable
                 }
             }
 
-            string cursor = fetchedAt.ToString("yyyy-MM-ddTHH:mm:ssZ");
+            string cursor = fetchedAt.ToString(
+                "yyyy-MM-ddTHH:mm:ssZ",
+                CultureInfo.InvariantCulture
+            );
             state.Cursor = cursor;
             return FeedSyncResult.Ok(0, totalPackageMeta, cursor);
         }

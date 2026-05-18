@@ -8,16 +8,16 @@ namespace Shield.Matcher.Tests;
 
 public class AdvisoryMatcherTests
 {
-    private static AdvisoryMatcher BuildMatcher()
-        => new([
+    private static AdvisoryMatcher BuildMatcher() =>
+        new([
             new SemverVersionComparer(Ecosystem.Npm),
             new SemverVersionComparer(Ecosystem.Composer),
             new NugetVersionComparer(),
-            new GradleVersionComparer()
+            new GradleVersionComparer(),
         ]);
 
-    private static InventorySnapshot Snapshot(int sourceId = 7, Guid? id = null)
-        => new()
+    private static InventorySnapshot Snapshot(int sourceId = 7, Guid? id = null) =>
+        new()
         {
             Id = id ?? Guid.NewGuid(),
             SourceId = sourceId,
@@ -26,8 +26,8 @@ public class AdvisoryMatcherTests
             ItemCount = 0,
         };
 
-    private static InventoryItem Item(int id, Ecosystem eco, string name, string version)
-        => new()
+    private static InventoryItem Item(int id, Ecosystem eco, string name, string version) =>
+        new()
         {
             Id = id,
             Ecosystem = eco,
@@ -37,9 +37,14 @@ public class AdvisoryMatcherTests
             IsDirect = true,
         };
 
-    private static Advisory Advisory(Ecosystem eco, string pkg, string externalId, string rangeJson,
-        Severity severity = Severity.High)
-        => new()
+    private static Advisory Advisory(
+        Ecosystem eco,
+        string pkg,
+        string externalId,
+        string rangeJson,
+        Severity severity = Severity.High
+    ) =>
+        new()
         {
             Id = Guid.NewGuid(),
             Feed = Feed.Osv,
@@ -64,14 +69,16 @@ public class AdvisoryMatcherTests
             Ecosystem.Npm,
             "lodash",
             "GHSA-test-1",
-            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]""");
+            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]"""
+        );
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
             [item],
             [advisory],
             [],
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
         findings.Should().HaveCount(1);
         findings[0].State.Should().Be(FindingState.Open);
@@ -89,14 +96,16 @@ public class AdvisoryMatcherTests
             Ecosystem.Npm,
             "lodash",
             "GHSA-test-2",
-            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]""");
+            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]"""
+        );
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
             [item],
             [advisory],
             [],
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
         findings.Should().BeEmpty();
     }
@@ -111,15 +120,11 @@ public class AdvisoryMatcherTests
             Ecosystem.Npm,
             "lodash",
             "GHSA-dedup",
-            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]""");
+            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]"""
+        );
 
         DateTime firstRun = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        IReadOnlyList<Finding> first = matcher.Match(
-            snapshot,
-            [item],
-            [advisory],
-            [],
-            firstRun);
+        IReadOnlyList<Finding> first = matcher.Match(snapshot, [item], [advisory], [], firstRun);
 
         Finding firstFinding = first.Single();
         Guid originalId = firstFinding.Id;
@@ -130,7 +135,8 @@ public class AdvisoryMatcherTests
             [item],
             [advisory],
             [firstFinding],
-            secondRun);
+            secondRun
+        );
 
         second.Should().HaveCount(1);
         second[0].Id.Should().Be(originalId);
@@ -148,14 +154,16 @@ public class AdvisoryMatcherTests
             Ecosystem.Nuget,
             "Newtonsoft.Json",
             "GHSA-nuget-1",
-            """[ { "events": [ { "introduced": "0" }, { "fixed": "13.0.1" } ] } ]""");
+            """[ { "events": [ { "introduced": "0" }, { "fixed": "13.0.1" } ] } ]"""
+        );
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
             [item],
             [advisory],
             [],
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
         string expected = DedupKey.Compute(42, Ecosystem.Nuget, "Newtonsoft.Json", "GHSA-nuget-1");
         findings.Single().DedupKey.Should().Be(expected);
@@ -171,14 +179,16 @@ public class AdvisoryMatcherTests
             Ecosystem.Nuget,
             "shared-name",
             "GHSA-other-eco",
-            """[ { "events": [ { "introduced": "0" } ] } ]""");
+            """[ { "events": [ { "introduced": "0" } ] } ]"""
+        );
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
             [item],
             [advisory],
             [],
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
         findings.Should().BeEmpty();
     }

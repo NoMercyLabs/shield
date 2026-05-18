@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Shield.Api.Services.Ecosystems;
 using Shield.Api.Services.ManifestEditors;
@@ -316,10 +317,14 @@ public sealed class UpdateApplier : IUpdateApplier
         string scopeLabel = scope == UpdateApplyScope.LatestMinor ? "minor" : "latest";
         string title = $"chore(deps): bump {bumps.Count} packages to {scopeLabel}";
         StringBuilder body = new();
-        body.AppendLine($"Automated dependency bump by Shield ({scopeLabel} scope).\n");
+        body.AppendLine(
+            CultureInfo.InvariantCulture,
+            $"Automated dependency bump by Shield ({scopeLabel} scope).\n"
+        );
         foreach (PackageUpdate bump in bumps.OrderBy(b => b.Ecosystem).ThenBy(b => b.Name))
         {
             body.AppendLine(
+                CultureInfo.InvariantCulture,
                 $"- `{bump.Name}` `{bump.CurrentVersion}` → `{bump.LatestVersion}` ({bump.Ecosystem})"
             );
         }

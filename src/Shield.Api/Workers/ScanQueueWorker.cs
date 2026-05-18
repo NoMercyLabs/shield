@@ -1,3 +1,4 @@
+using System.Globalization;
 using Shield.Api.Services.BulkFix;
 using Shield.Api.Workers.Queues;
 using Shield.Core.Results;
@@ -192,7 +193,7 @@ public sealed class ScanQueueWorker : BackgroundService
                         $"Scan failed: {source.Name}",
                         error,
                         relatedType: "Source",
-                        relatedId: source.Id.ToString(),
+                        relatedId: source.Id.ToString(CultureInfo.InvariantCulture),
                         ct
                     );
                 }
@@ -258,7 +259,7 @@ public sealed class ScanQueueWorker : BackgroundService
                         $"Scan failed: {source.Name}",
                         tracked.ErrorMessage ?? "Scan threw",
                         relatedType: "Source",
-                        relatedId: source.Id.ToString(),
+                        relatedId: source.Id.ToString(CultureInfo.InvariantCulture),
                         ct
                     );
                 }
@@ -345,7 +346,7 @@ public sealed class ScanQueueWorker : BackgroundService
                     $"Auto-fix PR opened for {source.Name}",
                     $"{applyResult.Entries.Count} packages bumped — {applyResult.PullRequestUrl}",
                     relatedType: "Source",
-                    relatedId: source.Id.ToString(),
+                    relatedId: source.Id.ToString(CultureInfo.InvariantCulture),
                     ct
                 );
             }

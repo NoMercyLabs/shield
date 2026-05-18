@@ -145,11 +145,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
         GhsaGraphQLClient client = new(http);
         InMemoryAdvisorySink sink = new();
         GhsaOptions options = new() { PageSize = 100 };
-        GhsaFeedSync feedSync = new(
-            client,
-            sink,
-            Options.Create(options)
-        );
+        GhsaFeedSync feedSync = new(client, sink, Options.Create(options));
 
         FeedSyncState state = new() { Feed = Feed.Ghsa, Cursor = "2026-04-01T00:00:00Z" };
         FeedSyncResult result = await feedSync.SyncAsync(state, CancellationToken.None);
@@ -159,15 +155,13 @@ public sealed class GhsaFeedSyncTests : IDisposable
         sink.Advisories.Should().HaveCount(5);
         sink.Advisories.Select(advisory => advisory.ExternalId)
             .Should()
-            .Contain(
-                [
-                    "GHSA-aaaa-aaaa-aaaa",
-                    "GHSA-bbbb-bbbb-bbbb",
-                    "GHSA-cccc-cccc-cccc",
-                    "GHSA-dddd-dddd-dddd",
-                    "GHSA-eeee-eeee-eeee"
-                ]
-            );
+            .Contain([
+                "GHSA-aaaa-aaaa-aaaa",
+                "GHSA-bbbb-bbbb-bbbb",
+                "GHSA-cccc-cccc-cccc",
+                "GHSA-dddd-dddd-dddd",
+                "GHSA-eeee-eeee-eeee",
+            ]);
 
         result.NextCursor.Should().NotBeNull();
         DateTime cursorParsed = DateTime.Parse(
@@ -187,11 +181,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
         GhsaGraphQLClient client = new(http);
         InMemoryAdvisorySink sink = new();
         GhsaOptions options = new();
-        GhsaFeedSync feedSync = new(
-            client,
-            sink,
-            Options.Create(options)
-        );
+        GhsaFeedSync feedSync = new(client, sink, Options.Create(options));
 
         feedSync.Feed.Should().Be(Feed.Ghsa);
     }

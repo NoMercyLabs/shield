@@ -1,0 +1,12 @@
+root = false
+
+# EF Core scaffolds these. We don't hand-edit them, so analyzer rules on naming /
+# constant-array-arguments don't apply — the templates emit what they emit.
+[*.cs]
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1310.severity = none
+dotnet_diagnostic.CA1866.severity = none
+dotnet_diagnostic.CA1865.severity = none
+dotnet_diagnostic.CA1847.severity = none

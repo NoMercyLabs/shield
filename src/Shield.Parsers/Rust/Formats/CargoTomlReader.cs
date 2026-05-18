@@ -20,7 +20,7 @@ internal static class CargoTomlReader
             if (line.Length == 0)
                 continue;
 
-            if (line.StartsWith("[["))
+            if (line.StartsWith("[[", StringComparison.Ordinal))
             {
                 if (current is not null)
                     packages.Add(current);
@@ -36,7 +36,7 @@ internal static class CargoTomlReader
                 continue;
             }
 
-            if (line.StartsWith("["))
+            if (line.StartsWith('['))
             {
                 if (current is not null)
                     packages.Add(current);
@@ -54,7 +54,7 @@ internal static class CargoTomlReader
             string key = line[..eq].Trim();
             string valuePart = line[(eq + 1)..].Trim();
 
-            if (valuePart.StartsWith("["))
+            if (valuePart.StartsWith('['))
             {
                 List<string> array = ReadArray(lines, ref index, valuePart);
                 if (string.Equals(key, "dependencies", StringComparison.Ordinal))
@@ -99,12 +99,12 @@ internal static class CargoTomlReader
             if (line.Length == 0)
                 continue;
 
-            if (line.StartsWith("[["))
+            if (line.StartsWith("[[", StringComparison.Ordinal))
             {
                 currentSection = null;
                 continue;
             }
-            if (line.StartsWith("["))
+            if (line.StartsWith('['))
             {
                 string header = line.Trim('[', ']').Trim();
                 currentSection = result.ContainsKey(header) ? header : null;

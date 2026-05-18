@@ -54,7 +54,7 @@ internal static class PipfileLockParser
             )
             {
                 string raw = vEl.GetString() ?? string.Empty;
-                version = raw.StartsWith("==") ? raw[2..] : raw;
+                version = raw.StartsWith("==", StringComparison.Ordinal) ? raw[2..] : raw;
             }
 
             if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(version))

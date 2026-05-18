@@ -35,31 +35,33 @@ public class DiscordChannelTests : IDisposable
         _provider.Dispose();
     }
 
-    private static Finding NewFinding(Severity severity) => new()
-    {
-        Id = Guid.NewGuid(),
-        SourceId = 1,
-        InventoryItemId = 1,
-        AdvisoryRefId = Guid.NewGuid(),
-        Severity = severity,
-        FirstSeenAt = DateTime.UtcNow,
-        LastSeenAt = DateTime.UtcNow,
-        State = FindingState.Open,
-        DedupKey = Guid.NewGuid().ToString("N"),
-        Notes = $"finding-{severity}",
-    };
+    private static Finding NewFinding(Severity severity) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            SourceId = 1,
+            InventoryItemId = 1,
+            AdvisoryRefId = Guid.NewGuid(),
+            Severity = severity,
+            FirstSeenAt = DateTime.UtcNow,
+            LastSeenAt = DateTime.UtcNow,
+            State = FindingState.Open,
+            DedupKey = Guid.NewGuid().ToString("N"),
+            Notes = $"finding-{severity}",
+        };
 
-    private AlertChannel NewChannel() => new()
-    {
-        Id = Guid.NewGuid(),
-        Type = ChannelType.Discord,
-        Name = "discord",
-        ConfigJsonEncrypted = JsonSerializer.Serialize(
-            new { webhookUrl = $"{_server.Urls[0]}/webhooks/1/abc" }
-        ),
-        MinSeverity = Severity.Low,
-        Enabled = true,
-    };
+    private AlertChannel NewChannel() =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            Type = ChannelType.Discord,
+            Name = "discord",
+            ConfigJsonEncrypted = JsonSerializer.Serialize(
+                new { webhookUrl = $"{_server.Urls[0]}/webhooks/1/abc" }
+            ),
+            MinSeverity = Severity.Low,
+            Enabled = true,
+        };
 
     [Fact]
     public async Task SingleFindingPostsOneEmbedWithSeverityColor()
@@ -107,7 +109,8 @@ public class DiscordChannelTests : IDisposable
         );
 
         // Inject 11 findings so digest preview (10) + "and 1 more" lands.
-        List<Finding> findings = Enumerable.Range(0, 11)
+        List<Finding> findings = Enumerable
+            .Range(0, 11)
             .Select(_ => NewFinding(Severity.High))
             .ToList();
 
@@ -163,8 +166,12 @@ public class DiscordChannelTests : IDisposable
     {
         _server
             .Given(Request.Create().WithPath("/webhooks/1/abc").UsingPost())
-            .RespondWith(Response.Create().WithStatusCode((int)HttpStatusCode.BadRequest)
-                .WithBody("bad webhook"));
+            .RespondWith(
+                Response
+                    .Create()
+                    .WithStatusCode((int)HttpStatusCode.BadRequest)
+                    .WithBody("bad webhook")
+            );
 
         DiscordWebhookChannel channel = new(
             _httpClientFactory,

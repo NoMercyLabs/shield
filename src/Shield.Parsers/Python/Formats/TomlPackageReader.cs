@@ -22,7 +22,7 @@ internal static class TomlPackageReader
             if (line.Length == 0)
                 continue;
 
-            if (line.StartsWith("[["))
+            if (line.StartsWith("[[", StringComparison.Ordinal))
             {
                 if (current is not null)
                     packages.Add(current);
@@ -39,7 +39,7 @@ internal static class TomlPackageReader
                 continue;
             }
 
-            if (line.StartsWith("["))
+            if (line.StartsWith('['))
             {
                 string header = line.Trim('[', ']').Trim();
                 // [package.dependencies] / [package.source] / [package.extras] stay within the
@@ -79,7 +79,7 @@ internal static class TomlPackageReader
             if (subSection.Length > 0)
                 continue;
 
-            if (valuePart.StartsWith("\"\"\""))
+            if (valuePart.StartsWith("\"\"\"", StringComparison.Ordinal))
             {
                 // Skip multiline string blocks.
                 int closingIndex = FindMultilineClose(lines, index + 1);
@@ -88,7 +88,7 @@ internal static class TomlPackageReader
                 continue;
             }
 
-            if (valuePart.StartsWith("["))
+            if (valuePart.StartsWith('['))
             {
                 List<string> arrayItems = ReadInlineOrMultilineArray(lines, ref index, valuePart);
                 if (string.Equals(key, "dependencies", StringComparison.Ordinal))
@@ -96,7 +96,7 @@ internal static class TomlPackageReader
                 continue;
             }
 
-            if (valuePart.StartsWith("{"))
+            if (valuePart.StartsWith('{'))
             {
                 // Skip inline table (e.g. source = { ... }), but flag source presence.
                 if (string.Equals(key, "source", StringComparison.Ordinal))
@@ -151,12 +151,12 @@ internal static class TomlPackageReader
             if (line.Length == 0)
                 continue;
 
-            if (line.StartsWith("[["))
+            if (line.StartsWith("[[", StringComparison.Ordinal))
             {
                 currentSection = null;
                 continue;
             }
-            if (line.StartsWith("["))
+            if (line.StartsWith('['))
             {
                 string header = line.Trim('[', ']').Trim();
                 currentSection = result.ContainsKey(header) ? header : null;

@@ -88,9 +88,7 @@ public sealed class GithubAccessResolverTests
 
         int sourceOtherOrg = await SeedSourceAsync(factory, "SomeoneElse", "thing");
 
-        factory.Handler.Responses.Add(
-            new(HttpStatusCode.OK, """[ { "login": "Strangers" } ]""")
-        );
+        factory.Handler.Responses.Add(new(HttpStatusCode.OK, """[ { "login": "Strangers" } ]"""));
 
         IGithubAccessResolver resolver =
             factory.Services.GetRequiredService<IGithubAccessResolver>();
@@ -113,10 +111,7 @@ public sealed class GithubAccessResolverTests
         await SeedSourceAsync(factory, "NoMercy-Entertainment", "media-server");
 
         factory.Handler.Responses.Add(
-            new(
-                HttpStatusCode.OK,
-                """[ { "login": "NoMercy-Entertainment" } ]"""
-            )
+            new(HttpStatusCode.OK, """[ { "login": "NoMercy-Entertainment" } ]""")
         );
 
         IGithubAccessResolver resolver =
@@ -142,16 +137,10 @@ public sealed class GithubAccessResolverTests
         await SeedSourceAsync(factory, "NoMercy-Entertainment", "media-server");
 
         factory.Handler.Responses.Add(
-            new(
-                HttpStatusCode.OK,
-                """[ { "login": "NoMercy-Entertainment" } ]"""
-            )
+            new(HttpStatusCode.OK, """[ { "login": "NoMercy-Entertainment" } ]""")
         );
         factory.Handler.Responses.Add(
-            new(
-                HttpStatusCode.OK,
-                """[ { "login": "NoMercy-Entertainment" } ]"""
-            )
+            new(HttpStatusCode.OK, """[ { "login": "NoMercy-Entertainment" } ]""")
         );
 
         IGithubAccessResolver resolver =
@@ -187,10 +176,7 @@ public sealed class GithubAccessResolverTests
         if (withGithubLogin)
         {
             string subject = githubSubject ?? "999";
-            await userManager.AddLoginAsync(
-                user,
-                new("Github", subject, user.UserName)
-            );
+            await userManager.AddLoginAsync(user, new("Github", subject, user.UserName));
 
             IOAuthTokenStore tokenStore =
                 scope.ServiceProvider.GetRequiredService<IOAuthTokenStore>();

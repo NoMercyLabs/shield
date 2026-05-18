@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -36,7 +37,7 @@ public sealed class WebhookChannel : IAlertChannel
 
         WebhookConfig? config = JsonSerializer.Deserialize<WebhookConfig>(
             cfg.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            ChannelJson.Options
         );
 
         if (config is null || !config.IsValid())
@@ -112,8 +113,8 @@ public sealed class WebhookChannel : IAlertChannel
             ["advisoryId"] = anchor.AdvisoryRefId.ToString(),
             ["summary"] = anchor.Notes ?? string.Empty,
             ["findingId"] = anchor.Id.ToString(),
-            ["sourceName"] = anchor.SourceId.ToString(),
-            ["count"] = (digest ? findings.Count : 1).ToString(),
+            ["sourceName"] = anchor.SourceId.ToString(CultureInfo.InvariantCulture),
+            ["count"] = (digest ? findings.Count : 1).ToString(CultureInfo.InvariantCulture),
         };
 
         StringBuilder sb = new(template.Length);

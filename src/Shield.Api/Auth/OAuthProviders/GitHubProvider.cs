@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -152,7 +153,11 @@ public sealed class GitHubProvider : IOAuthProvider
     )
     {
         HttpClient http = _httpClientFactory.CreateClient("oauth");
-        string url = string.Format(RevokeUrlTemplate, config.ClientId);
+        string url = string.Format(
+            CultureInfo.InvariantCulture,
+            RevokeUrlTemplate,
+            config.ClientId
+        );
         using HttpRequestMessage request = new(HttpMethod.Delete, url)
         {
             Content = JsonContent.Create(new { access_token = token.AccessToken }),

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Shield.Api.Services.BulkFix;
 
 public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
@@ -143,7 +145,7 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
         await _audit.RecordAsync(
             "source.bulk_apply",
             "Source",
-            source.Id.ToString(),
+            source.Id.ToString(CultureInfo.InvariantCulture),
             details: new
             {
                 packages = result.Entries.Select(entry => entry.PackageName).ToList(),

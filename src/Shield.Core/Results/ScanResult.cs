@@ -12,6 +12,5 @@ public sealed record ScanResult(
     public static ScanResult Ok(InventorySnapshot snapshot, IReadOnlyList<InventoryItem> items) =>
         new(snapshot, items, true, null);
 
-    public static ScanResult Fail(string error) =>
-        new(null, [], false, error);
+    public static ScanResult Fail(string error) => new(null, [], false, error);
 }

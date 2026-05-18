@@ -28,7 +28,7 @@ public class Source
 
     public AutoFixMode AutoFixMode { get; set; } = AutoFixMode.Off;
 
-    public bool IsProduction { get; set; } = false;
+    public bool IsProduction { get; set; }
 
     // Minimum age (hours) a candidate target version must have on its registry before any
     // bulk-apply path will bump to it. Defaults to 48h to side-step the npm/typosquat window.

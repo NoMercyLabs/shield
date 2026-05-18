@@ -1,3 +1,4 @@
+using System.Globalization;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 
@@ -41,7 +42,7 @@ internal static class CargoTomlParser
 
         if (items.Count == 0)
             diagnostics["error"] = "noDependenciesFound";
-        diagnostics["unpinned"] = items.Count.ToString();
+        diagnostics["unpinned"] = items.Count.ToString(CultureInfo.InvariantCulture);
 
         return ParseResult.Ok(items, diagnostics);
     }

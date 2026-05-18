@@ -79,14 +79,16 @@ public sealed class ForwardedHeadersTests
         options
             .Value.KnownIPNetworks.Should()
             .Contain(network =>
-                network.BaseAddress.Equals(IPAddress.Parse("10.0.0.0")) && network.PrefixLength == 24
+                network.BaseAddress.Equals(IPAddress.Parse("10.0.0.0"))
+                && network.PrefixLength == 24
             );
         // System.Net.IPNetwork canonicalises the base address: bits beyond PrefixLength are
         // zeroed, so 192.168.1.0/16 → 192.168.0.0/16.
         options
             .Value.KnownIPNetworks.Should()
             .Contain(network =>
-                network.BaseAddress.Equals(IPAddress.Parse("192.168.0.0")) && network.PrefixLength == 16
+                network.BaseAddress.Equals(IPAddress.Parse("192.168.0.0"))
+                && network.PrefixLength == 16
             );
     }
 

@@ -113,10 +113,7 @@ public class SmtpChannelTests
             .IsValid()
             .Should()
             .BeTrue();
-        new SmtpConfig("", 587, true, null, null, "from@x", ["to@x"])
-            .IsValid()
-            .Should()
-            .BeFalse();
+        new SmtpConfig("", 587, true, null, null, "from@x", ["to@x"]).IsValid().Should().BeFalse();
         new SmtpConfig("smtp.example.com", 0, true, null, null, "from@x", ["to@x"])
             .IsValid()
             .Should()

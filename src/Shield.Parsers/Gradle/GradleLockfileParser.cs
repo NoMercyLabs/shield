@@ -46,7 +46,11 @@ public sealed class GradleLockfileParser : IParser
         foreach (string rawLine in text.Split('\n'))
         {
             string line = rawLine.Trim();
-            if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("empty="))
+            if (
+                line.Length == 0
+                || line.StartsWith('#')
+                || line.StartsWith("empty=", StringComparison.Ordinal)
+            )
                 continue;
 
             int equalsIndex = line.IndexOf('=');

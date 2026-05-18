@@ -33,20 +33,22 @@ public sealed class DiscordWebhookChannel : IAlertChannel
         CancellationToken ct
     )
     {
-        if (findings.Count == 0) return AlertResult.Ok(0);
+        if (findings.Count == 0)
+            return AlertResult.Ok(0);
 
         // Encryption deferred — Phase 2: ConfigJsonEncrypted is plaintext today.
         DiscordConfig? config = JsonSerializer.Deserialize<DiscordConfig>(
             cfg.ConfigJsonEncrypted,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            ChannelJson.Options
         );
 
         if (config is null || !config.IsValid())
             return AlertResult.Fail("Discord webhook URL invalid or missing");
 
-        object payload = findings.Count >= DigestThreshold
-            ? BuildDigestPayload(findings)
-            : BuildSinglePayload(findings[0]);
+        object payload =
+            findings.Count >= DigestThreshold
+                ? BuildDigestPayload(findings)
+                : BuildSinglePayload(findings[0]);
 
         HttpClient client = _httpClientFactory.CreateClient(HttpClientName);
 
@@ -78,25 +80,41 @@ public sealed class DiscordWebhookChannel : IAlertChannel
         }
     }
 
-    private static object BuildSinglePayload(Finding finding) => new
-    {
-        embeds = new[]
+    private static object BuildSinglePayload(Finding finding) =>
+        new
         {
-            new
+            embeds = new[]
             {
-                title = $"Shield · {finding.Severity} finding",
-                description = finding.Notes ?? $"Finding {finding.Id}",
-                color = ColorFor(finding.Severity),
-                fields = new[]
+                new
                 {
-                    new { name = "Severity", value = finding.Severity.ToString(), inline = true },
-                    new { name = "State", value = finding.State.ToString(), inline = true },
-                    new { name = "Dedup", value = finding.DedupKey, inline = false },
+                    title = $"Shield · {finding.Severity} finding",
+                    description = finding.Notes ?? $"Finding {finding.Id}",
+                    color = ColorFor(finding.Severity),
+                    fields = new[]
+                    {
+                        new
+                        {
+                            name = "Severity",
+                            value = finding.Severity.ToString(),
+                            inline = true,
+                        },
+                        new
+                        {
+                            name = "State",
+                            value = finding.State.ToString(),
+                            inline = true,
+                        },
+                        new
+                        {
+                            name = "Dedup",
+                            value = finding.DedupKey,
+                            inline = false,
+                        },
+                    },
+                    timestamp = finding.LastSeenAt.ToString("o"),
                 },
-                timestamp = finding.LastSeenAt.ToString("o"),
             },
-        },
-    };
+        };
 
     private static object BuildDigestPayload(IReadOnlyList<Finding> findings)
     {
@@ -109,7 +127,8 @@ public sealed class DiscordWebhookChannel : IAlertChannel
             .Select(finding => $"• [{finding.Severity}] {finding.Notes ?? finding.DedupKey}");
 
         string description = string.Join("\n", lines);
-        if (extra > 0) description += $"\nand {extra} more";
+        if (extra > 0)
+            description += $"\nand {extra} more";
 
         return new
         {
@@ -126,12 +145,13 @@ public sealed class DiscordWebhookChannel : IAlertChannel
         };
     }
 
-    private static int ColorFor(Severity severity) => severity switch
-    {
-        Severity.Critical => 0xff3344,
-        Severity.High => 0xff8800,
-        Severity.Medium => 0xffd633,
-        Severity.Low => 0x66cc66,
-        _ => 0x808080,
-    };
+    private static int ColorFor(Severity severity) =>
+        severity switch
+        {
+            Severity.Critical => 0xff3344,
+            Severity.High => 0xff8800,
+            Severity.Medium => 0xffd633,
+            Severity.Low => 0x66cc66,
+            _ => 0x808080,
+        };
 }

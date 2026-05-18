@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shield.Core.Abstractions;
@@ -64,7 +65,10 @@ public sealed class GhsaFeedSync : IFeedSync
                         node.PublishedAt,
                         DateTimeKind.Utc
                     );
-                    lastPublishedAtIso = advisoryPublishedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    lastPublishedAtIso = advisoryPublishedUtc.ToString(
+                        "yyyy-MM-ddTHH:mm:ssZ",
+                        CultureInfo.InvariantCulture
+                    );
                 }
 
                 if (!page.HasNextPage || page.EndCursor is null)

@@ -14,7 +14,11 @@ public class PnpmTests
         NpmLockParser parser = new();
         using Stream stream = FixtureLoader.Open("pnpm-lock.yaml");
 
-        ParseResult result = await parser.ParseAsync(stream, "pnpm-lock.yaml", CancellationToken.None);
+        ParseResult result = await parser.ParseAsync(
+            stream,
+            "pnpm-lock.yaml",
+            CancellationToken.None
+        );
 
         result.Success.Should().BeTrue(result.Error);
         result.Items.Should().HaveCount(7);
