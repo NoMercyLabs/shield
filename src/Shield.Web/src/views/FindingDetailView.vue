@@ -13,7 +13,7 @@ import {
   useResolveFindingMutation,
   useSuppressFindingMutation,
 } from '@/queries/findings'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { formatDate, parseJsonArray, severityName } from '@/lib/format'
 import type { ApplyFixStrategy } from '@/types/api'
@@ -154,8 +154,8 @@ async function applyBestEffortFix(): Promise<void> {
         <div class="min-w-0">
           <h1 class="break-all text-2xl font-semibold">{{ heading }}</h1>
           <p class="text-sm text-slate-400">
-            <span v-if="item">{{ enumName('Ecosystem', item.ecosystem) }}</span>
-            <span v-else-if="advisory">{{ enumName('Ecosystem', advisory.ecosystem) }}</span>
+            <span v-if="item">{{ enumLabel('Ecosystem', item.ecosystem) }}</span>
+            <span v-else-if="advisory">{{ enumLabel('Ecosystem', advisory.ecosystem) }}</span>
             <span v-else>{{ t('finding_detail.unknown_ecosystem') }}</span>
             ·
             <RouterLink
@@ -215,7 +215,7 @@ async function applyBestEffortFix(): Promise<void> {
           <dt class="text-slate-500">{{ t('finding_detail.field_last_seen') }}</dt>
           <dd>{{ formatDate(finding.lastSeenAt) }}</dd>
           <dt class="text-slate-500">{{ t('finding_detail.field_state') }}</dt>
-          <dd>{{ enumName('FindingState', finding.state) }}</dd>
+          <dd>{{ enumLabel('FindingState', finding.state) }}</dd>
           <dt v-if="finding.notes" class="text-slate-500">{{ t('finding_detail.field_notes') }}</dt>
           <dd v-if="finding.notes" class="whitespace-pre-wrap">{{ finding.notes }}</dd>
         </dl>

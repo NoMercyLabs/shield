@@ -10,7 +10,7 @@ import {
   useTestSendMutation,
   useUpdateChannelMutation,
 } from '@/queries/channels'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { severityName } from '@/lib/format'
 import { ChannelType, Severity } from '@/types/api'
@@ -312,7 +312,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
         >
           <p class="text-sm font-medium">{{ channel.name }}</p>
           <p class="text-xs text-slate-500">
-            {{ enumName('ChannelType', channel.type) }} · min {{ severityName(channel.minSeverity) }} · {{ channel.enabled ? t('channels.channel_enabled') : t('channels.channel_disabled') }}
+            {{ enumLabel('ChannelType', channel.type) }} · min {{ severityName(channel.minSeverity) }} · {{ channel.enabled ? t('channels.channel_enabled') : t('channels.channel_disabled') }}
           </p>
           <p v-if="summarise(channel)" class="mt-0.5 truncate text-xs text-slate-400">
             {{ summarise(channel) }}

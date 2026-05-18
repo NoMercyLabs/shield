@@ -2,9 +2,16 @@
 // renders (Feed, SourceType, OAuthProvider, Severity, Ecosystem, …) so this file is the
 // only place that owns "what's the display name for value N of enum X". Adding an enum
 // value server-side propagates here on next reload — no second copy in types/api.ts.
+//
+// enumName returns the raw C# enum name ("Npm", "GithubRepo"). enumLabel goes through
+// vue-i18n with key `enum.<Type>.<Name>` for polished display strings ("npm", "GitHub").
+// Components should call enumLabel for anything user-facing; reserve enumName for code
+// paths that need the server-side string (URL paths, API request bodies).
 
 import { ref } from 'vue'
+
 import { api } from '@/lib/api'
+import { i18n } from '@/i18n'
 
 type EnumDict = Record<string, number>
 type Catalog = Record<string, EnumDict>
@@ -67,6 +74,32 @@ export function enumEntries(enumType: string): { name: string, value: number }[]
   return Object.entries(entries)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => a.value - b.value)
+}
+
+// Polished display label for an enum value. Looks up `enum.<EnumType>.<Name>` via vue-i18n,
+// falls back to the raw enum name when the key is missing. Use this for every user-facing
+// label — dropdown options, chips, badges, headers. The catalog endpoint gives us the
+// authoritative name; this fn turns it into proper-cased / locale-aware display text.
+export function enumLabel(enumType: string, value: number | null | undefined): string {
+  const name = enumName(enumType, value)
+  if (!name) return ''
+  const key = `enum.${enumType}.${name}`
+  const t = i18n.global.t as (key: string) => string
+  const translated = t(key)
+  // vue-i18n returns the key itself when no message exists. Fall back to the raw enum
+  // name in that case — better than rendering "enum.Foo.Bar" to the user.
+  return translated === key ? name : translated
+}
+
+// enumLabel for the entries list. Returns `{name, value, label}` pre-translated so a
+// component template can render `entry.label` instead of repeating the call.
+export function enumLabelEntries(
+  enumType: string,
+): { name: string, value: number, label: string }[] {
+  return enumEntries(enumType).map(entry => ({
+    ...entry,
+    label: enumLabel(enumType, entry.value),
+  }))
 }
 
 export const enumsLoaded = loaded

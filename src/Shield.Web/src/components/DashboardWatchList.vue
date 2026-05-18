@@ -10,7 +10,7 @@ import {
   useWatchesQuery,
   useWatchSummaryQuery,
 } from '@/queries/watches'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { Ecosystem, type WatchSummaryRow } from '@/types/api'
 
@@ -93,7 +93,7 @@ async function onRemove(row: WatchSummaryRow): Promise<void> {
         class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200"
       >
         <option v-for="value in ecosystemOptions" :key="value" :value="value">
-          {{ enumName('Ecosystem', value) }}
+          {{ enumLabel('Ecosystem', value) }}
         </option>
       </select>
       <input
@@ -128,7 +128,7 @@ async function onRemove(row: WatchSummaryRow): Promise<void> {
             {{ row.packageName }}
           </RouterLink>
           <p class="text-xs text-slate-500">
-            {{ enumName('Ecosystem', row.ecosystem) }} · {{ t('watches.source_count', row.sourceCount) }}
+            {{ enumLabel('Ecosystem', row.ecosystem) }} · {{ t('watches.source_count', row.sourceCount) }}
           </p>
         </div>
         <div class="flex shrink-0 items-center gap-1 text-xs">

@@ -15,7 +15,7 @@ import {
 } from '@/queries/findings'
 import { useSourcesQuery } from '@/queries/sources'
 import { formatDate } from '@/lib/format'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import {
   Ecosystem,
@@ -313,21 +313,21 @@ const chips = computed<Chip[]>(() => {
   for (const value of severityFilter.value) {
     out.push({
       key: `sev-${value}`,
-      label: t('findings.chip.severity', { name: enumName('Severity', value) }),
+      label: t('findings.chip.severity', { name: enumLabel('Severity', value) }),
       remove: () => { severityFilter.value = severityFilter.value.filter(item => item !== value) },
     })
   }
   for (const value of stateFilter.value) {
     out.push({
       key: `state-${value}`,
-      label: t('findings.chip.state', { name: enumName('FindingState', value) }),
+      label: t('findings.chip.state', { name: enumLabel('FindingState', value) }),
       remove: () => { stateFilter.value = stateFilter.value.filter(item => item !== value) },
     })
   }
   for (const value of ecosystemFilter.value) {
     out.push({
       key: `eco-${value}`,
-      label: t('findings.chip.ecosystem', { name: enumName('Ecosystem', value) }),
+      label: t('findings.chip.ecosystem', { name: enumLabel('Ecosystem', value) }),
       remove: () => { ecosystemFilter.value = ecosystemFilter.value.filter(item => item !== value) },
     })
   }
@@ -759,7 +759,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 :checked="severityFilter.includes(value)"
                 @change="toggleSeverity(value)"
               >
-              {{ enumName('Severity', value) }}
+              {{ enumLabel('Severity', value) }}
             </label>
           </section>
 
@@ -771,7 +771,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 :checked="stateFilter.includes(value)"
                 @change="toggleState(value)"
               >
-              {{ enumName('FindingState', value) }}
+              {{ enumLabel('FindingState', value) }}
             </label>
           </section>
 
@@ -783,7 +783,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 :checked="ecosystemFilter.includes(value)"
                 @change="toggleEcosystem(value)"
               >
-              {{ enumName('Ecosystem', value) }}
+              {{ enumLabel('Ecosystem', value) }}
             </label>
           </section>
 
@@ -853,13 +853,13 @@ watch([allOnPageSelected, someOnPageSelected], () => {
             <div class="flex flex-wrap items-center gap-2">
               <SeverityBadge :severity="finding.severity" />
               <span class="text-xs uppercase tracking-wide text-slate-500">
-                {{ enumName('FindingState', finding.state) }}
+                {{ enumLabel('FindingState', finding.state) }}
               </span>
               <span
                 v-if="finding.ecosystem !== null && finding.ecosystem !== undefined"
                 class="text-[10px] uppercase tracking-wider text-slate-600"
               >
-                {{ enumName('Ecosystem', finding.ecosystem) }}
+                {{ enumLabel('Ecosystem', finding.ecosystem) }}
               </span>
             </div>
             <RouterLink :to="`/findings/${finding.id}`" class="mt-2 block font-mono text-sm text-blue-300 hover:underline">
@@ -1011,7 +1011,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 v-if="finding.ecosystem !== null && finding.ecosystem !== undefined"
                 class="text-xs uppercase text-slate-500"
               >
-                {{ enumName('Ecosystem', finding.ecosystem) }}
+                {{ enumLabel('Ecosystem', finding.ecosystem) }}
               </p>
             </td>
             <td class="px-4 py-2">
@@ -1029,7 +1029,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
             </td>
             <td class="px-4 py-2 text-slate-300">{{ finding.sourceName ?? `#${finding.sourceId}` }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(finding.lastSeenAt) }}</td>
-            <td class="px-4 py-2 text-slate-400">{{ enumName('FindingState', finding.state) }}</td>
+            <td class="px-4 py-2 text-slate-400">{{ enumLabel('FindingState', finding.state) }}</td>
           </tr>
         </tbody>
       </table>

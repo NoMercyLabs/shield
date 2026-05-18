@@ -1273,5 +1273,103 @@
     "job_finished": "Application terminee — {done} sources traitees.",
     "open_pr": "Ouvrir la PR ({n} mises a jour)",
     "no_changes": "Aucun changement"
+  },
+  "enum": {
+    "Severity": {
+      "Low": "Faible",
+      "Medium": "Moyen",
+      "High": "Eleve",
+      "Critical": "Critique"
+    },
+    "Ecosystem": {
+      "Npm": "npm",
+      "Nuget": "NuGet",
+      "Composer": "Composer",
+      "Gradle": "Gradle",
+      "Os": "Paquet systeme",
+      "Python": "Python (PyPI)",
+      "Go": "Modules Go",
+      "Rust": "Rust (crates.io)",
+      "RubyGems": "RubyGems",
+      "SwiftPM": "Swift Package Manager",
+      "Pub": "Pub (Dart)",
+      "Maven": "Maven",
+      "Hex": "Hex (Elixir)",
+      "Vcpkg": "vcpkg"
+    },
+    "SourceType": {
+      "GithubRepo": "Depot GitHub",
+      "LocalFolder": "Dossier local",
+      "LinuxHost": "Hote Linux",
+      "GitlabRepo": "Depot GitLab",
+      "BitbucketRepo": "Depot Bitbucket",
+      "ForgejoRepo": "Depot Forgejo",
+      "GiteaRepo": "Depot Gitea",
+      "CodebergRepo": "Depot Codeberg"
+    },
+    "FindingState": {
+      "Open": "Ouvert",
+      "Acked": "Accuse",
+      "Resolved": "Resolu",
+      "Suppressed": "Supprime",
+      "AutoResolved": "Auto-resolu"
+    },
+    "Feed": {
+      "Osv": "OSV.dev",
+      "Ghsa": "GitHub Advisory DB",
+      "NpmRegistry": "Registre npm",
+      "DepsDev": "deps.dev",
+      "Socket": "Socket.dev",
+      "TrivyDb": "Trivy DB",
+      "Kev": "CISA KEV",
+      "Epss": "FIRST EPSS",
+      "NugetRegistry": "Registre NuGet",
+      "PyPiRegistry": "Registre PyPI",
+      "CratesRegistry": "Registre crates.io",
+      "RubyGemsRegistry": "Registre RubyGems",
+      "PackagistRegistry": "Registre Packagist",
+      "HexRegistry": "Registre Hex.pm"
+    },
+    "ChannelType": {
+      "Discord": "Discord",
+      "Ntfy": "ntfy",
+      "Smtp": "E-mail (SMTP)",
+      "Inbox": "Boite de reception",
+      "Slack": "Slack",
+      "Webhook": "Webhook"
+    },
+    "AlertStatus": {
+      "Pending": "En attente",
+      "Sent": "Envoye",
+      "Failed": "Echoue"
+    },
+    "OAuthProvider": {
+      "Github": "GitHub",
+      "Slack": "Slack",
+      "Google": "Google",
+      "Gitlab": "GitLab",
+      "Bitbucket": "Bitbucket",
+      "Forgejo": "Forgejo",
+      "Gitea": "Gitea",
+      "Codeberg": "Codeberg"
+    },
+    "SourceAccessLevel": {
+      "Read": "Lecture",
+      "Triage": "Triage"
+    },
+    "AutoFixMode": {
+      "Off": "Desactive",
+      "WeeklyDigest": "Resume hebdomadaire",
+      "OnEveryScan": "A chaque scan"
+    },
+    "NotificationKind": {
+      "ScanFailed": "Scan echoue",
+      "OauthExpiring": "Jeton OAuth expirant",
+      "FeedDown": "Feed indisponible",
+      "MaintainerChange": "Changement de mainteneur",
+      "NewAnomaly": "Nouvelle anomalie",
+      "SystemMessage": "Message systeme",
+      "Alert": "Alerte"
+    }
   }
 }

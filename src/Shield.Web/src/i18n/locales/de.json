@@ -1271,5 +1271,103 @@
     "job_finished": "Anwendung fertig — {done} Quellen verarbeitet.",
     "open_pr": "PR oeffnen ({n} Updates)",
     "no_changes": "Keine Aenderungen"
+  },
+  "enum": {
+    "Severity": {
+      "Low": "Niedrig",
+      "Medium": "Mittel",
+      "High": "Hoch",
+      "Critical": "Kritisch"
+    },
+    "Ecosystem": {
+      "Npm": "npm",
+      "Nuget": "NuGet",
+      "Composer": "Composer",
+      "Gradle": "Gradle",
+      "Os": "Betriebssystem-Paket",
+      "Python": "Python (PyPI)",
+      "Go": "Go-Module",
+      "Rust": "Rust (crates.io)",
+      "RubyGems": "RubyGems",
+      "SwiftPM": "Swift Package Manager",
+      "Pub": "Pub (Dart)",
+      "Maven": "Maven",
+      "Hex": "Hex (Elixir)",
+      "Vcpkg": "vcpkg"
+    },
+    "SourceType": {
+      "GithubRepo": "GitHub-Repository",
+      "LocalFolder": "Lokaler Ordner",
+      "LinuxHost": "Linux-Host",
+      "GitlabRepo": "GitLab-Repository",
+      "BitbucketRepo": "Bitbucket-Repository",
+      "ForgejoRepo": "Forgejo-Repository",
+      "GiteaRepo": "Gitea-Repository",
+      "CodebergRepo": "Codeberg-Repository"
+    },
+    "FindingState": {
+      "Open": "Offen",
+      "Acked": "Bestaetigt",
+      "Resolved": "Geloest",
+      "Suppressed": "Unterdrueckt",
+      "AutoResolved": "Auto-geloest"
+    },
+    "Feed": {
+      "Osv": "OSV.dev",
+      "Ghsa": "GitHub Advisory DB",
+      "NpmRegistry": "npm-Registry",
+      "DepsDev": "deps.dev",
+      "Socket": "Socket.dev",
+      "TrivyDb": "Trivy DB",
+      "Kev": "CISA KEV",
+      "Epss": "FIRST EPSS",
+      "NugetRegistry": "NuGet-Registry",
+      "PyPiRegistry": "PyPI-Registry",
+      "CratesRegistry": "crates.io-Registry",
+      "RubyGemsRegistry": "RubyGems-Registry",
+      "PackagistRegistry": "Packagist-Registry",
+      "HexRegistry": "Hex.pm-Registry"
+    },
+    "ChannelType": {
+      "Discord": "Discord",
+      "Ntfy": "ntfy",
+      "Smtp": "E-Mail (SMTP)",
+      "Inbox": "In-App-Posteingang",
+      "Slack": "Slack",
+      "Webhook": "Webhook"
+    },
+    "AlertStatus": {
+      "Pending": "Ausstehend",
+      "Sent": "Gesendet",
+      "Failed": "Fehlgeschlagen"
+    },
+    "OAuthProvider": {
+      "Github": "GitHub",
+      "Slack": "Slack",
+      "Google": "Google",
+      "Gitlab": "GitLab",
+      "Bitbucket": "Bitbucket",
+      "Forgejo": "Forgejo",
+      "Gitea": "Gitea",
+      "Codeberg": "Codeberg"
+    },
+    "SourceAccessLevel": {
+      "Read": "Lesen",
+      "Triage": "Triage"
+    },
+    "AutoFixMode": {
+      "Off": "Aus",
+      "WeeklyDigest": "Woechentliche Zusammenfassung",
+      "OnEveryScan": "Bei jedem Scan"
+    },
+    "NotificationKind": {
+      "ScanFailed": "Scan fehlgeschlagen",
+      "OauthExpiring": "OAuth-Token laeuft ab",
+      "FeedDown": "Feed ausgefallen",
+      "MaintainerChange": "Maintainer-Wechsel",
+      "NewAnomaly": "Neue Anomalie",
+      "SystemMessage": "Systemnachricht",
+      "Alert": "Warnung"
+    }
   }
 }

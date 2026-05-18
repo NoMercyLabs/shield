@@ -1,4 +1,4 @@
-import { enumName } from '@/stores/enums'
+import { enumLabel, enumName } from '@/stores/enums'
 import { Severity } from '@/types/api'
 
 export function formatDate(iso: string | null | undefined): string {
@@ -9,11 +9,12 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 export function severityName(severity: Severity): string {
-  return enumName('Severity', severity) || String(severity)
+  return enumLabel('Severity', severity) || String(severity)
 }
 
 // i18n key for vue-i18n lookups (e.g. `severity.critical`). Falls back to "low" when the
-// catalog hasn't hydrated, so the missing-key warning surfaces instead of crashing.
+// catalog hasn't hydrated, so the missing-key warning surfaces instead of crashing. Uses
+// enumName (raw C# name) because the i18n keys downstream are lowercase forms of the raw.
 export function severityI18nKey(severity: Severity): string {
   const name = enumName('Severity', severity)
   return name ? `severity.${name.toLowerCase()}` : 'severity.low'

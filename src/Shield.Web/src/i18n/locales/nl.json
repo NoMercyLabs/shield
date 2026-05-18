@@ -1221,5 +1221,103 @@
     "job_finished": "Toepassen klaar — {done} bronnen verwerkt.",
     "open_pr": "PR openen ({n} updates)",
     "no_changes": "Geen wijzigingen"
+  },
+  "enum": {
+    "Severity": {
+      "Low": "Laag",
+      "Medium": "Middel",
+      "High": "Hoog",
+      "Critical": "Kritiek"
+    },
+    "Ecosystem": {
+      "Npm": "npm",
+      "Nuget": "NuGet",
+      "Composer": "Composer",
+      "Gradle": "Gradle",
+      "Os": "Systeempakket",
+      "Python": "Python (PyPI)",
+      "Go": "Go-modules",
+      "Rust": "Rust (crates.io)",
+      "RubyGems": "RubyGems",
+      "SwiftPM": "Swift Package Manager",
+      "Pub": "Pub (Dart)",
+      "Maven": "Maven",
+      "Hex": "Hex (Elixir)",
+      "Vcpkg": "vcpkg"
+    },
+    "SourceType": {
+      "GithubRepo": "GitHub-repository",
+      "LocalFolder": "Lokale map",
+      "LinuxHost": "Linux-host",
+      "GitlabRepo": "GitLab-repository",
+      "BitbucketRepo": "Bitbucket-repository",
+      "ForgejoRepo": "Forgejo-repository",
+      "GiteaRepo": "Gitea-repository",
+      "CodebergRepo": "Codeberg-repository"
+    },
+    "FindingState": {
+      "Open": "Open",
+      "Acked": "Bevestigd",
+      "Resolved": "Opgelost",
+      "Suppressed": "Onderdrukt",
+      "AutoResolved": "Auto-opgelost"
+    },
+    "Feed": {
+      "Osv": "OSV.dev",
+      "Ghsa": "GitHub Advisory DB",
+      "NpmRegistry": "npm-register",
+      "DepsDev": "deps.dev",
+      "Socket": "Socket.dev",
+      "TrivyDb": "Trivy DB",
+      "Kev": "CISA KEV",
+      "Epss": "FIRST EPSS",
+      "NugetRegistry": "NuGet-register",
+      "PyPiRegistry": "PyPI-register",
+      "CratesRegistry": "crates.io-register",
+      "RubyGemsRegistry": "RubyGems-register",
+      "PackagistRegistry": "Packagist-register",
+      "HexRegistry": "Hex.pm-register"
+    },
+    "ChannelType": {
+      "Discord": "Discord",
+      "Ntfy": "ntfy",
+      "Smtp": "E-mail (SMTP)",
+      "Inbox": "In-app inbox",
+      "Slack": "Slack",
+      "Webhook": "Webhook"
+    },
+    "AlertStatus": {
+      "Pending": "In afwachting",
+      "Sent": "Verzonden",
+      "Failed": "Mislukt"
+    },
+    "OAuthProvider": {
+      "Github": "GitHub",
+      "Slack": "Slack",
+      "Google": "Google",
+      "Gitlab": "GitLab",
+      "Bitbucket": "Bitbucket",
+      "Forgejo": "Forgejo",
+      "Gitea": "Gitea",
+      "Codeberg": "Codeberg"
+    },
+    "SourceAccessLevel": {
+      "Read": "Lezen",
+      "Triage": "Triage"
+    },
+    "AutoFixMode": {
+      "Off": "Uit",
+      "WeeklyDigest": "Wekelijkse samenvatting",
+      "OnEveryScan": "Bij elke scan"
+    },
+    "NotificationKind": {
+      "ScanFailed": "Scan mislukt",
+      "OauthExpiring": "OAuth-token verloopt",
+      "FeedDown": "Feed onbereikbaar",
+      "MaintainerChange": "Maintainer-wissel",
+      "NewAnomaly": "Nieuwe anomalie",
+      "SystemMessage": "Systeembericht",
+      "Alert": "Waarschuwing"
+    }
   }
 }

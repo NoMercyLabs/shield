@@ -22,7 +22,7 @@ import {
   useMarkNotificationReadMutation,
   useNotificationsQuery,
 } from '@/queries/notifications'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import type { Notification } from '@/types/api'
 
@@ -222,7 +222,7 @@ const showPushBanner = computed<boolean>(() =>
         <div class="flex items-center gap-2 sm:contents">
           <SeverityBadge :severity="notification.severity" />
           <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-400 sm:hidden">
-            {{ enumName('NotificationKind', notification.kind) }}
+            {{ enumLabel('NotificationKind', notification.kind) }}
           </span>
         </div>
         <div class="min-w-0 flex-1">
@@ -246,7 +246,7 @@ const showPushBanner = computed<boolean>(() =>
             </template>
             <template v-else>{{ notification.title }}</template>
             <span class="hidden rounded bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-400 sm:inline">
-              {{ enumName('NotificationKind', notification.kind) }}
+              {{ enumLabel('NotificationKind', notification.kind) }}
             </span>
           </p>
           <p class="mt-1 text-sm text-slate-300">{{ notification.body }}</p>

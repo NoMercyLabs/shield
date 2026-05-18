@@ -18,7 +18,7 @@ import {
   useUpdateSourceMutation,
 } from '@/queries/sources'
 import { useAuth } from '@/stores/auth'
-import { enumName } from '@/stores/enums'
+import { enumLabel } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
 import { repoUrl } from '@/lib/repo-url'
@@ -394,7 +394,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
               {{ t('source_detail.is_production_badge') }}
             </span>
           </div>
-          <p class="text-sm text-slate-400">{{ enumName('SourceType', source.type) }}</p>
+          <p class="text-sm text-slate-400">{{ enumLabel('SourceType', source.type) }}</p>
           <p v-if="source.detectedRemote" class="mt-1 flex items-center gap-2 text-xs text-slate-400">
             <GitBranch class="h-3.5 w-3.5" />
             <a
@@ -669,7 +669,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
                 <ul v-else class="mt-2 space-y-2">
                   <li v-for="entry in diffQuery.data.value.added" :key="`added-${entry.ecosystem}-${entry.name}`" class="text-sm">
                     <div class="flex flex-wrap items-baseline gap-2">
-                      <span class="rounded bg-emerald-900/40 px-1.5 py-0.5 text-[10px] uppercase text-emerald-300">{{ enumName('Ecosystem', entry.ecosystem) }}</span>
+                      <span class="rounded bg-emerald-900/40 px-1.5 py-0.5 text-[10px] uppercase text-emerald-300">{{ enumLabel('Ecosystem', entry.ecosystem) }}</span>
                       <RouterLink
                         :to="{ path: '/findings', query: { packageName: entry.name, packageVersion: entry.version } }"
                         class="font-mono text-slate-100 hover:text-blue-300 hover:underline"
@@ -700,7 +700,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
                 <ul v-else class="mt-2 space-y-2">
                   <li v-for="entry in diffQuery.data.value.removed" :key="`removed-${entry.ecosystem}-${entry.name}`" class="text-sm">
                     <div class="flex flex-wrap items-baseline gap-2">
-                      <span class="rounded bg-red-900/40 px-1.5 py-0.5 text-[10px] uppercase text-red-300">{{ enumName('Ecosystem', entry.ecosystem) }}</span>
+                      <span class="rounded bg-red-900/40 px-1.5 py-0.5 text-[10px] uppercase text-red-300">{{ enumLabel('Ecosystem', entry.ecosystem) }}</span>
                       <RouterLink
                         :to="{ path: '/findings', query: { packageName: entry.name, packageVersion: entry.version } }"
                         class="font-mono text-slate-300 line-through hover:text-blue-300 hover:no-underline"
@@ -719,7 +719,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
                 <ul v-else class="mt-2 space-y-2">
                   <li v-for="entry in diffQuery.data.value.versionChanged" :key="`bump-${entry.ecosystem}-${entry.name}`" class="text-sm">
                     <div class="flex flex-wrap items-baseline gap-2">
-                      <span class="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] uppercase text-amber-300">{{ enumName('Ecosystem', entry.ecosystem) }}</span>
+                      <span class="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] uppercase text-amber-300">{{ enumLabel('Ecosystem', entry.ecosystem) }}</span>
                       <RouterLink
                         :to="{ path: '/findings', query: { packageName: entry.name, packageVersion: entry.toVersion } }"
                         class="font-mono text-slate-100 hover:text-blue-300 hover:underline"
@@ -764,7 +764,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.id" class="border-t border-slate-800">
-              <td class="px-4 py-2 text-slate-300">{{ enumName('Ecosystem', item.ecosystem) }}</td>
+              <td class="px-4 py-2 text-slate-300">{{ enumLabel('Ecosystem', item.ecosystem) }}</td>
               <td class="px-4 py-2 font-mono">
                 <RouterLink
                   :to="{ path: '/findings', query: { packageName: item.name, packageVersion: item.version } }"
