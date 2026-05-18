@@ -316,7 +316,7 @@ public sealed class GitHubRateLimitHandler : DelegatingHandler
     private static string BuildPrincipalKey(HttpRequestMessage request)
     {
         string? raw = null;
-        if (request.Headers.Authorization?.Parameter is string bearer && bearer.Length > 0)
+        if (request.Headers.Authorization?.Parameter is { } bearer && bearer.Length > 0)
             raw = "bearer:" + bearer;
         else if (
             request.Headers.TryGetValues("installation", out IEnumerable<string>? installValues)

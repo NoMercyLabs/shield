@@ -19,7 +19,6 @@ public sealed class GradleEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Gradle;
     public string DefaultManifestPath => "build.gradle";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => _maven.PackageUrl(packageName);
 

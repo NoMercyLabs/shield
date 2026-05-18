@@ -15,15 +15,9 @@ public sealed class NpmEcosystem : IEcosystem
         _editor = editor;
     }
 
-    private static readonly HashSet<string> _popular = new(
-        KnownPopularPackages.Npm,
-        StringComparer.OrdinalIgnoreCase
-    );
-
     public Ecosystem Ecosystem => Ecosystem.Npm;
     public string DefaultManifestPath => "package.json";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames => _popular;
 
     public string PackageUrl(string packageName) => $"https://www.npmjs.com/package/{packageName}";
 

@@ -5,11 +5,6 @@ namespace Shield.Api.Services.Ecosystems;
 
 public sealed class NugetEcosystem : IEcosystem
 {
-    private static readonly HashSet<string> _popular = new(
-        KnownPopularPackages.Nuget,
-        StringComparer.OrdinalIgnoreCase
-    );
-
     private readonly INugetRegistryProbe _registry;
     private readonly NugetManifestEditor _editor;
 
@@ -22,7 +17,6 @@ public sealed class NugetEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Nuget;
     public string DefaultManifestPath => "Directory.Packages.props";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames => _popular;
 
     public string PackageUrl(string packageName) => $"https://www.nuget.org/packages/{packageName}";
 

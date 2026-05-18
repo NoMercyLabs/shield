@@ -19,7 +19,6 @@ public sealed class MavenEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Maven;
     public string DefaultManifestPath => "pom.xml";
     public bool SupportsAutomaticPullRequests => false;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName)
     {

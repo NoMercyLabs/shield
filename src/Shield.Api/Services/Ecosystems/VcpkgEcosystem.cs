@@ -18,7 +18,6 @@ public sealed class VcpkgEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Vcpkg;
     public string DefaultManifestPath => "vcpkg.json";
     public bool SupportsAutomaticPullRequests => false;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) =>
         $"https://github.com/microsoft/vcpkg/tree/master/ports/{packageName}";

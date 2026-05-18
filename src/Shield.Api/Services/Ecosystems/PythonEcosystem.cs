@@ -19,7 +19,6 @@ public sealed class PythonEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Python;
     public string DefaultManifestPath => "pyproject.toml";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => $"https://pypi.org/project/{packageName}/";
 

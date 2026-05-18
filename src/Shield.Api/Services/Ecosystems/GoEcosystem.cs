@@ -20,7 +20,6 @@ public sealed class GoEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Go;
     public string DefaultManifestPath => "go.mod";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => $"https://pkg.go.dev/{packageName}";
 

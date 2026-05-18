@@ -722,6 +722,7 @@ builder.Services.AddSingleton<
 // FeedsDbContext (advisories) + reads ShieldDbContext (snapshots/items); a Singleton
 // would capture both contexts and trip the captive-dep trap CLAUDE.md warns about.
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IPopularPackageRegistry, PopularPackageRegistry>();
 builder.Services.AddSingleton<ITyposquatDetector, TyposquatDetector>();
 builder.Services.AddScoped<IAnomalyDetector, AnomalyDetector>();
 

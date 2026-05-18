@@ -18,7 +18,6 @@ public sealed class RubyGemsEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.RubyGems;
     public string DefaultManifestPath => "Gemfile";
     public bool SupportsAutomaticPullRequests => false;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => $"https://rubygems.org/gems/{packageName}";
 

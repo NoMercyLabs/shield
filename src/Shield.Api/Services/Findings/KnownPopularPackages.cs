@@ -1,6 +1,6 @@
 using Shield.Core.Domain;
 
-namespace Shield.Api.Services.Ecosystems;
+namespace Shield.Api.Services.Findings;
 
 // Hand-curated allowlists of "names a typosquat would mimic".
 // npm picks: ~top 100 by historic weekly download rank on npmjs.com — frameworks

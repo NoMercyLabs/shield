@@ -20,7 +20,6 @@ public sealed class ComposerEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Composer;
     public string DefaultManifestPath => "composer.json";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => $"https://packagist.org/packages/{packageName}";
 

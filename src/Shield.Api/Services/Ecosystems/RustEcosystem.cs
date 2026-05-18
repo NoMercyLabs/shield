@@ -20,7 +20,6 @@ public sealed class RustEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.Rust;
     public string DefaultManifestPath => "Cargo.toml";
     public bool SupportsAutomaticPullRequests => true;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => $"https://crates.io/crates/{packageName}";
 

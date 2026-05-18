@@ -21,7 +21,6 @@ public sealed class SwiftPmEcosystem : IEcosystem
     public Ecosystem Ecosystem => Ecosystem.SwiftPM;
     public string DefaultManifestPath => "Package.swift";
     public bool SupportsAutomaticPullRequests => false;
-    public IReadOnlySet<string> PopularPackageNames { get; } = new HashSet<string>();
 
     public string PackageUrl(string packageName) => packageName;
 

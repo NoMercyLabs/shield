@@ -1,4 +1,3 @@
-using Shield.Api.Services.Ecosystems;
 using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Findings;
@@ -10,11 +9,11 @@ public sealed class TyposquatDetector : ITyposquatDetector
     // names like `lodash`, `react`, `axios`).
     private const int MaxNameLengthForLevenshtein = 64;
 
-    private readonly IEcosystemRegistry _ecosystems;
+    private readonly IPopularPackageRegistry _popular;
 
-    public TyposquatDetector(IEcosystemRegistry ecosystems)
+    public TyposquatDetector(IPopularPackageRegistry popular)
     {
-        _ecosystems = ecosystems;
+        _popular = popular;
     }
 
     public bool IsTyposquat(Ecosystem ecosystem, string name)
@@ -22,8 +21,8 @@ public sealed class TyposquatDetector : ITyposquatDetector
         if (string.IsNullOrWhiteSpace(name) || name.Length > MaxNameLengthForLevenshtein)
             return false;
 
-        IReadOnlySet<string>? popular = _ecosystems.For(ecosystem)?.PopularPackageNames;
-        if (popular is null || popular.Count == 0)
+        IReadOnlySet<string> popular = _popular.For(ecosystem);
+        if (popular.Count == 0)
             return false;
 
         // A package matching itself is not a typosquat.
@@ -63,8 +62,8 @@ public sealed class TyposquatDetector : ITyposquatDetector
         string inner = name[(slash + 1)..];
         if (string.Equals(scope, inner, StringComparison.OrdinalIgnoreCase))
         {
-            IReadOnlySet<string>? popular = _ecosystems.For(Ecosystem.Npm)?.PopularPackageNames;
-            return popular is not null && popular.Contains(inner);
+            IReadOnlySet<string> popular = _popular.For(Ecosystem.Npm);
+            return popular.Contains(inner);
         }
         return false;
     }

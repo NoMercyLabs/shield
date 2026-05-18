@@ -23,11 +23,6 @@ public interface IEcosystem
     // manifest on disk + emit a PR. False for ecosystems we only probe today (Maven, Pub, etc).
     bool SupportsAutomaticPullRequests { get; }
 
-    // Popular package names this ecosystem ships — fed to the typosquat detector. Empty when
-    // we don't have a curated list yet (still safe; detector treats empty as "skip check").
-    // IReadOnlySet so the detector's hot path (Contains-per-candidate) stays O(1).
-    IReadOnlySet<string> PopularPackageNames { get; }
-
     // Display links for the SPA / PR body. PackageUrl is the package page; ChangelogUrl points
     // at a specific version where possible.
     string PackageUrl(string packageName);
