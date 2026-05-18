@@ -19,10 +19,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVersionComparer, NugetVersionComparer>();
         services.AddSingleton<IVersionComparer, GradleVersionComparer>();
         services.AddSingleton<IVersionComparer, MavenVersionComparer>();
-        // TODO: Python (PEP 440), Go (modules + pseudo-versions), Rust (Cargo), RubyGems
-        // (Gem::Version), Vcpkg (port-version) need dedicated comparers — none of these are
-        // pure SemVer. Until added, their advisories silently DO NOT match — see the warning
-        // in AdvisoryMatcher.Match.
+        services.AddSingleton<IVersionComparer, PythonVersionComparer>();
+        // TODO: Go (modules + pseudo-versions), Rust (Cargo), RubyGems (Gem::Version), Vcpkg
+        // (port-version) still need dedicated comparers — none of these are pure SemVer.
+        // Until added, their advisories silently DO NOT match — see the warning in
+        // AdvisoryMatcher.Match.
 
         services.AddSingleton<AdvisoryMatcher>();
         services.AddSingleton<MaintainerDriftDetector>();
