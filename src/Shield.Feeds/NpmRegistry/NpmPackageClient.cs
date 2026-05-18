@@ -124,8 +124,42 @@ public sealed class NpmVersion
     [JsonPropertyName("dist")]
     public NpmDist? Dist { get; set; }
 
+    // npm registry historically returns either a string (the deprecation message) OR a
+    // boolean `false` for not-deprecated versions. System.Text.Json's default `string?`
+    // converter blows up on the bool form — see GHSA-style payloads emitted by older
+    // package versions in the registry. Tolerant converter maps bool/null → null,
+    // string → string. Mapping code treats null/empty as "not deprecated".
     [JsonPropertyName("deprecated")]
+    [JsonConverter(typeof(StringOrBoolToStringConverter))]
     public string? Deprecated { get; set; }
+}
+
+internal sealed class StringOrBoolToStringConverter : JsonConverter<string?>
+{
+    public override string? Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.String => reader.GetString(),
+            JsonTokenType.True
+            or JsonTokenType.False
+            or JsonTokenType.Null
+            or JsonTokenType.Number => null,
+            _ => null,
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+    {
+        if (value is null)
+            writer.WriteNullValue();
+        else
+            writer.WriteStringValue(value);
+    }
 }
 
 public sealed class NpmDist
