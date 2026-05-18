@@ -21,9 +21,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVersionComparer, MavenVersionComparer>();
         services.AddSingleton<IVersionComparer, PythonVersionComparer>();
         services.AddSingleton<IVersionComparer, GemVersionComparer>();
-        // TODO: Go (modules + pseudo-versions), Rust (Cargo), Vcpkg (port-version) still need
-        // dedicated comparers. Until added, their advisories silently DO NOT match — see the
-        // warning in AdvisoryMatcher.Match.
+        services.AddSingleton<IVersionComparer, GoModVersionComparer>();
+        // TODO: Rust (Cargo), Vcpkg (port-version) still need dedicated comparers. Until added,
+        // their advisories silently DO NOT match — see the warning in AdvisoryMatcher.Match.
 
         services.AddSingleton<AdvisoryMatcher>();
         services.AddSingleton<MaintainerDriftDetector>();
