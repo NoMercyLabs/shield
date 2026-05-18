@@ -230,7 +230,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ApplyFixRequiresAdmin()
     {
-        using ViewerFactory factory = new();
+        await using ViewerFactory factory = new();
         HttpClient client = factory.CreateClient();
         await client.PostAsJsonAsync(
             "/api/auth/register",

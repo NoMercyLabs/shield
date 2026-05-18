@@ -314,7 +314,7 @@ public sealed class ProductionSafetyGateTests
         // Use a fresh factory so the banner logger fires in a controlled scope.
         // The factory runs in Testing environment, which skips the gate entirely
         // and still calls LogPostureBanner.
-        using PostureBannerFactory factory = new();
+        await using PostureBannerFactory factory = new();
         _ = factory.CreateClient(); // trigger startup
 
         // Give the hosted services a moment to write the log.

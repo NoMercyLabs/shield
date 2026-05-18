@@ -11,7 +11,7 @@ public class PackageLockV1Tests
     public async Task ParsesV1LockfileWithNestedDeps()
     {
         NpmLockParser parser = new();
-        using Stream stream = FixtureLoader.Open("package-lock.v1.json");
+        await using Stream stream = FixtureLoader.Open("package-lock.v1.json");
 
         ParseResult result = await parser.ParseAsync(
             stream,

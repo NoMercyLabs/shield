@@ -11,7 +11,7 @@ public class PackageLockV3Tests
     public async Task ParsesV3LockfileWithDirectAndTransitiveDeps()
     {
         NpmLockParser parser = new();
-        using Stream stream = FixtureLoader.Open("package-lock.v3.json");
+        await using Stream stream = FixtureLoader.Open("package-lock.v3.json");
 
         ParseResult result = await parser.ParseAsync(
             stream,

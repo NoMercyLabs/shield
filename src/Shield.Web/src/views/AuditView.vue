@@ -2,10 +2,13 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { Undo2 } from 'lucide-vue-next'
+
 import SortableTh from '@/components/SortableTh.vue'
 import { useClientSort } from '@/composables/useClientSort'
-import { useAuditQuery } from '@/queries/audit'
+import { useAuditQuery, useUndoAuditEntryMutation } from '@/queries/audit'
 import { formatDate } from '@/lib/format'
+import { useToasts } from '@/stores/toast'
 import type { AuditEntry, AuditFilter } from '@/types/api'
 
 const { t } = useI18n()
@@ -46,6 +49,27 @@ const filter = computed<AuditFilter>(() => ({
 }))
 
 const { data, isLoading, isError } = useAuditQuery(filter)
+const undo = useUndoAuditEntryMutation()
+const toasts = useToasts()
+
+async function onUndo(entry: AuditEntry): Promise<void> {
+  // Confirm before reversing — undo is reversible only at the row level (you can undo the
+  // undo) but a misclick on a chained mutation still surprises. Friendly summary helps the
+  // operator confirm they're rolling back the right thing.
+  const friendly = entry.targetLabel ?? `${entry.targetType}#${entry.targetId}`
+  if (!window.confirm(t('audit.undo_confirm', { action: entry.action, target: friendly })))
+    return
+  try {
+    const result = await undo.mutateAsync(entry.id)
+    if (result.success)
+      toasts.push('success', result.summary || t('audit.undo_ok'))
+    else
+      toasts.push('error', result.error ?? result.summary ?? t('audit.undo_error'))
+  }
+  catch {
+    toasts.push('error', t('audit.undo_error'))
+  }
+}
 
 // Client-side sort over the current page. The audit endpoint paginates server-side, so
 // this only reorders what's currently visible — but it's still better than no sort, and
@@ -167,6 +191,7 @@ function prettyDetails(json: string | null): string {
             <SortableTh column-key="ip" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
               {{ t('audit.col_ip') }}
             </SortableTh>
+            <th class="px-4 py-2 text-right">{{ t('audit.col_actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
@@ -205,9 +230,29 @@ function prettyDetails(json: string | null): string {
                 </span>
               </td>
               <td class="px-4 py-2 text-xs text-slate-500">{{ entry.remoteIp ?? '—' }}</td>
+              <td class="px-4 py-2 text-right">
+                <span
+                  v-if="entry.reversedAt"
+                  class="text-xs text-slate-500"
+                  :title="t('audit.reversed_at', { when: formatDate(entry.reversedAt) })"
+                >
+                  {{ t('audit.reversed_label') }}
+                </span>
+                <button
+                  v-else-if="entry.isReversible"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-amber-600/60 hover:bg-amber-950/40 hover:text-amber-200 disabled:opacity-40"
+                  :disabled="undo.isPending.value"
+                  :aria-label="t('audit.undo_btn_aria', { action: entry.action })"
+                  @click="onUndo(entry)"
+                >
+                  <Undo2 class="h-3 w-3" />
+                  {{ t('audit.undo_btn') }}
+                </button>
+              </td>
             </tr>
             <tr v-if="entry.detailsJson">
-              <td colspan="5" class="px-4 pb-2">
+              <td colspan="6" class="px-4 pb-2">
                 <details class="group">
                   <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
                     {{ t('audit.details_summary') }}

@@ -23,7 +23,7 @@ public sealed class OAuthRepoListTests
     [Fact]
     public async Task ReposReturns400WhenGithubNotConnected()
     {
-        using GitHubReposFactory factory = new();
+        await using GitHubReposFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/repos");
@@ -33,7 +33,7 @@ public sealed class OAuthRepoListTests
     [Fact]
     public async Task ReposFollowsLinkHeaderAndReturnsPaginatedResults()
     {
-        using GitHubReposFactory factory = new();
+        await using GitHubReposFactory factory = new();
         // Force host startup so the singleton handler we registered is reachable.
         HttpClient client = factory.CreateClient();
 
@@ -145,7 +145,7 @@ public sealed class OAuthRepoListTests
     [Fact]
     public async Task ReposResponseIsCachedPerUserForFiveMinutes()
     {
-        using GitHubReposFactory factory = new();
+        await using GitHubReposFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();

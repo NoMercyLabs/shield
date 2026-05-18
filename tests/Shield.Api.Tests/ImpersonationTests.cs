@@ -16,7 +16,7 @@ public sealed class ImpersonationTests
     [Fact]
     public async Task StartAsAdminSucceedsAndMeReturnsImpersonatedIdentity()
     {
-        using MultiUserImpersonationFactory factory = new();
+        await using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
 
         HttpClient admin = factory.CreateClient();
@@ -48,7 +48,7 @@ public sealed class ImpersonationTests
     [Fact]
     public async Task StartAsNonAdminReturns403()
     {
-        using MultiUserImpersonationFactory factory = new();
+        await using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
 
         HttpClient viewer = factory.CreateClient();
@@ -67,7 +67,7 @@ public sealed class ImpersonationTests
     [Fact]
     public async Task MutatingEndpointDuringImpersonationReturns403ImpersonationBlocked()
     {
-        using MultiUserImpersonationFactory factory = new();
+        await using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
 
         HttpClient admin = factory.CreateClient();
@@ -97,7 +97,7 @@ public sealed class ImpersonationTests
     [Fact]
     public async Task StopRestoresAdminIdentity()
     {
-        using MultiUserImpersonationFactory factory = new();
+        await using MultiUserImpersonationFactory factory = new();
         Guid viewerId = await SeedAdminAndViewerAsync(factory);
 
         HttpClient admin = factory.CreateClient();

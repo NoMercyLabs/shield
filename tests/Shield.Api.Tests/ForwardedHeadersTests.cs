@@ -100,7 +100,7 @@ public sealed class ForwardedHeadersTests
         // The audit-log spoof-rejection assertion lives in the wire-level smoke test in
         // docs/auth.md because TestServer can't synthesise a real remote IP for the
         // not-a-known-proxy case.
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpRequestMessage request = new(HttpMethod.Get, "/healthz");

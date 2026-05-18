@@ -94,7 +94,7 @@ public sealed class ChannelsTests
     [Fact]
     public async Task SlackChannelCreateWithChannelIdSucceeds()
     {
-        using RecordingFactory factory = new(ChannelType.Slack);
+        await using RecordingFactory factory = new(ChannelType.Slack);
         HttpClient client = factory.CreateClient();
 
         // Per the new per-type form, the Slack OAuth payload looks like
@@ -138,7 +138,7 @@ public sealed class ChannelsTests
     [Fact]
     public async Task WebhookChannelWithBodyTemplateRendersPlaceholders()
     {
-        using RecordingFactory factory = new(ChannelType.Webhook);
+        await using RecordingFactory factory = new(ChannelType.Webhook);
         HttpClient client = factory.CreateClient();
 
         string template = "sev={{severity}} count={{count}}";
@@ -186,7 +186,7 @@ public sealed class ChannelsTests
     [Fact]
     public async Task ChannelResponseIncludesMaskedParsedConfig()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         string configJson = JsonSerializer.Serialize(

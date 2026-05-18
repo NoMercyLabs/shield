@@ -17,7 +17,7 @@ public sealed class PasswordChangeNotificationTests
     [Fact]
     public async Task ChangePasswordCreatesNotificationAndSecurityEvent()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         // Register + login so we have an authenticated session.

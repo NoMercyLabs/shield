@@ -16,7 +16,7 @@ public sealed class SessionsTests
     [Fact]
     public async Task LoginCreatesSessionRow()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "sess-login", "Correct1!");
 
@@ -29,7 +29,7 @@ public sealed class SessionsTests
     [Fact]
     public async Task RevokeOtherSessionsNukesAllButCurrent()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient currentClient = factory.CreateClient();
         await RegisterAndLoginAsync(currentClient, "sess-many", "Correct1!");
 
@@ -71,7 +71,7 @@ public sealed class SessionsTests
     [Fact]
     public async Task RevokedCookieReturns401NextRequest()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "sess-revoke", "Correct1!");
 

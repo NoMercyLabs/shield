@@ -11,7 +11,7 @@ public class PnpmTests
     public async Task ParsesPnpmLockfileWithDirectFlagFromImporters()
     {
         NpmLockParser parser = new();
-        using Stream stream = FixtureLoader.Open("pnpm-lock.yaml");
+        await using Stream stream = FixtureLoader.Open("pnpm-lock.yaml");
 
         ParseResult result = await parser.ParseAsync(
             stream,

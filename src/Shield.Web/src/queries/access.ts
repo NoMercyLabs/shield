@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 
 import { api } from '@/lib/api'
 import type {
+  AccessRoleName,
   AccessUser,
   AcceptInviteRequest,
   AcceptInviteResponse,
@@ -28,6 +29,25 @@ export const useAccessUsersQuery = () => useQuery({
     return data
   },
 })
+
+// Destructive swap — clears every Shield role on the user and sets exactly `role`.
+// Server refuses to demote the only remaining Admin (409 with error: "last_admin").
+export const useSetUserRoleMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { userId: string, role: AccessRoleName }): Promise<AccessUser> => {
+      const { data } = await api.put<AccessUser>(
+        `/access/users/${input.userId}/role`,
+        { role: input.role },
+      )
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['access', 'users'] })
+      queryClient.invalidateQueries({ queryKey: ['audit'] })
+    },
+  })
+}
 
 export const useAccessGroupsQuery = () => useQuery({
   queryKey: ['access', 'groups'],

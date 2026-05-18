@@ -715,6 +715,20 @@ export interface AuditEntry {
   targetLabel: string | null
   detailsJson: string | null
   remoteIp: string | null
+  // True when a registered IAuditUndoHandler exists for Action AND BeforeJson is populated
+  // — UI renders an Undo button only in that case.
+  isReversible: boolean
+  // Populated once the entry has been reversed via /api/audit/{id}/undo. UI greys the row
+  // and links to the inverse-action row when present.
+  reversedAt: string | null
+  reversedByEntryId: string | null
+}
+
+export interface AuditUndoResponse {
+  success: boolean
+  summary: string
+  newAuditEntryId: string | null
+  error: string | null
 }
 
 export interface AuditPage {

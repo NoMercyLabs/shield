@@ -18,7 +18,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task StatusReturnsDisconnectedWhenNothingPersisted()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/status");
@@ -33,7 +33,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task StatusReturnsConnectedWhenTokenSaved()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
@@ -62,7 +62,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task TokenAccessorReturnsTokenWhenConnected()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         // Force factory to spin up the host.
         factory.CreateClient();
 
@@ -88,7 +88,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task TokensAreEncryptedAtRest()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
@@ -119,7 +119,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task DisconnectClearsToken()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
@@ -151,7 +151,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task StartReturnsBadRequestWhenClientIdNotConfigured()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/start");
@@ -161,7 +161,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task StartReturnsAuthorizationUrlWhenConfigured()
     {
-        using ConfiguredOAuthFactory factory = new();
+        await using ConfiguredOAuthFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/start");
@@ -179,7 +179,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task CallbackWithInvalidStateRedirectsToSettingsWithError()
     {
-        using ConfiguredOAuthFactory factory = new();
+        await using ConfiguredOAuthFactory factory = new();
         HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         HttpResponseMessage response = await client.GetAsync(
@@ -217,7 +217,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task ProvidersListOnlyShowsConfigured()
     {
-        using SigninFactory factory = new(github: true, slack: false, google: false);
+        await using SigninFactory factory = new(github: true, slack: false, google: false);
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/api/auth/providers");
@@ -233,7 +233,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninCreatesFirstUserAsAdmin()
     {
-        using SigninFactory factory = new(
+        await using SigninFactory factory = new(
             github: true,
             slack: false,
             google: false,
@@ -294,7 +294,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninFindsExistingUserByEmail()
     {
-        using SigninFactory factory = new(
+        await using SigninFactory factory = new(
             github: true,
             slack: false,
             google: false,
@@ -357,7 +357,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninRejectedWhenRegistrationClosedAndNoMatch()
     {
-        using SigninFactory factory = new(
+        await using SigninFactory factory = new(
             github: true,
             slack: false,
             google: false,

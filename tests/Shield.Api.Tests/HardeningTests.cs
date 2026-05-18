@@ -143,7 +143,7 @@ public sealed class HardeningTests
     [Fact]
     public async Task LoginRateLimitBlocksAfter10AttemptsPerMinute()
     {
-        using LimitTestFactory factory = new();
+        await using LimitTestFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         // Register a real account so each login attempt at least reaches the limiter.
@@ -173,7 +173,7 @@ public sealed class HardeningTests
     [Fact]
     public async Task SecurityHeadersPresentOnStaticFilesWhenRequired()
     {
-        using HttpsRequiredFactory factory = new();
+        await using HttpsRequiredFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/healthz");
@@ -197,7 +197,7 @@ public sealed class HardeningTests
     {
         // Default factory does NOT require HTTPS — HSTS would pin browsers to a non-existent
         // TLS endpoint, so the middleware must omit it.
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         HttpResponseMessage response = await client.GetAsync("/healthz");

@@ -19,6 +19,7 @@ import {
   usePendingInvitesQuery,
   useRemoveGroupMemberMutation,
   useRevokeInviteMutation,
+  useSetUserRoleMutation,
 } from '@/queries/access'
 import { useStartImpersonationMutation } from '@/queries/impersonation'
 import { useAuth } from '@/stores/auth'
@@ -65,10 +66,42 @@ const removeMember = useRemoveGroupMemberMutation()
 const invite = useInviteUserMutation()
 const revokeInvite = useRevokeInviteMutation()
 const startImpersonation = useStartImpersonationMutation()
+const setRole = useSetUserRoleMutation()
 const auth = useAuth()
 const router = useRouter()
 const { push } = useToasts()
 const { t } = useI18n()
+
+// Pick the top-tier role to display in the chip when a user has multiple. Server-side
+// the first swap collapses to one role, but legacy accounts seeded with Admin+Maintainer
+// still carry both until they're edited.
+const ROLE_PRIORITY: AccessRoleName[] = ['Admin', 'Maintainer', 'Viewer']
+function primaryRole(roles: readonly string[]): AccessRoleName {
+  for (const role of ROLE_PRIORITY) {
+    if (roles.includes(role)) return role
+  }
+  return 'Viewer'
+}
+
+async function onSetRole(user: AccessUser, role: AccessRoleName): Promise<void> {
+  const current = primaryRole(user.roles)
+  if (current === role) return
+  const confirmKey = role === 'Admin' ? 'access_view.role_promote_confirm' : 'access_view.role_demote_confirm'
+  if (!window.confirm(t(confirmKey, { username: user.username, role })))
+    return
+  try {
+    await setRole.mutateAsync({ userId: user.id, role })
+    push('success', t('access_view.role_changed_toast', { username: user.username, role }))
+  }
+  catch (error: unknown) {
+    const status = (error as { response?: { status?: number } })?.response?.status
+    const code = (error as { response?: { data?: { error?: string } } })?.response?.data?.error
+    if (status === 409 && code === 'last_admin')
+      push('error', t('access_view.role_last_admin'))
+    else
+      push('error', t('access_view.role_change_failed'))
+  }
+}
 
 async function onImpersonate(userId: string, username: string): Promise<void> {
   try {
@@ -815,7 +848,21 @@ function fmtDate(iso: string): string {
           <tr v-for="user in usersSort.sortedRows.value" :key="user.id" class="hover:bg-slate-800/50">
             <td class="px-4 py-2 text-slate-200">{{ user.username }}</td>
             <td class="px-4 py-2 text-slate-400">{{ user.email ?? '—' }}</td>
-            <td class="px-4 py-2 text-slate-400">{{ user.roles.join(', ') }}</td>
+            <td class="px-4 py-2">
+              <select
+                v-if="auth.isAdmin.value"
+                :value="primaryRole(user.roles)"
+                class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="setRole.isPending.value"
+                :aria-label="t('access_view.role_picker_aria', { username: user.username })"
+                @change="onSetRole(user, ($event.target as HTMLSelectElement).value as AccessRoleName)"
+              >
+                <option value="Admin">{{ t('access_view.role_admin') }}</option>
+                <option value="Maintainer">{{ t('access_view.role_maintainer') }}</option>
+                <option value="Viewer">{{ t('access_view.role_viewer') }}</option>
+              </select>
+              <span v-else class="text-slate-400">{{ user.roles.join(', ') }}</span>
+            </td>
             <td class="px-4 py-2 text-slate-400">{{ user.createdAt }}</td>
             <td class="px-4 py-2 text-right">
               <button

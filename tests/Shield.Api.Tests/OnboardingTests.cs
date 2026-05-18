@@ -12,7 +12,7 @@ public sealed class OnboardingTests
     [Fact]
     public async Task StatusReturnsNotCompletedOnFreshDb()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         OnboardingStatusResponse? status = await client.GetFromJsonAsync<OnboardingStatusResponse>(
@@ -30,7 +30,7 @@ public sealed class OnboardingTests
     [Fact]
     public async Task StatusReturnsCompletedWhenAtLeastOneSourceAndChannelExist()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         object sourceRequest = new
@@ -73,7 +73,7 @@ public sealed class OnboardingTests
     [Fact]
     public async Task DismissMarksCompletedEvenWithoutSourcesOrChannels()
     {
-        using ShieldWebAppFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         OnboardingStatusResponse? before = await client.GetFromJsonAsync<OnboardingStatusResponse>(

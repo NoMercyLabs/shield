@@ -43,7 +43,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ApplyAllFixesNonAdminReturns403()
     {
-        using ViewerRoleFactory factory = new();
+        await using ViewerRoleFactory factory = new();
 
         // Seed source and viewer user directly via EF — bypasses the HTTP layer so we
         // don't need a working admin HTTP session on a SingleUser=false factory.

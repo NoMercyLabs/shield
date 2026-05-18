@@ -33,7 +33,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task RegisterFirstUserBecomesAdmin()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         RegisterRequest request = new("first-admin", "P@ssword1");
@@ -58,7 +58,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task LoginWithWrongPasswordReturns401()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await client.PostAsJsonAsync(
             "/api/auth/register",
@@ -76,7 +76,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task LoginThenMeReturnsAuthenticatedUser()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await client.PostAsJsonAsync(
             "/api/auth/register",
@@ -100,7 +100,7 @@ public sealed class AuthTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task LogoutClearsCookieAndMeReturns401()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await client.PostAsJsonAsync(
             "/api/auth/register",

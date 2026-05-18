@@ -11,7 +11,7 @@ public class YarnBerryTests
     public async Task ParsesYarnBerryLockfile()
     {
         NpmLockParser parser = new();
-        using Stream stream = FixtureLoader.Open("yarn.berry.lock");
+        await using Stream stream = FixtureLoader.Open("yarn.berry.lock");
 
         ParseResult result = await parser.ParseAsync(stream, "yarn.lock", CancellationToken.None);
 

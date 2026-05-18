@@ -19,7 +19,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task StartReturnsFlowIdUserCodeAndVerificationUri()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             DeviceCode: "device-code-xyz",
@@ -55,7 +55,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task PollReturnsPendingWhileUserHasNotAuthorized()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-pending",
@@ -99,7 +99,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task PollReturnsOkAndWritesIntegrationTokenOnSuccess()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-success",
@@ -169,7 +169,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task PollReturnsExpiredAndDropsFlowOnExpiredToken()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-expired",
@@ -212,7 +212,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task StatusAdvertisesDeviceFlowAvailableWhenDefaultClientIdResolves()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         OAuthStatusResponse? body = await client.GetFromJsonAsync<OAuthStatusResponse>(
@@ -225,7 +225,7 @@ public sealed class GitHubDeviceFlowTests
     [Fact]
     public async Task PerUserClientIdOverrideWinsOverDefault()
     {
-        using DeviceFlowFactory factory = new();
+        await using DeviceFlowFactory factory = new();
         HttpClient client = factory.CreateClient();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-override",

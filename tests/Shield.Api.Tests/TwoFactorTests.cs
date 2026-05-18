@@ -18,7 +18,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task EnrollmentReturnsProvisioningUriAndRecoveryCodes()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-enroll", "Correct1!");
 
@@ -38,7 +38,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task VerifyMarksUser2faEnabled()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-verify", "Correct1!");
 
@@ -127,7 +127,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task Require2FaSettingBlocksNon2faUserFromApi()
     {
-        using MultiUserFactory factory = new();
+        await using MultiUserFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-blocked", "Correct1!");
 

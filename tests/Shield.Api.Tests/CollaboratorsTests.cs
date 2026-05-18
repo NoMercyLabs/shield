@@ -22,7 +22,7 @@ public sealed class CollaboratorsTests
     [Fact]
     public async Task ListOrgsReturnsAdminTokenOrgs()
     {
-        using GithubCollabFactory factory = new();
+        await using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
@@ -68,7 +68,7 @@ public sealed class CollaboratorsTests
     [Fact]
     public async Task MembersPaginated()
     {
-        using GithubCollabFactory factory = new();
+        await using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
@@ -145,7 +145,7 @@ public sealed class CollaboratorsTests
     [Fact]
     public async Task TokenRevokedReturns409()
     {
-        using GithubCollabFactory factory = new();
+        await using GithubCollabFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();

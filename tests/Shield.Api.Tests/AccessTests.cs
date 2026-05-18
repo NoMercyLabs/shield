@@ -17,7 +17,7 @@ public sealed class AccessTests
     [Fact]
     public async Task MaintainerSeesOnlyGrantedSourcesInList()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         (int sourceA, int sourceB, int sourceC, Guid maintainerId, _) = await SeedAclScenarioAsync(
             factory
         );
@@ -42,7 +42,7 @@ public sealed class AccessTests
     [Fact]
     public async Task MaintainerCannotGetUnauthorizedSourceReturns404()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         (_, _, int sourceC, _, _) = await SeedAclScenarioAsync(factory);
 
         HttpClient maintainer = factory.CreateClient();
@@ -58,7 +58,7 @@ public sealed class AccessTests
     [Fact]
     public async Task MaintainerWithTriageCanAckFinding()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         (_, int sourceB, _, _, _) = await SeedAclScenarioAsync(factory);
         Guid findingB = await SeedFindingOnSourceAsync(factory, sourceB);
 
@@ -78,7 +78,7 @@ public sealed class AccessTests
     [Fact]
     public async Task MaintainerWithReadCannotAckFindingReturns403()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         (int sourceA, _, _, _, _) = await SeedAclScenarioAsync(factory);
         Guid findingA = await SeedFindingOnSourceAsync(factory, sourceA);
 
@@ -98,7 +98,7 @@ public sealed class AccessTests
     [Fact]
     public async Task GroupGrantPropagatesToMember()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         await SeedAdminAsync(factory);
 
         // Seed a source that the maintainer doesn't get directly — only through a group.
@@ -177,7 +177,7 @@ public sealed class AccessTests
     [Fact]
     public async Task AdminSeesAllSourcesRegardlessOfGrants()
     {
-        using MultiUserAccessFactory factory = new();
+        await using MultiUserAccessFactory factory = new();
         (int sourceA, int sourceB, int sourceC, _, _) = await SeedAclScenarioAsync(factory);
 
         HttpClient admin = factory.CreateClient();

@@ -23,7 +23,7 @@ public sealed class GithubAccessResolverTests
     [Fact]
     public async Task UserWithoutGithubLoginReturnsNull()
     {
-        using GithubAccessFactory factory = new();
+        await using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
         Guid userId = await SeedUserAsync(factory, withGithubLogin: false);
 
@@ -41,7 +41,7 @@ public sealed class GithubAccessResolverTests
     [Fact]
     public async Task UserWithMatchingOrgGetsTriageOnOrgsSources()
     {
-        using GithubAccessFactory factory = new();
+        await using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
         Guid userId = await SeedUserAsync(factory, withGithubLogin: true, githubSubject: "999");
 
@@ -82,7 +82,7 @@ public sealed class GithubAccessResolverTests
     [Fact]
     public async Task UserWithGithubLoginButNoOrgMatchReturnsEmptySnapshot()
     {
-        using GithubAccessFactory factory = new();
+        await using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
         Guid userId = await SeedUserAsync(factory, withGithubLogin: true, githubSubject: "999");
 
@@ -105,7 +105,7 @@ public sealed class GithubAccessResolverTests
     [Fact]
     public async Task CacheHitReturnsSameResultWithoutSecondHttpCall()
     {
-        using GithubAccessFactory factory = new();
+        await using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
         Guid userId = await SeedUserAsync(factory, withGithubLogin: true, githubSubject: "999");
         await SeedSourceAsync(factory, "NoMercy-Entertainment", "media-server");
@@ -131,7 +131,7 @@ public sealed class GithubAccessResolverTests
     [Fact]
     public async Task InvalidateDropsCachedEntrySoNextCallRefetches()
     {
-        using GithubAccessFactory factory = new();
+        await using GithubAccessFactory factory = new();
         _ = factory.CreateClient();
         Guid userId = await SeedUserAsync(factory, withGithubLogin: true, githubSubject: "999");
         await SeedSourceAsync(factory, "NoMercy-Entertainment", "media-server");

@@ -14,7 +14,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task GetReturnsDefaultsWhenDbEmpty()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-reader");
 
         HttpResponseMessage response = await client.GetAsync("/api/settings");
@@ -40,7 +40,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task GetSettingsReturnsOauthProviderConfigMasked()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-get");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -65,7 +65,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsPersistsProviderCredentialsAndMasksOnReadBack()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-put");
 
         UpdateSettingsRequest request = BaselineRequest() with
@@ -96,7 +96,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsWithNullClientSecretKeepsExisting()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-keep");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -122,7 +122,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsWithEmptyClientSecretClears()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-clear");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -158,7 +158,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutPersistsValuesAndMasksSecretOnReadBack()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-writer");
 
         UpdateSettingsRequest request = new(
@@ -198,7 +198,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task RuntimeReturnsEnvironmentInfo()
     {
-        using SettingsFactory factory = new();
+        await using SettingsFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-runtime");
 
         HttpResponseMessage response = await client.GetAsync("/api/settings/runtime");
