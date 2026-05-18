@@ -8,6 +8,11 @@ import NotificationsBell from '@/components/NotificationsBell.vue'
 import { type LocaleCode, LOCALE_FLAGS, LOCALE_LABELS, SUPPORTED_LOCALES, setLocale } from '@/i18n'
 import { logout, useAuth } from '@/stores/auth'
 
+// Synthetic principal id stamped by the server-side single-user middleware. Real users
+// never have this id — gating the logout button on `userId !== SYNTHETIC` correctly hides
+// it ONLY for the synthetic session even when the server reports singleUserMode=true.
+const SYNTHETIC_SINGLE_USER_ID = '00000000-0000-0000-0000-000000000001'
+
 interface Props {
   drawerOpen?: boolean
 }
@@ -196,7 +201,7 @@ onUnmounted(() => {
               <Settings class="h-4 w-4 text-slate-400" />
               <span>{{ t('topbar.account.tokens') }}</span>
             </RouterLink>
-            <template v-if="!user?.singleUserMode">
+            <template v-if="user.userId && user.userId !== SYNTHETIC_SINGLE_USER_ID">
               <div class="border-t border-slate-800" />
               <button
                 type="button"
