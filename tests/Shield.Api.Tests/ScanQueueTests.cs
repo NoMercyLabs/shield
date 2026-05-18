@@ -92,7 +92,7 @@ public sealed class ScanQueueTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task StatusEndpointReportsRecentFailures()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
 
         int sourceId = await SeedGithubLikeSourceAsync();
 

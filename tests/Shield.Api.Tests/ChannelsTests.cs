@@ -95,7 +95,8 @@ public sealed class ChannelsTests
     public async Task SlackChannelCreateWithChannelIdSucceeds()
     {
         await using RecordingFactory factory = new(ChannelType.Slack);
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         // Per the new per-type form, the Slack OAuth payload looks like
         // { "channelId": "C12345" } — no webhookUrl.
@@ -139,7 +140,8 @@ public sealed class ChannelsTests
     public async Task WebhookChannelWithBodyTemplateRendersPlaceholders()
     {
         await using RecordingFactory factory = new(ChannelType.Webhook);
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         string template = "sev={{severity}} count={{count}}";
         string configJson = JsonSerializer.Serialize(
@@ -187,7 +189,8 @@ public sealed class ChannelsTests
     public async Task ChannelResponseIncludesMaskedParsedConfig()
     {
         await using ShieldWebAppFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         string configJson = JsonSerializer.Serialize(
             new { webhookUrl = "https://discord.com/api/webhooks/12345/secret-token-stuff" }

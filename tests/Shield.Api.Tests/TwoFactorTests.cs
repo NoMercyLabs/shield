@@ -2,9 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Api.Services.Auth;
@@ -18,7 +16,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task EnrollmentReturnsProvisioningUriAndRecoveryCodes()
     {
-        await using MultiUserFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-enroll", "Correct1!");
 
@@ -38,7 +36,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task VerifyMarksUser2faEnabled()
     {
-        await using MultiUserFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-verify", "Correct1!");
 
@@ -127,7 +125,7 @@ public sealed class TwoFactorTests
     [Fact]
     public async Task Require2FaSettingBlocksNon2faUserFromApi()
     {
-        await using MultiUserFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
         await RegisterAndLoginAsync(client, "tfa-blocked", "Correct1!");
 
@@ -164,21 +162,5 @@ public sealed class TwoFactorTests
             new LoginRequest(username, password)
         );
         login.IsSuccessStatusCode.Should().BeTrue();
-    }
-
-    private sealed class MultiUserFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
     }
 }

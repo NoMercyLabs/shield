@@ -2,9 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
@@ -41,7 +39,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 sourceType: SourceType.LocalFolder
             );
 
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage response = await client.GetAsync("/api/findings?pageSize=200");
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -73,7 +71,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
     {
         Guid id = await SeedFindingAsync();
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage ack = await client.PostAsync($"/api/findings/{id}/ack", content: null);
         ack.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -107,7 +105,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 sourceType: SourceType.LocalFolder
             );
 
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage response = await client.PostAsJsonAsync(
                 $"/api/findings/{findingId}/apply-fix",
                 new ApplyFixRequest("auto")
@@ -162,7 +160,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 sourceType: SourceType.LocalFolder
             );
 
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage detail = await client.GetAsync($"/api/findings/{findingId}");
             detail.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -205,7 +203,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 sourceType: SourceType.LocalFolder
             );
 
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage response = await client.PostAsJsonAsync(
                 $"/api/findings/{findingId}/apply-fix",
                 new ApplyFixRequest("pr")
@@ -307,7 +305,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         Guid second = await SeedFindingAsync();
         Guid third = await SeedFindingAsync();
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/findings/bulk-ack",
             new BulkFindingsRequest([first, second, third])
@@ -336,7 +334,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         Guid real = await SeedFindingAsync();
         Guid missing = Guid.NewGuid();
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/findings/bulk-resolve",
             new BulkFindingsRequest([real, missing])
@@ -365,7 +363,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await db.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         // ?severity=2&severity=3 = High + Critical
         HttpResponseMessage response = await client.GetAsync(
             "/api/findings?severity=2&severity=3&pageSize=200"
@@ -498,7 +496,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await db.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/findings?sortBy=severity&sortDir=asc&pageSize=200"
         );
@@ -557,7 +555,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await db.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/findings?sortBy=discoveredAt&sortDir=desc&pageSize=200"
         );
@@ -620,7 +618,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await shieldDb.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             $"/api/findings?advisoryQuery={Uri.EscapeDataString(unique)}&pageSize=200"
         );
@@ -711,7 +709,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await shieldDb.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/findings?kevOnly=true&pageSize=200"
         );
@@ -801,7 +799,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
             await shieldDb.SaveChangesAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         // Threshold 0.50 — should include 0.85, exclude 0.10
         HttpResponseMessage response = await client.GetAsync(
             "/api/findings?epssMin=0.50&pageSize=200"
@@ -834,7 +832,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
                 sourceType: SourceType.LocalFolder
             );
 
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage response = await client.GetAsync(
                 "/api/findings?hasFix=true&pageSize=200"
             );
@@ -856,21 +854,5 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         }
     }
 
-    // Variant of the shared factory that turns off SingleUserMode so role gates exercise real
-    // Identity principals (needed for the Viewer 403 test).
-    private sealed class ViewerFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
-    }
+    private sealed class ViewerFactory : ShieldWebAppFactory { }
 }

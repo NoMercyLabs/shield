@@ -20,7 +20,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task StartReturnsFlowIdUserCodeAndVerificationUri()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             DeviceCode: "device-code-xyz",
             UserCode: "WDJB-MJHT",
@@ -56,7 +57,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task PollReturnsPendingWhileUserHasNotAuthorized()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-pending",
             "USR-PEND",
@@ -100,7 +102,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task PollReturnsOkAndWritesIntegrationTokenOnSuccess()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-success",
             "GR8T-PASS",
@@ -170,7 +173,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task PollReturnsExpiredAndDropsFlowOnExpiredToken()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-expired",
             "EXP1-RED2",
@@ -213,7 +217,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task StatusAdvertisesDeviceFlowAvailableWhenDefaultClientIdResolves()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         OAuthStatusResponse? body = await client.GetFromJsonAsync<OAuthStatusResponse>(
             "/api/oauth/github/status"
@@ -226,7 +231,8 @@ public sealed class GitHubDeviceFlowTests
     public async Task PerUserClientIdOverrideWinsOverDefault()
     {
         await using DeviceFlowFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
         FakeGitHubDeviceFlowClient.NextDeviceCode = new(
             "device-code-override",
             "OVR-CODE",
@@ -240,7 +246,6 @@ public sealed class GitHubDeviceFlowTests
         IAppSettingsService settings = factory.Services.GetRequiredService<IAppSettingsService>();
         await settings.UpdateAsync(
             new(
-                SingleUserMode: true,
                 OpenApiEnabled: false,
                 OidcEnabled: false,
                 OidcIssuer: null,
@@ -258,6 +263,11 @@ public sealed class GitHubDeviceFlowTests
                 ),
                 SlackOAuth: new(null, null, true, null),
                 GoogleOAuth: new(null, null, true, null),
+                GitlabOAuth: new(null, null, true, null),
+                BitbucketOAuth: new(null, null, true, null),
+                ForgejoOAuth: new(null, null, true, null),
+                GiteaOAuth: new(null, null, true, null),
+                CodebergOAuth: new(null, null, true, null),
                 OAuthRedirectBase: null
             ),
             updatedBy: null

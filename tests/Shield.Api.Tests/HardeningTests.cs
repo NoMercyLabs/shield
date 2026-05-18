@@ -23,33 +23,11 @@ public sealed class HardeningTests
         new StubHostEnvironment("Production");
 
     [Fact]
-    public void ProductionThrowsWhenSingleUserModeEnabledWithoutOverride()
-    {
-        IConfiguration config = BuildConfig(
-            new()
-            {
-                ["Shield:SingleUser"] = "true",
-                ["Shield:OpenApi:Enabled"] = "false",
-                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
-                ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
-            }
-        );
-
-        Action act = () => ProductionSafetyGate.Validate(config, ProductionEnvironment());
-
-        act.Should()
-            .Throw<InvalidOperationException>()
-            .WithMessage("*SingleUser*")
-            .WithMessage("*AllowSingleUserInProduction*");
-    }
-
-    [Fact]
     public void ProductionThrowsWhenSwaggerEnabled()
     {
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "true",
                 ["Shield:Auth:JwtSigningKey"] = new('k', 64),
                 ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
@@ -67,7 +45,6 @@ public sealed class HardeningTests
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "false",
                 ["Shield:Public"] = "true",
                 ["Shield:OpenApi:Enabled"] = "false",
                 ["Shield:Auth:RequireHttps"] = "false",
@@ -87,7 +64,6 @@ public sealed class HardeningTests
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "false",
                 ["Shield:Auth:JwtSigningKey"] = new('k', 64),
                 ["Shield:Auth:DataProtectionMasterKey"] =
@@ -106,7 +82,6 @@ public sealed class HardeningTests
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "false",
                 ["Shield:Auth:JwtSigningKey"] = new('k', 32), // below 48-char floor
                 ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
@@ -124,7 +99,6 @@ public sealed class HardeningTests
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "true",
                 ["Shield:OpenApi:Enabled"] = "true",
                 ["Shield:Public"] = "true",
                 ["Shield:Auth:RequireHttps"] = "false",
@@ -220,34 +194,15 @@ public sealed class HardeningTests
                 (_, config) =>
                 {
                     config.AddInMemoryCollection(
-                        new Dictionary<string, string?>
-                        {
-                            ["Shield:Auth:RequireHttps"] = "true",
-                            ["Shield:SingleUser"] = "false",
-                        }
+                        new Dictionary<string, string?> { ["Shield:Auth:RequireHttps"] = "true" }
                     );
                 }
             );
         }
     }
 
-    // Factory variant for rate-limit test: multi-user mode so /api/auth/login hits the real
-    // sign-in pipeline (and therefore the EnableRateLimiting attribute).
-    private sealed class LimitTestFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
-    }
+    // Factory variant for rate-limit test — /api/auth/login hits the real sign-in pipeline.
+    private sealed class LimitTestFactory : ShieldWebAppFactory { }
 
     private sealed class StubHostEnvironment : IHostEnvironment
     {

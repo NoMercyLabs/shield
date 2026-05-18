@@ -224,7 +224,6 @@ ProductionSafetyGate.Validate(configuration, builder.Environment);
 // Identity — cookies for the SPA, JWT bearer for API clients. Password policy + lockout
 // tighten automatically when Shield:Public=true; otherwise dev-friendly defaults stay.
 bool shieldPublicMode = configuration.GetValue("Shield:Public", false);
-bool shieldSingleUserMode = configuration.GetValue("Shield:SingleUser", false);
 builder
     .Services.AddIdentity<ShieldUser, ShieldRole>(options =>
     {
@@ -247,14 +246,9 @@ builder
         {
             options.Password.RequireNonAlphanumeric = false;
             options.Password.RequireUppercase = false;
-            // Multi-user mode (not single-user) still wants lockout-on-failure even off the
-            // public internet — brute force from a LAN host is still brute force.
-            if (!shieldSingleUserMode)
-            {
-                options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-            }
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         }
     })
     .AddEntityFrameworkStores<ShieldDbContext>()
@@ -324,10 +318,6 @@ builder
             };
         }
     )
-    .AddScheme<
-        Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
-        SingleUserAuthHandler
-    >(SingleUserAuthHandler.SchemeName, configureOptions: null)
     .AddScheme<ApiTokenAuthOptions, ApiTokenAuthHandler>(
         ApiTokenAuthHandler.SchemeName,
         configureOptions: null
@@ -378,14 +368,11 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    // Default policy accepts the Identity cookie (SPA), a JWT bearer (API clients), or the
-    // SingleUser convenience scheme (solo operators). The auth handler decides whether each
-    // request matches its scheme; SingleUser only succeeds when Shield:SingleUser=true and
-    // no real cookie is present.
+    // Default policy accepts the Identity cookie (SPA), a JWT bearer (API clients), or an
+    // ApiToken. The auth handler decides whether each request matches its scheme.
     options.DefaultPolicy = new AuthorizationPolicyBuilder(
         IdentityConstants.ApplicationScheme,
         JwtBearerDefaults.AuthenticationScheme,
-        SingleUserAuthHandler.SchemeName,
         ApiTokenAuthHandler.SchemeName
     )
         .RequireAuthenticatedUser()
@@ -393,14 +380,12 @@ builder.Services.AddAuthorization(options =>
 
     // Role-based policies — MUST list every authentication scheme explicitly. `[Authorize(Roles=X)]`
     // ignores DefaultPolicy.AuthenticationSchemes and falls back to DefaultAuthenticateScheme
-    // (Identity.Application), so SingleUser / JWT / ApiToken never get a chance to authenticate
-    // the request. We declare the schemes here once and route the controllers through the named
-    // policies instead.
+    // (Identity.Application), so JWT / ApiToken never get a chance to authenticate the request.
+    // We declare the schemes here once and route the controllers through the named policies.
     string[] allSchemes =
     [
         IdentityConstants.ApplicationScheme,
         JwtBearerDefaults.AuthenticationScheme,
-        SingleUserAuthHandler.SchemeName,
         ApiTokenAuthHandler.SchemeName,
     ];
     options.AddPolicy(
@@ -425,7 +410,7 @@ builder.Services.AddAuthorization(options =>
 
 // Antiforgery — XSRF-TOKEN cookie (readable by SPA, HttpOnly=false) + X-XSRF-TOKEN header.
 // CookieAuthCsrfFilter (registered globally below) only enforces for cookie-auth requests;
-// JWT / ApiToken / SingleUser requests carry no cookie that a malicious page could replay.
+// JWT / ApiToken requests carry no cookie that a malicious page could replay.
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-XSRF-TOKEN";
@@ -713,8 +698,7 @@ builder.Services.AddScoped<IAccessResolver, AccessResolver>();
 // Singleton — owns its own ConcurrentDictionary cache; opens a scoped DbContext per refresh.
 builder.Services.AddSingleton<IGithubAccessResolver, GithubAccessResolver>();
 
-// Runtime-mutable settings cache. Singleton so Current is shared across requests and
-// SingleUserAuthHandler sees the new snapshot the instant SettingsController writes.
+// Runtime-mutable settings cache. Singleton so Current is shared across requests.
 builder.Services.AddSingleton<IAppSettingsService, AppSettingsService>();
 
 // 2FA enforcement + session tracking. TwoFactorEnforcement is a thin facade over the
@@ -903,7 +887,7 @@ using (IServiceScope scope = app.Services.CreateScope())
     await inboxDb.Database.EnsureCreatedAsync();
 }
 
-// Seed Admin/Viewer roles and (in single-user mode) the synthetic operator account.
+// Seed Admin, Maintainer, and Viewer roles.
 await IdentitySeeder.SeedAsync(app.Services);
 
 // Detect public-posture transition: when Shield:Public flips false→true, revoke OAuth
@@ -1019,7 +1003,7 @@ app.UseAuthentication();
 
 // Short-circuit invalid `shld_` bearers to 401 before downstream schemes can satisfy the
 // default policy — otherwise a revoked/expired api-token would silently fall back to the
-// cookie/SingleUser/JWT principal that auth middleware happened to also authenticate.
+// cookie/JWT principal that auth middleware happened to also authenticate.
 app.UseApiTokenChallengeGate();
 app.UseAuthorization();
 

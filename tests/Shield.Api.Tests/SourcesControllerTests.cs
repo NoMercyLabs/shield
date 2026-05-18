@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
@@ -13,7 +11,7 @@ using Xunit;
 namespace Shield.Api.Tests;
 
 // Auth permutation tests for POST /api/sources/{id}/apply-all-fixes.
-// Admin (SingleUser mode) → 400 (wrong source type, but auth passes).
+// Admin → 400 (wrong source type, but auth passes).
 // Non-admin viewer → 403.
 // API token bearer → 403 ([NoApiToken] gate).
 public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
@@ -30,7 +28,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     {
         int sourceId = await SeedGithubSourceAsync("ctrl-admin-fixture");
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true }
@@ -45,8 +43,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     {
         await using ViewerRoleFactory factory = new();
 
-        // Seed source and viewer user directly via EF — bypasses the HTTP layer so we
-        // don't need a working admin HTTP session on a SingleUser=false factory.
+        // Seed source and viewer user directly via EF — bypasses the HTTP layer.
         int sourceId;
         using (IServiceScope scope = factory.Services.CreateScope())
         {
@@ -97,7 +94,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
         int sourceId = await SeedGithubSourceAsync("ctrl-apitoken-fixture");
 
         // Mint an API token as admin.
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage tokenResponse = await adminClient.PostAsJsonAsync(
             "/api/apitokens",
             new CreateApiTokenRequest("ctrl-no-apitoken", ["sources:read"], null, null)
@@ -121,7 +118,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ApplyAllFixesUnknownSourceReturns404()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/sources/999999/apply-all-fixes",
             new { dryRun = true }
@@ -132,7 +129,7 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ApplyAllFixesLocalFolderSourceReturns400()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage create = await client.PostAsJsonAsync(
             "/api/sources",
             new
@@ -178,20 +175,5 @@ public sealed class SourcesControllerTests : IClassFixture<ShieldWebAppFactory>
         return source.Id;
     }
 
-    // SingleUser=false so role-based gates see real Identity principals.
-    private sealed class ViewerRoleFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
-    }
+    private sealed class ViewerRoleFactory : ShieldWebAppFactory { }
 }

@@ -23,7 +23,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateThenListReturnsCreatedSource()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -48,7 +48,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateWithBadConfigReturns400()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         // LocalFolder requires a 'path' — empty object should fail validation.
         object request = new
         {
@@ -65,7 +65,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task GetReturnsEmptyLatestSnapshotWhenNeverScanned()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -90,7 +90,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ScanNowReturns202WithQueuedPayloadAndSnapshotAppears()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -152,7 +152,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DetectedRemoteRoundTripsThroughSourceDetail()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -195,7 +195,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task PromoteToGithubCreatesSiblingGithubSource()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -244,7 +244,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task PromoteToGithubRejectsSourceWithoutDetectedRemote()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new
         {
             type = (int)SourceType.LocalFolder,
@@ -266,7 +266,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task BulkLocalFoldersCreatesAndSkipsExisting()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
 
         string tempRoot = Path.Combine(
             Path.GetTempPath(),
@@ -324,7 +324,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task BulkFromGithubCreatesSourcesAndSkipsExisting()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
 
         // Pre-seed an existing GithubRepo source with the same name we'll try to add — must be skipped.
         object existing = new
@@ -399,7 +399,7 @@ public sealed class SourcesTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task BulkFromGithubRejectsEmptySelections()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         object request = new { selections = Array.Empty<object>() };
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/sources/bulk-from-github",

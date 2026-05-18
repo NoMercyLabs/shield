@@ -20,7 +20,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task BrowseWithNoPathReturnsRoots()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync("/api/fs/browse");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -47,7 +47,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
 
         try
         {
-            HttpClient client = _factory.CreateClient();
+            HttpClient client = await _factory.CreateAuthenticatedClientAsync();
             HttpResponseMessage response = await client.GetAsync(
                 $"/api/fs/browse?path={Uri.EscapeDataString(tempRoot)}"
             );
@@ -84,7 +84,7 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task BrowseRejectsUnrootedPath()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/fs/browse?path=relative-not-rooted"
         );
@@ -125,6 +125,13 @@ public sealed class FsBrowseTests : IClassFixture<ShieldWebAppFactory>
         try
         {
             HttpClient client = withAllowlist.CreateClient();
+            await client.PostAsJsonAsync(
+                "/api/auth/login",
+                new LoginRequest(
+                    ShieldWebAppFactory.AdminUsername,
+                    ShieldWebAppFactory.AdminPassword
+                )
+            );
 
             HttpResponseMessage allowed = await client.GetAsync(
                 $"/api/fs/browse?path={Uri.EscapeDataString(allowedRoot)}"

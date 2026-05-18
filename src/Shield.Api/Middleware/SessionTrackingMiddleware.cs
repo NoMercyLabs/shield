@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Shield.Api.Middleware;
 
 // Reads the opaque shield.session cookie and:
-//   - if absent → no-op (some clients use JWT bearer or the SingleUser convenience scheme)
+//   - if absent → no-op (some clients use JWT bearer)
 //   - if present + matches a non-revoked row → write-coalesced LastActiveAt touch
 //   - if present + row missing or revoked → clear cookie + 401 (only for /api requests)
 // Stores the resolved UserSession on HttpContext.Items["UserSession"] so SessionsController
@@ -19,15 +19,8 @@ public sealed class SessionTrackingMiddleware : IMiddleware
         bool hasCookie =
             context.Request.Cookies.TryGetValue(CookieName, out string? opaqueToken)
             && !string.IsNullOrWhiteSpace(opaqueToken);
-        // SingleUserAuthHandler builds its principal via SignInManager.CreateUserPrincipalAsync,
-        // which tags the inner identity with AuthenticationType=IdentityConstants.ApplicationScheme
-        // — same as a real cookie. The handler stamps a marker claim so we can tell them apart.
-        bool isSingleUserPrincipal = context.User.HasClaim(c =>
-            c.Type == SingleUserAuthHandler.SingleUserClaimType
-        );
         bool isCookieAuth =
-            !isSingleUserPrincipal
-            && context.User.Identity?.IsAuthenticated == true
+            context.User.Identity?.IsAuthenticated == true
             && context.User.Identities.Any(id =>
                 id.AuthenticationType == IdentityConstants.ApplicationScheme
             );
@@ -36,7 +29,7 @@ public sealed class SessionTrackingMiddleware : IMiddleware
         {
             // Cookie-auth without our session cookie = browser kept the Identity cookie after
             // a revoke-induced clear. Force a re-login by signing out + 401 (api only).
-            // Bearer + SingleUser principals don't carry the application cookie so they pass.
+            // Bearer principals don't carry the application cookie so they pass.
             if (isApi && isCookieAuth)
             {
                 await SignOutAndRejectAsync(context);

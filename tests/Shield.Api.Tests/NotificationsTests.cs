@@ -39,7 +39,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync("/api/notifications");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -67,7 +67,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage listResponse = await client.GetAsync("/api/notifications");
         NotificationsPage? page = await listResponse.Content.ReadFromJsonAsync<NotificationsPage>();
         Guid id = page!.Items.First(item => item.Title == title).Id;
@@ -98,7 +98,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage listResponse = await client.GetAsync("/api/notifications");
         NotificationsPage? page = await listResponse.Content.ReadFromJsonAsync<NotificationsPage>();
         Guid id = page!.Items.First(item => item.Title == title).Id;
@@ -135,7 +135,7 @@ public sealed class NotificationsTests : IClassFixture<ShieldWebAppFactory>
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsync(
             "/api/notifications/mark-all-read",
             content: null

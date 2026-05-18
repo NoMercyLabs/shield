@@ -51,7 +51,6 @@ public sealed class ScanQueueWorkerDeferredFactory : WebApplicationFactory<Progr
             {
                 Dictionary<string, string?> overrides = new()
                 {
-                    ["Shield:SingleUser"] = "true",
                     ["Shield:Db:Shield"] = $"Data Source={_shieldDb}",
                     ["Shield:Db:Feeds"] = $"Data Source={_feedsDb}",
                     ["Shield:OpenApi:Enabled"] = "false",

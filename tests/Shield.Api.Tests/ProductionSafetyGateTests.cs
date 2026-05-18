@@ -32,7 +32,6 @@ public sealed class ProductionSafetyGateTests
     private static Dictionary<string, string?> GreenConfig() =>
         new()
         {
-            ["Shield:SingleUser"] = "false",
             ["Shield:OpenApi:Enabled"] = "false",
             ["Shield:Public"] = "false",
             ["Shield:Auth:RequireHttps"] = "false",
@@ -94,37 +93,7 @@ public sealed class ProductionSafetyGateTests
     }
 
     // ---------------------------------------------------------------------------
-    // 3.  SingleUser=true in Production without AllowSingleUserInProduction
-    // ---------------------------------------------------------------------------
-
-    [Fact]
-    public void RefusesSingleUserInProductionWithoutOverride()
-    {
-        Dictionary<string, string?> config = GreenConfig();
-        config["Shield:SingleUser"] = "true";
-
-        Action act = () => ProductionSafetyGate.Validate(BuildConfig(config), Production());
-
-        act.Should()
-            .Throw<InvalidOperationException>()
-            .WithMessage("*SingleUser*")
-            .WithMessage("*AllowSingleUserInProduction*");
-    }
-
-    [Fact]
-    public void AllowsSingleUserWhenProductionOverrideSet()
-    {
-        Dictionary<string, string?> config = GreenConfig();
-        config["Shield:SingleUser"] = "true";
-        config["Shield:Auth:AllowSingleUserInProduction"] = "true";
-
-        Action act = () => ProductionSafetyGate.Validate(BuildConfig(config), Production());
-
-        act.Should().NotThrow();
-    }
-
-    // ---------------------------------------------------------------------------
-    // 4.  Public=true AND RequireHttps=false
+    // 3.  Public=true AND RequireHttps=false
     // ---------------------------------------------------------------------------
 
     [Fact]
@@ -263,7 +232,6 @@ public sealed class ProductionSafetyGateTests
         IConfiguration badConfig = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "true",
                 ["Shield:OpenApi:Enabled"] = "true",
                 ["Shield:Public"] = "true",
                 ["Shield:Auth:RequireHttps"] = "false",
@@ -289,9 +257,8 @@ public sealed class ProductionSafetyGateTests
         IConfiguration config = BuildConfig(
             new()
             {
-                ["Shield:SingleUser"] = "true",
                 ["Shield:OpenApi:Enabled"] = "true",
-                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
+                ["Shield:Auth:JwtSigningKey"] = new('k', 32),
                 ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
             }
         );
@@ -300,8 +267,8 @@ public sealed class ProductionSafetyGateTests
 
         act.Should()
             .Throw<InvalidOperationException>()
-            .WithMessage("*SingleUser*")
-            .WithMessage("*OpenApi*");
+            .WithMessage("*OpenApi*")
+            .WithMessage("*JwtSigningKey*");
     }
 
     // ---------------------------------------------------------------------------

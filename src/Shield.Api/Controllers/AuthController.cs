@@ -2,9 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Options;
 using Shield.Api.Middleware;
-using Shield.Core.Options;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace Shield.Api.Controllers;
@@ -16,7 +14,6 @@ public sealed class AuthController : ControllerBase
     private readonly SignInManager<ShieldUser> _signInManager;
     private readonly UserManager<ShieldUser> _userManager;
     private readonly RoleManager<ShieldRole> _roleManager;
-    private readonly IOptions<ShieldOptions> _shieldOptions;
     private readonly IAppSettingsService _settings;
     private readonly ISessionTracker _sessionTracker;
     private readonly ISessionCookieIssuer _sessionCookieIssuer;
@@ -34,7 +31,6 @@ public sealed class AuthController : ControllerBase
         SignInManager<ShieldUser> signInManager,
         UserManager<ShieldUser> userManager,
         RoleManager<ShieldRole> roleManager,
-        IOptions<ShieldOptions> shieldOptions,
         IAppSettingsService settings,
         ISessionTracker sessionTracker,
         ISessionCookieIssuer sessionCookieIssuer,
@@ -52,7 +48,6 @@ public sealed class AuthController : ControllerBase
         _signInManager = signInManager;
         _userManager = userManager;
         _roleManager = roleManager;
-        _shieldOptions = shieldOptions;
         _settings = settings;
         _sessionTracker = sessionTracker;
         _sessionCookieIssuer = sessionCookieIssuer;
@@ -299,6 +294,74 @@ public sealed class AuthController : ControllerBase
     private static bool IsConfigured(OAuthClientSettings client) =>
         !string.IsNullOrEmpty(client.ClientId) && !string.IsNullOrEmpty(client.ClientSecret);
 
+    [HttpGet("setup-required")]
+    [AllowAnonymous]
+    [NoApiToken]
+    [EnableRateLimiting("auth-burst")]
+    public async Task<ActionResult<SetupRequiredResponse>> SetupRequired(CancellationToken ct)
+    {
+        bool required = !await _userManager.Users.AnyAsync(ct);
+        return Ok(new SetupRequiredResponse(required));
+    }
+
+    [HttpPost("setup")]
+    [AllowAnonymous]
+    [NoApiToken]
+    [EnableRateLimiting("auth-burst")]
+    public async Task<ActionResult<LoginResponse>> Setup(
+        [FromBody] SetupRequest request,
+        CancellationToken ct
+    )
+    {
+        if (
+            string.IsNullOrWhiteSpace(request.Username)
+            || string.IsNullOrWhiteSpace(request.Password)
+        )
+            return BadRequest(new { error = "Username and password are required." });
+
+        if (await _userManager.Users.AnyAsync(ct))
+            return Conflict(new { error = "Setup already completed." });
+
+        if (!await _roleManager.RoleExistsAsync(ShieldRoles.Admin))
+        {
+            IdentityResult roleResult = await _roleManager.CreateAsync(new(ShieldRoles.Admin));
+            if (!roleResult.Succeeded)
+                return Problem(
+                    title: "Failed to create Admin role",
+                    detail: string.Join(", ", roleResult.Errors.Select(error => error.Description))
+                );
+        }
+
+        ShieldUser user = new()
+        {
+            UserName = request.Username,
+            Email = request.Email,
+            EmailConfirmed = string.IsNullOrWhiteSpace(request.Email),
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        IdentityResult create = await _userManager.CreateAsync(user, request.Password);
+        if (!create.Succeeded)
+            return BadRequest(
+                new { error = string.Join(", ", create.Errors.Select(error => error.Description)) }
+            );
+
+        IdentityResult assign = await _userManager.AddToRoleAsync(user, ShieldRoles.Admin);
+        if (!assign.Succeeded)
+            return Problem(
+                title: "Failed to assign Admin role",
+                detail: string.Join(", ", assign.Errors.Select(error => error.Description))
+            );
+
+        await _signInManager.SignInAsync(user, isPersistent: true);
+        IList<string> roles = await _userManager.GetRolesAsync(user);
+        UserSession session = await _sessionCookieIssuer.IssueAsync(HttpContext, user.Id, ct);
+        await _sessionAuditor.RecordSigninAsync(user, session, SigninMethod.Password, ct);
+        return Ok(
+            new LoginResponse(user.Id.ToString(), user.UserName, roles.ToList(), Succeeded: true)
+        );
+    }
+
     [HttpPost("logout")]
     [Authorize]
     [NoApiToken]
@@ -499,15 +562,6 @@ public sealed class AuthController : ControllerBase
         );
         string? impersonatorLogin = User.FindFirstValue("imp.admin.name");
 
-        // SingleUserMode reflects THIS SESSION, not the server config. A real cookie/OAuth
-        // session running on a server with Shield:SingleUser=true must report false here, or
-        // the SPA shows the SingleUser badge / hides the Sign-out button incorrectly.
-        bool sessionIsSingleUser = string.Equals(
-            User.Identity?.Name,
-            IdentitySeeder.SingleUserName,
-            StringComparison.OrdinalIgnoreCase
-        );
-
         // Side-effect: ensure the XSRF-TOKEN cookie is set on every authenticated /me call so
         // the SPA's Axios XSRF interceptor has something to read on subsequent mutating
         // requests. Real cookie-auth sessions need this to send X-XSRF-TOKEN on logout/etc.
@@ -518,7 +572,6 @@ public sealed class AuthController : ControllerBase
                 user.Id.ToString(),
                 user.UserName,
                 roles.ToList(),
-                sessionIsSingleUser,
                 DisplayName: displayName,
                 AvatarUrl: avatarUrl,
                 ProfileUrl: profileUrl,

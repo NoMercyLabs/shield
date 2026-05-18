@@ -4,7 +4,6 @@ public sealed class AuthOptions
 {
     public const string SectionName = "Shield:Auth";
 
-    public bool SingleUser { get; set; }
     public JwtOptions Jwt { get; set; } = new();
     public OidcOptions Oidc { get; set; } = new();
 }

@@ -1,14 +1,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
-using Shield.Core.Options;
 
 namespace Shield.Api.Middleware;
 
 // When `auth.require_2fa` is true, blocks API calls from authenticated users whose Identity
 // flag `TwoFactorEnabled` is false. Returns 403 with a discoverable body so the SPA can route
-// the user to the enrollment page. Lets anonymous + the synthetic single-user admin + the
-// 2FA-enrollment endpoints through so users can self-rescue.
+// the user to the enrollment page. Lets anonymous + 2FA-enrollment endpoints through so users
+// can self-rescue.
 public sealed class TwoFactorEnforcementMiddleware : IMiddleware
 {
     private static readonly string[] s_allowedPathPrefixes = ["/api/auth/2fa/"];
@@ -50,25 +48,6 @@ public sealed class TwoFactorEnforcementMiddleware : IMiddleware
             context.RequestServices.GetRequiredService<ITwoFactorEnforcement>();
         bool required = await enforcement.IsRequiredAsync(context.RequestAborted);
         if (!required)
-        {
-            await next(context);
-            return;
-        }
-
-        // The synthetic single-user admin can't enroll itself (auto-auth handler short-circuits
-        // the cookie pipeline), so the policy can't apply to it. Real admins enrolling under
-        // their own Identity row still hit the check.
-        IOptions<ShieldOptions> shieldOptions = context.RequestServices.GetRequiredService<
-            IOptions<ShieldOptions>
-        >();
-        if (
-            shieldOptions.Value.SingleUser
-            && string.Equals(
-                context.User.Identity.Name,
-                IdentitySeeder.SingleUserName,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
         {
             await next(context);
             return;

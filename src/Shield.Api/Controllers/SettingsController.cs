@@ -14,7 +14,6 @@ public sealed class SettingsController : ControllerBase
 {
     public static class Keys
     {
-        public const string SingleUserMode = "singleUserMode";
         public const string OpenApiEnabled = "openApiEnabled";
         public const string OidcEnabled = "oidcEnabled";
         public const string OidcIssuer = "oidcIssuer";
@@ -29,11 +28,7 @@ public sealed class SettingsController : ControllerBase
     }
 
     // Toggles that flip middleware/OpenApi pipeline at boot; runtime change requires restart.
-    private static readonly string[] RestartRequiredKeys =
-    [
-        Keys.SingleUserMode,
-        Keys.OpenApiEnabled,
-    ];
+    private static readonly string[] RestartRequiredKeys = [Keys.OpenApiEnabled];
 
     private readonly ShieldDbContext _db;
     private readonly IDataProtector _protector;
@@ -77,7 +72,6 @@ public sealed class SettingsController : ControllerBase
         Dictionary<string, string> existing = await LoadAllAsync(ct);
         Dictionary<string, string> updated = new(StringComparer.Ordinal);
 
-        updated[Keys.SingleUserMode] = request.SingleUserMode ? "true" : "false";
         updated[Keys.OpenApiEnabled] = request.OpenApiEnabled ? "true" : "false";
         updated[Keys.OidcEnabled] = request.OidcEnabled ? "true" : "false";
         updated[Keys.OidcIssuer] = request.OidcIssuer ?? "";
@@ -323,11 +317,6 @@ public sealed class SettingsController : ControllerBase
 
     private SettingsResponse BuildResponse(Dictionary<string, string> stored)
     {
-        bool singleUser = ReadBool(
-            stored,
-            Keys.SingleUserMode,
-            _configuration.GetValue("Shield:SingleUser", false)
-        );
         bool openApi = ReadBool(
             stored,
             Keys.OpenApiEnabled,
@@ -440,7 +429,6 @@ public sealed class SettingsController : ControllerBase
         string? redirectBase = ReadString(stored, Keys.OAuthRedirectBase);
 
         return new(
-            singleUser,
             openApi,
             oidcEnabled,
             string.IsNullOrEmpty(issuer) ? null : issuer,

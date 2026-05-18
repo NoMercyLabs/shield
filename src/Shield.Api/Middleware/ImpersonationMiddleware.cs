@@ -7,8 +7,8 @@ namespace Shield.Api.Middleware;
 // HttpContext.User to a synthetic principal carrying the impersonated user's id + roles +
 // username, plus a custom `imp.admin` claim holding the original admin's id.
 //
-// Runs AFTER UseAuthentication so context.User reflects the real cookie/JWT/SingleUser
-// principal we trust to gate the override on. Runs BEFORE UseAuthorization (and the 2FA gate,
+// Runs AFTER UseAuthentication so context.User reflects the real cookie/JWT principal
+// we trust to gate the override on. Runs BEFORE UseAuthorization (and the 2FA gate,
 // the audit logger, MapControllers) so downstream policies and the IAccessResolver see the
 // SWAPPED principal — that's the entire point: the admin lives the impersonated user's view.
 //

@@ -1,7 +1,6 @@
 namespace Shield.Api.Contracts;
 
 public sealed record SettingsResponse(
-    bool SingleUserMode,
     bool OpenApiEnabled,
     bool OidcEnabled,
     string? OidcIssuer,
@@ -32,7 +31,6 @@ public sealed record OAuthProviderConfigResponse(
 );
 
 public sealed record UpdateSettingsRequest(
-    bool SingleUserMode,
     bool OpenApiEnabled,
     bool OidcEnabled,
     string? OidcIssuer,

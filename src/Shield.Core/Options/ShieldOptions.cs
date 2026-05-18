@@ -4,7 +4,6 @@ public sealed class ShieldOptions
 {
     public const string SectionName = "Shield";
 
-    public bool SingleUser { get; set; }
     public DataSourceOptions DataSource { get; set; } = new();
     public RetentionOptions Retention { get; set; } = new();
 }

@@ -235,7 +235,6 @@ public sealed class GithubAccessResolverTests
                     config.AddInMemoryCollection(
                         new Dictionary<string, string?>
                         {
-                            ["Shield:SingleUser"] = "false",
                             // Drop the cache TTL so the cache-hit test below stays fast — still long
                             // enough that the "second call hits cache" assertion holds within the test.
                             ["Shield:Access:GithubCacheMinutes"] = "15",

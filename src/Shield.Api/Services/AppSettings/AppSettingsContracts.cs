@@ -28,7 +28,6 @@ public interface IAppSettingsService
 }
 
 public sealed record AppSettingsSnapshot(
-    bool SingleUserMode,
     bool OpenApiEnabled,
     bool OidcEnabled,
     string? OidcIssuer,
@@ -62,7 +61,6 @@ public sealed record OAuthClientSettings(
 // PreserveOidcClientSecret=true means "leave whatever is stored alone"; otherwise the
 // provided ClientSecret value (including null/empty) overwrites the row.
 public sealed record AppSettingsPatch(
-    bool SingleUserMode,
     bool OpenApiEnabled,
     bool OidcEnabled,
     string? OidcIssuer,

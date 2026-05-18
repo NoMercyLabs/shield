@@ -17,7 +17,7 @@ namespace Shield.Api.Tests;
 //
 // Non-dry-run can't exercise the full PR path without a live GitHub token; the integration
 // tests below verify the notification contract using the controller's BroadcastAsync call
-// path and the seeded admin user provided by SingleUser mode in ShieldWebAppFactory.
+// path and the seeded admin user provided by ShieldWebAppFactory.
 public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebAppFactory>
 {
     private readonly ShieldWebAppFactory _factory;
@@ -34,9 +34,10 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
         int sourceId = await SeedGithubSourceAsync("notif-dryrun");
         await SeedFindingsAsync(sourceId, 2);
 
+        // Snapshot taken after login so the sign-in notification is excluded from the baseline.
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int notificationsBefore = await CountNotificationsAsync();
 
-        HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true }
@@ -57,9 +58,10 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
         int sourceId = await SeedGithubSourceAsync("notif-noPr");
         await SeedFindingsAsync(sourceId, 1);
 
+        // Snapshot taken after login so the sign-in notification is excluded from the baseline.
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int notificationsBefore = await CountNotificationsAsync();
 
-        HttpClient client = _factory.CreateClient();
         // No GitHub token in the test environment — BulkFixApplier returns PullRequestUrl=null.
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
@@ -91,7 +93,7 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
             scope.ServiceProvider.GetRequiredService<Core.Abstractions.IAdminAudienceProvider>();
 
         IReadOnlyList<Guid> adminIds = await adminAudience.GetAdminUserIdsAsync();
-        adminIds.Should().NotBeEmpty("SingleUser mode seeds one admin");
+        adminIds.Should().NotBeEmpty("factory seeds one admin via /api/auth/setup");
 
         foreach (Guid adminId in adminIds)
         {

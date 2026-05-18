@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
 using Xunit;
@@ -14,7 +12,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task GetReturnsDefaultsWhenDbEmpty()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-reader");
 
         HttpResponseMessage response = await client.GetAsync("/api/settings");
@@ -22,8 +20,7 @@ public sealed class SettingsTests
 
         SettingsResponse? settings = await response.Content.ReadFromJsonAsync<SettingsResponse>();
         settings.Should().NotBeNull();
-        settings!.SingleUserMode.Should().BeFalse();
-        settings.OpenApiEnabled.Should().BeFalse();
+        settings!.OpenApiEnabled.Should().BeFalse();
         settings.OidcEnabled.Should().BeFalse();
         settings.OidcClientSecretMasked.Should().BeNull();
         settings.AlertSeverityFloor.Should().Be(Severity.Low);
@@ -40,7 +37,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task GetSettingsReturnsOauthProviderConfigMasked()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-get");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -65,7 +62,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsPersistsProviderCredentialsAndMasksOnReadBack()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-put");
 
         UpdateSettingsRequest request = BaselineRequest() with
@@ -96,7 +93,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsWithNullClientSecretKeepsExisting()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-keep");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -122,7 +119,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutSettingsWithEmptyClientSecretClears()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-oauth-clear");
 
         UpdateSettingsRequest seed = BaselineRequest() with
@@ -145,7 +142,6 @@ public sealed class SettingsTests
 
     private static UpdateSettingsRequest BaselineRequest() =>
         new(
-            SingleUserMode: false,
             OpenApiEnabled: false,
             OidcEnabled: false,
             OidcIssuer: null,
@@ -158,11 +154,10 @@ public sealed class SettingsTests
     [Fact]
     public async Task PutPersistsValuesAndMasksSecretOnReadBack()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-writer");
 
         UpdateSettingsRequest request = new(
-            SingleUserMode: true,
             OpenApiEnabled: true,
             OidcEnabled: true,
             OidcIssuer: "https://issuer.example/realms/shield",
@@ -198,7 +193,7 @@ public sealed class SettingsTests
     [Fact]
     public async Task RuntimeReturnsEnvironmentInfo()
     {
-        await using SettingsFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = await LoginAsAdminAsync(factory, "settings-runtime");
 
         HttpResponseMessage response = await client.GetAsync("/api/settings/runtime");
@@ -213,7 +208,7 @@ public sealed class SettingsTests
     }
 
     private static async Task<HttpClient> LoginAsAdminAsync(
-        SettingsFactory factory,
+        ShieldWebAppFactory factory,
         string username
     )
     {
@@ -229,22 +224,5 @@ public sealed class SettingsTests
         );
         login.StatusCode.Should().Be(HttpStatusCode.OK);
         return client;
-    }
-
-    // Multi-user mode lets the real cookie auth flow run; SingleUser middleware bypasses it otherwise.
-    private sealed class SettingsFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
     }
 }

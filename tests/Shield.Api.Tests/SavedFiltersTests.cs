@@ -18,7 +18,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateThenListRoundtripsTheFilter()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string name = "critical-lodash-" + Guid.NewGuid().ToString("n");
         const string queryJson = "{\"severity\":[3],\"packageName\":[\"lodash\"]}";
 
@@ -42,7 +42,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task SavingSameNameOverwritesExistingQuery()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string name = "overwrite-" + Guid.NewGuid().ToString("n");
         const string firstJson = "{\"severity\":[1]}";
         const string secondJson = "{\"severity\":[2,3]}";
@@ -68,7 +68,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DeleteRemovesTheFilter()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage created = await client.PostAsJsonAsync(
             "/api/saved-filters",
             new CreateSavedFilterRequest(
@@ -92,7 +92,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateWithEmptyNameReturns400()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/saved-filters",
             new CreateSavedFilterRequest("   ", "findings", "{}")
@@ -103,7 +103,7 @@ public sealed class SavedFiltersTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task ListByKindFiltersToThatKindOnly()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string unique = Guid.NewGuid().ToString("n");
         await client.PostAsJsonAsync(
             "/api/saved-filters",

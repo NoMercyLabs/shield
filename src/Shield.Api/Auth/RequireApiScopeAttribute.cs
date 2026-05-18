@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace Shield.Api.Auth;
 
 // Action filter that succeeds when:
-//   - the principal isn't an api-token (cookie/JWT/SingleUser principals already passed
-//     through the role policy), OR
+//   - the principal isn't an api-token (cookie/JWT principals already passed the role
+//     policy), OR
 //   - the api-token's scope set contains the required value (or a wildcard `*`).
 // Layer on top of [Authorize] — this filter doesn't authenticate, it just narrows what an
 // api-token is allowed to do once authenticated.

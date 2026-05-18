@@ -336,11 +336,7 @@ public sealed class OAuthController : ControllerBase
         CancellationToken ct
     )
     {
-        // First real user wins the Admin role — synthetic single-user is excluded from the count.
-        bool isFirstUser = !await _userManager.Users.AnyAsync(
-            candidate => candidate.UserName != IdentitySeeder.SingleUserName,
-            ct
-        );
+        bool isFirstUser = !await _userManager.Users.AnyAsync(ct);
 
         AppSettingsSnapshot snapshot = await _settings.GetAsync(ct);
 
@@ -650,8 +646,7 @@ public sealed class OAuthController : ControllerBase
         }
 
         // The current Shield user — request is Admin-policy authenticated so this resolves
-        // either to a real Identity user, the API-token-backed actor, or the synthetic
-        // single-user account, all of which expose a Guid id.
+        // either to a real Identity user or the API-token-backed actor.
         ShieldUser? currentUser = await _userManager.GetUserAsync(User);
         if (currentUser is null)
             return Unauthorized();

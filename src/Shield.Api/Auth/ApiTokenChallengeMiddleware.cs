@@ -4,8 +4,8 @@ namespace Shield.Api.Auth;
 
 // When the caller presented an `shld_` bearer, the ONLY scheme allowed to authenticate the
 // request is ApiToken. Without this gate the default policy keeps walking the scheme list
-// and a cookie / SingleUser / JWT principal can still satisfy the request — meaning a
-// revoked or expired api-token effectively falls back to the seeded SingleUser admin.
+// and a cookie / JWT principal can still satisfy the request — meaning a revoked or expired
+// api-token could silently fall back to the cookie session.
 //
 // Runs after UseAuthentication, before UseAuthorization. Cheap header sniff — no DB hit;
 // the actual lookup already happened in ApiTokenAuthHandler.
@@ -35,7 +35,7 @@ public static class ApiTokenChallengeMiddleware
                         }
                         // Replace User with the api-token principal so downstream auth /
                         // controllers see the correct identity even though the default policy
-                        // is multi-scheme. Otherwise SingleUser fallthrough could still win.
+                        // is multi-scheme.
                         context.User = result.Principal!;
                     }
                 }

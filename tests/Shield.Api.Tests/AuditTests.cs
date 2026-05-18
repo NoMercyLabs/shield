@@ -24,7 +24,7 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
     {
         Guid findingId = await SeedFindingAsync();
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage ack = await client.PostAsync(
             $"/api/findings/{findingId}/ack",
             content: null
@@ -56,7 +56,7 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
         Guid first = await SeedFindingAsync();
         Guid second = await SeedFindingAsync();
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         (await client.PostAsync($"/api/findings/{first}/ack", null)).EnsureSuccessStatusCode();
         (await client.PostAsync($"/api/findings/{second}/resolve", null)).EnsureSuccessStatusCode();
 
@@ -75,6 +75,9 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task GetFindingsDoesNotRecordAuditEntry()
     {
+        // Snapshot taken after login so the login's own audit row is excluded.
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
+
         long beforeCount;
         using (IServiceScope scope = _factory.Services.CreateScope())
         {
@@ -82,7 +85,6 @@ public sealed class AuditTests : IClassFixture<ShieldWebAppFactory>
             beforeCount = await db.AuditEntries.LongCountAsync();
         }
 
-        HttpClient client = _factory.CreateClient();
         HttpResponseMessage list = await client.GetAsync("/api/findings?pageSize=10");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
 

@@ -25,7 +25,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
         await SeedEventAsync("shield.auth", "login.lockout", Severity.High, ip: "10.0.0.2");
         await SeedEventAsync("shield.ratelimit", "rate.limit", Severity.Low, ip: "10.0.0.3");
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/security/events?minSeverity=2&pageSize=200"
         );
@@ -43,7 +43,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: "10.0.1.1");
         await SeedEventAsync("shield.crawler", "crawler.detected", Severity.Low, ip: "10.0.1.2");
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             "/api/security/events?source=shield.crawler&pageSize=200"
         );
@@ -60,7 +60,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: ip);
         await SeedEventAsync("shield.auth", "login.failed", Severity.Medium, ip: "10.99.0.99");
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             $"/api/security/events?ip={ip}&pageSize=200"
         );
@@ -95,7 +95,7 @@ public sealed class SecurityEventsTests : IClassFixture<ShieldWebAppFactory>
             host: "host-b"
         );
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync("/api/security/hosts");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 

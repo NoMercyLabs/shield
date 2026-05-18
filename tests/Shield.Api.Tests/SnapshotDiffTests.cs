@@ -21,7 +21,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DiffReturnsAddedRemovedAndVersionChanged()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int sourceId = await SeedSourceAsync(client, "diff-shape-fixture");
 
         // Older snapshot: lodash + axios + react@18.0.0
@@ -73,7 +73,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DiffReturns400WhenSnapshotIdsMatch()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int sourceId = await SeedSourceAsync(client, "diff-same-ids");
         Guid snapshotId = Guid.NewGuid();
         await SeedSnapshotAsync(
@@ -92,7 +92,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DiffReturns404WhenSnapshotBelongsToDifferentSource()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int sourceA = await SeedSourceAsync(client, "diff-source-a");
         int sourceB = await SeedSourceAsync(client, "diff-source-b");
 
@@ -121,7 +121,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task SnapshotsListIncludesPrevSnapshotIdChain()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         int sourceId = await SeedSourceAsync(client, "snapshots-prev-chain");
 
         Guid oldestId = Guid.NewGuid();

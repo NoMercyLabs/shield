@@ -24,7 +24,8 @@ public sealed class OAuthRepoListTests
     public async Task ReposReturns400WhenGithubNotConnected()
     {
         await using GitHubReposFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/repos");
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -34,8 +35,8 @@ public sealed class OAuthRepoListTests
     public async Task ReposFollowsLinkHeaderAndReturnsPaginatedResults()
     {
         await using GitHubReposFactory factory = new();
-        // Force host startup so the singleton handler we registered is reachable.
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
@@ -146,7 +147,8 @@ public sealed class OAuthRepoListTests
     public async Task ReposResponseIsCachedPerUserForFiveMinutes()
     {
         await using GitHubReposFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(

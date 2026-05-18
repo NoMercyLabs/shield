@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
@@ -17,7 +15,7 @@ public sealed class PasswordChangeNotificationTests
     [Fact]
     public async Task ChangePasswordCreatesNotificationAndSecurityEvent()
     {
-        await using MultiUserFactory factory = new();
+        await using ShieldWebAppFactory factory = new();
         HttpClient client = factory.CreateClient();
 
         // Register + login so we have an authenticated session.
@@ -58,21 +56,5 @@ public sealed class PasswordChangeNotificationTests
         );
         notif!.Severity.Should().Be(Severity.High);
         notif.Body.Should().Contain("Your password was changed");
-    }
-
-    private sealed class MultiUserFactory : ShieldWebAppFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureAppConfiguration(
-                (_, config) =>
-                {
-                    config.AddInMemoryCollection(
-                        new Dictionary<string, string?> { ["Shield:SingleUser"] = "false" }
-                    );
-                }
-            );
-        }
     }
 }

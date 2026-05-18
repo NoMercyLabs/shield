@@ -1,7 +1,5 @@
 using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Options;
-using Shield.Core.Options;
 
 namespace Shield.Api.Services.AppSettings;
 
@@ -9,7 +7,6 @@ public sealed class AppSettingsService : IAppSettingsService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IDataProtector _protector;
-    private readonly IOptions<ShieldOptions> _shieldOptions;
     private readonly IConfiguration _configuration;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private AppSettingsSnapshot? _current;
@@ -17,13 +14,11 @@ public sealed class AppSettingsService : IAppSettingsService
     public AppSettingsService(
         IServiceScopeFactory scopeFactory,
         IDataProtectionProvider protectionProvider,
-        IOptions<ShieldOptions> shieldOptions,
         IConfiguration configuration
     )
     {
         _scopeFactory = scopeFactory;
         _protector = protectionProvider.CreateProtector("shield.settings");
-        _shieldOptions = shieldOptions;
         _configuration = configuration;
     }
 
@@ -105,7 +100,6 @@ public sealed class AppSettingsService : IAppSettingsService
                 }
             }
 
-            Write(AppSettingKeys.SingleUserMode, patch.SingleUserMode ? "true" : "false");
             Write(AppSettingKeys.OpenApiEnabled, patch.OpenApiEnabled ? "true" : "false");
             Write(AppSettingKeys.OidcEnabled, patch.OidcEnabled ? "true" : "false");
             Write(AppSettingKeys.OidcIssuer, patch.OidcIssuer ?? "");
@@ -359,11 +353,6 @@ public sealed class AppSettingsService : IAppSettingsService
             }
         }
 
-        bool singleUser = ReadBool(
-            stored,
-            AppSettingKeys.SingleUserMode,
-            _shieldOptions.Value.SingleUser
-        );
         bool openApi = ReadBool(
             stored,
             AppSettingKeys.OpenApiEnabled,
@@ -496,7 +485,6 @@ public sealed class AppSettingsService : IAppSettingsService
         IReadOnlyList<string> detectedHosts = ParseHostList(detectedHostsRaw);
 
         return new(
-            singleUser,
             openApi,
             oidcEnabled,
             string.IsNullOrEmpty(issuer) ? null : issuer,
@@ -551,7 +539,6 @@ public sealed class AppSettingsService : IAppSettingsService
 
     private AppSettingsSnapshot Defaults() =>
         new(
-            _shieldOptions.Value.SingleUser,
             _configuration.GetValue("Shield:OpenApi:Enabled", false),
             _configuration.GetValue("Shield:Oidc:Enabled", false),
             _configuration["Shield:Oidc:Issuer"],

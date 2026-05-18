@@ -14,16 +14,16 @@ namespace Shield.Api.Tests;
 // Covers /api/collaborators/github/* — orgs listing, paginated members fan-out, and the
 // token-revoked → 409 path.
 //
-// SingleUser=true means the test client is implicitly admin, so the Authorize policy passes
-// without an explicit login step. The named "github" HttpClient gets its primary handler
-// swapped for a deterministic fake — same pattern as OAuthRepoListTests.
+// The named "github" HttpClient gets its primary handler swapped for a deterministic fake —
+// same pattern as OAuthRepoListTests.
 public sealed class CollaboratorsTests
 {
     [Fact]
     public async Task ListOrgsReturnsAdminTokenOrgs()
     {
         await using GithubCollabFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
@@ -69,7 +69,8 @@ public sealed class CollaboratorsTests
     public async Task MembersPaginated()
     {
         await using GithubCollabFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
@@ -146,7 +147,8 @@ public sealed class CollaboratorsTests
     public async Task TokenRevokedReturns409()
     {
         await using GithubCollabFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(

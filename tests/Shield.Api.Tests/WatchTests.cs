@@ -22,7 +22,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateThenListReturnsTheWatch()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string packageName = "lodash-" + Guid.NewGuid().ToString("n");
 
         HttpResponseMessage created = await client.PostAsJsonAsync(
@@ -43,7 +43,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DuplicateCreateIsIdempotent()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string packageName = "axios-" + Guid.NewGuid().ToString("n");
 
         HttpResponseMessage first = await client.PostAsJsonAsync(
@@ -66,7 +66,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task DeleteRemovesTheWatch()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         string packageName = "to-delete-" + Guid.NewGuid().ToString("n");
 
         HttpResponseMessage created = await client.PostAsJsonAsync(
@@ -93,7 +93,7 @@ public sealed class WatchTests : IClassFixture<ShieldWebAppFactory>
         await SeedFindingForPackageAsync(packageName, Severity.High);
         await SeedFindingForPackageAsync(packageName, Severity.High);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         await client.PostAsJsonAsync(
             "/api/watch",
             new CreateWatchRequest(Ecosystem.Npm, packageName)

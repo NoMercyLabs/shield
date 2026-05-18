@@ -85,25 +85,6 @@ public sealed class InviteAcceptanceController : ControllerBase
                     new { error = "Session user not found.", code = "user_not_found" }
                 );
 
-            // Synthetic single-user has no external binding by design — invite acceptance
-            // requires a real code-host identity. Tell the SPA to redirect to GitHub signin.
-            if (
-                string.Equals(
-                    currentUser.UserName,
-                    IdentitySeeder.SingleUserName,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-            {
-                return BadRequest(
-                    new
-                    {
-                        error = "Single-user session can't accept invites — sign in with GitHub.",
-                        code = "single_user_session",
-                    }
-                );
-            }
-
             IList<UserLoginInfo> currentLogins = await _userManager.GetLoginsAsync(currentUser);
             UserLoginInfo? githubLogin = currentLogins.FirstOrDefault(login =>
                 string.Equals(login.LoginProvider, "github", StringComparison.OrdinalIgnoreCase)

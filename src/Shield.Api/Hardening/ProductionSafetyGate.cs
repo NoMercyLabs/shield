@@ -3,8 +3,8 @@ namespace Shield.Api.Hardening;
 // Refuses to start when configuration would expose a half-secured instance to the internet.
 // Runs once at startup AFTER the data-protection master-key check in Program.cs, so by the
 // time we get here we know a master key was provided — we only need to validate its quality
-// plus the rest of the public-exposure posture (no single-user mode, no Swagger, HTTPS
-// required, JWT key length, master-key not the dev string).
+// plus the rest of the public-exposure posture (no Swagger, HTTPS required, JWT key length,
+// master-key not the dev string).
 //
 // Each failure throws InvalidOperationException with a remediation hint so the operator can
 // fix the env var without diving into source. The banner that follows lists everything that
@@ -23,11 +23,6 @@ public static class ProductionSafetyGate
         if (isDevelopment || environment.IsEnvironment("Testing"))
             return;
 
-        bool singleUser = configuration.GetValue("Shield:SingleUser", false);
-        bool allowSingleUserInProduction = configuration.GetValue(
-            "Shield:Auth:AllowSingleUserInProduction",
-            false
-        );
         bool openApiEnabled = configuration.GetValue("Shield:OpenApi:Enabled", false);
         bool isPublic = configuration.GetValue("Shield:Public", false);
         bool requireHttps = configuration.GetValue("Shield:Auth:RequireHttps", false);
@@ -40,15 +35,6 @@ public static class ProductionSafetyGate
         string masterKey = configuration["Shield:Auth:DataProtectionMasterKey"] ?? string.Empty;
 
         List<string> failures = [];
-
-        if (singleUser && !allowSingleUserInProduction)
-            failures.Add(
-                "Shield:SingleUser=true outside Development is refused. "
-                    + "Solo operators on the public internet expose an auto-Admin session to anyone "
-                    + "who reaches the host. Either disable single-user mode (Shield__SingleUser=false) "
-                    + "and register a real Admin via /api/auth/register, or explicitly accept the risk "
-                    + "by setting Shield__Auth__AllowSingleUserInProduction=true (NOT recommended)."
-            );
 
         if (openApiEnabled)
             failures.Add(
@@ -144,11 +130,6 @@ public static class ProductionSafetyGate
         IHostEnvironment environment
     )
     {
-        bool singleUser = configuration.GetValue("Shield:SingleUser", false);
-        bool allowSingleUserInProduction = configuration.GetValue(
-            "Shield:Auth:AllowSingleUserInProduction",
-            false
-        );
         bool openApiEnabled = configuration.GetValue("Shield:OpenApi:Enabled", false);
         bool isPublic = configuration.GetValue("Shield:Public", false);
         bool requireHttps = configuration.GetValue("Shield:Auth:RequireHttps", false);
@@ -160,14 +141,11 @@ public static class ProductionSafetyGate
 
         logger.LogInformation(
             "Shield posture: Environment={Environment} Public={Public} RequireHttps={RequireHttps} "
-                + "SingleUser={SingleUser} AllowSingleUserInProduction={AllowSingleUserInProduction} "
                 + "OpenApi={OpenApi} CookieDomain={CookieDomain} KnownProxies={KnownProxies} "
                 + "OAuthRedirectBase={OAuthRedirectBase}",
             environment.EnvironmentName,
             isPublic,
             requireHttps,
-            singleUser,
-            allowSingleUserInProduction,
             openApiEnabled,
             cookieDomain,
             knownProxies,

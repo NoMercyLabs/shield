@@ -2,7 +2,6 @@ namespace Shield.Api.Services.AppSettings;
 
 public static class AppSettingKeys
 {
-    public const string SingleUserMode = "singleUserMode";
     public const string OpenApiEnabled = "openApiEnabled";
     public const string OidcEnabled = "oidcEnabled";
     public const string OidcIssuer = "oidcIssuer";

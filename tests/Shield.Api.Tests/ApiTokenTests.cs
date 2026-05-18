@@ -27,7 +27,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task CreateReturnsFullTokenOnce()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/apitokens",
             new CreateApiTokenRequest("smoke", ["findings:read"], null, null)
@@ -56,7 +56,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task TokenWithFindingsReadScopeCanListFindings()
     {
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         CreateApiTokenResponse created = await CreateTokenAsync(
             adminClient,
             "findings-reader",
@@ -71,7 +71,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task TokenWithoutScopeReturns403()
     {
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         // Token has only sources:read — calling findings should be forbidden.
         CreateApiTokenResponse created = await CreateTokenAsync(
             adminClient,
@@ -87,7 +87,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task RevokedTokenReturns401()
     {
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         CreateApiTokenResponse created = await CreateTokenAsync(
             adminClient,
             "to-revoke",
@@ -107,7 +107,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task LastUsedTrackedPerMinute()
     {
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         CreateApiTokenResponse created = await CreateTokenAsync(
             adminClient,
             "coalesce-target",
@@ -130,7 +130,7 @@ public sealed class ApiTokenTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task TokenCannotCreateOtherTokens()
     {
-        HttpClient adminClient = _factory.CreateClient();
+        HttpClient adminClient = await _factory.CreateAuthenticatedClientAsync();
         // Even a token whose owner is Admin must not be able to mint more tokens via the
         // NoApiToken gate on ApiTokensController.
         CreateApiTokenResponse created = await CreateTokenAsync(

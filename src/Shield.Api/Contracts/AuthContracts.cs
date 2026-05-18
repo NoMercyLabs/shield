@@ -33,7 +33,6 @@ public sealed record MeResponse(
     string? UserId,
     string? Username,
     IReadOnlyList<string> Roles,
-    bool SingleUserMode,
     // Decoration pulled from the user's connected code-host identity (e.g. GitHub) — used by
     // the SPA to render avatar / display-name in the topbar without an extra round-trip.
     // Null when the user hasn't connected any external provider.
@@ -47,6 +46,10 @@ public sealed record MeResponse(
     string? ImpersonatedBy = null,
     string? ImpersonatorLogin = null
 );
+
+public sealed record SetupRequiredResponse(bool Required);
+
+public sealed record SetupRequest(string Username, string Password, string? Email = null);
 
 public sealed record ImpersonationStartRequest(string UserId);
 

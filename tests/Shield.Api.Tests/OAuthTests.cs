@@ -19,7 +19,8 @@ public sealed class OAuthTests
     public async Task StatusReturnsDisconnectedWhenNothingPersisted()
     {
         await using ShieldWebAppFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/status");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -34,7 +35,8 @@ public sealed class OAuthTests
     public async Task StatusReturnsConnectedWhenTokenSaved()
     {
         await using ShieldWebAppFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
@@ -120,7 +122,8 @@ public sealed class OAuthTests
     public async Task DisconnectClearsToken()
     {
         await using ShieldWebAppFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
@@ -152,7 +155,8 @@ public sealed class OAuthTests
     public async Task StartReturnsBadRequestWhenClientIdNotConfigured()
     {
         await using ShieldWebAppFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/start");
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -162,7 +166,8 @@ public sealed class OAuthTests
     public async Task StartReturnsAuthorizationUrlWhenConfigured()
     {
         await using ConfiguredOAuthFactory factory = new();
-        HttpClient client = factory.CreateClient();
+        await factory.InitializeAsync();
+        HttpClient client = await factory.CreateAuthenticatedClientAsync();
 
         HttpResponseMessage response = await client.GetAsync("/api/oauth/github/start");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -233,12 +238,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninCreatesFirstUserAsAdmin()
     {
-        await using SigninFactory factory = new(
-            github: true,
-            slack: false,
-            google: false,
-            singleUser: false
-        );
+        await using SigninFactory factory = new(github: true, slack: false, google: false);
         HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         IOAuthStateStore stateStore = factory.Services.GetRequiredService<IOAuthStateStore>();
@@ -294,12 +294,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninFindsExistingUserByEmail()
     {
-        await using SigninFactory factory = new(
-            github: true,
-            slack: false,
-            google: false,
-            singleUser: false
-        );
+        await using SigninFactory factory = new(github: true, slack: false, google: false);
         HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         // Seed a real user via the registration endpoint (first-user bootstrap path).
@@ -357,12 +352,7 @@ public sealed class OAuthTests
     [Fact]
     public async Task SigninRejectedWhenRegistrationClosedAndNoMatch()
     {
-        await using SigninFactory factory = new(
-            github: true,
-            slack: false,
-            google: false,
-            singleUser: false
-        );
+        await using SigninFactory factory = new(github: true, slack: false, google: false);
         HttpClient client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
         // Bootstrap an admin so we're past the "first user" branch; RegistrationOpen stays false.
@@ -422,14 +412,12 @@ public sealed class OAuthTests
         private readonly bool _github;
         private readonly bool _slack;
         private readonly bool _google;
-        private readonly bool _singleUser;
 
-        public SigninFactory(bool github, bool slack, bool google, bool singleUser = true)
+        public SigninFactory(bool github, bool slack, bool google)
         {
             _github = github;
             _slack = slack;
             _google = google;
-            _singleUser = singleUser;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -440,7 +428,6 @@ public sealed class OAuthTests
                 {
                     Dictionary<string, string?> overrides = new()
                     {
-                        ["Shield:SingleUser"] = _singleUser ? "true" : "false",
                         ["Shield:OAuth:RedirectBase"] = "http://localhost:8080",
                     };
                     if (_github)

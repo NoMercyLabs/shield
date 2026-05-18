@@ -193,8 +193,7 @@ public sealed class ApiTokensController : ControllerBase
         if (Guid.TryParse(rawId, out Guid parsed))
             return parsed;
 
-        // Fallback for principals that don't carry NameIdentifier as a Guid (eg SingleUser
-        // synthetic principal in some paths) — resolve via the username claim.
+        // Fallback for principals that don't carry NameIdentifier as a Guid — resolve via username.
         ShieldUser? user = await _userManager.GetUserAsync(User);
         return user?.Id ?? Guid.Empty;
     }

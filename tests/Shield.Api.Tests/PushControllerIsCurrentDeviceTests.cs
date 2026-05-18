@@ -33,7 +33,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
             userAgent: "Mozilla/5.0 (Chrome/120)"
         );
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         // Send the *same* UA that was stored — the old code would return true here.
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Chrome/120)");
 
@@ -61,7 +61,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
 
         await SeedSubscriptionAsync(endpoint: testEndpoint, userAgent: null);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync("/api/push/subscriptions");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -88,7 +88,7 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
 
         await SeedSubscriptionAsync(endpoint: testEndpoint, userAgent: "Firefox/121");
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync("/api/push/subscriptions");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -112,13 +112,12 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
         using IServiceScope scope = _factory.Services.CreateScope();
         ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
 
-        // Resolve the first admin user seeded by SingleUser mode.
         Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> userManager =
             scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
         Data.Identity.ShieldUser? admin = (
             await userManager.GetUsersInRoleAsync(Auth.ShieldRoles.Admin)
         ).FirstOrDefault();
-        admin.Should().NotBeNull("SingleUser factory must seed an admin");
+        admin.Should().NotBeNull("factory seeds an admin via /api/auth/setup");
 
         db.PushSubscriptions.Add(
             new()

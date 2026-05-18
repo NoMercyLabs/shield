@@ -75,7 +75,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync(
             $"/api/security/ips?search={ip}&pageSize=200"
         );
@@ -108,7 +108,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync($"/api/security/ips/{ip}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -136,7 +136,7 @@ public sealed class IpReputationCorrelationTests : IClassFixture<ShieldWebAppFac
             );
         }
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/security/ips/{ip}/notes",
             new UpdateNotesRequest("known scanner from VPS pool")

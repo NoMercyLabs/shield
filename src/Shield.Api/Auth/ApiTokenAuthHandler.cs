@@ -8,8 +8,8 @@ namespace Shield.Api.Auth;
 
 // Recognises `Authorization: Bearer shld_<secret>` and authenticates the request as the
 // owning user, plus an `api-token` claim carrying the token id and a `api-scope` claim per
-// granted scope. Returns NoResult on anything that isn't an shld_ bearer so cookie/JWT/
-// SingleUser fall-through schemes still get a shot.
+// granted scope. Returns NoResult on anything that isn't an shld_ bearer so cookie/JWT
+// fall-through schemes still get a shot.
 public sealed class ApiTokenAuthHandler : AuthenticationHandler<ApiTokenAuthOptions>
 {
     public const string SchemeName = "ApiToken";

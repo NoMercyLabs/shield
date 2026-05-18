@@ -1,9 +1,11 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Shield.Api.Contracts;
 using Shield.Api.Persistence;
 using Shield.Core.Abstractions;
 using Shield.Data;
@@ -17,6 +19,9 @@ public class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
     private readonly string _testRoot;
     private readonly string _shieldDb;
     private readonly string _feedsDb;
+
+    public const string AdminUsername = "test-admin";
+    public const string AdminPassword = "TestAdmin1!";
 
     // Program.Main reads configuration BEFORE ConfigureAppConfiguration runs, so the
     // data-protection master-key requirement (non-Development gate) must be satisfied
@@ -53,14 +58,11 @@ public class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             {
                 Dictionary<string, string?> overrides = new()
                 {
-                    ["Shield:SingleUser"] = "true",
                     ["Shield:Db:Shield"] = $"Data Source={_shieldDb}",
                     ["Shield:Db:Feeds"] = $"Data Source={_feedsDb}",
                     ["Shield:OpenApi:Enabled"] = "false",
                     ["Shield:Auth:JwtSigningKey"] =
                         "test-signing-key-must-be-at-least-32-characters-long",
-                    // Non-Development envs require a master key for the data-protection chain.
-                    // Tests run in "Testing" so the key must be supplied here.
                     ["Shield:Auth:DataProtectionMasterKey"] =
                         "test-data-protection-master-key-deterministic-tests-32",
                 };
@@ -130,7 +132,38 @@ public class ShieldWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             services.Remove(descriptor);
     }
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    // Seeds the test-admin user via the real registration endpoint so the cookie-auth
+    // pipeline is fully exercised. Idempotent — skipped if a user already exists (factory
+    // subclass may have seeded one earlier in ConfigureWebHost).
+    public async Task InitializeAsync()
+    {
+        HttpClient bootstrap = CreateClient();
+        HttpResponseMessage check = await bootstrap.GetAsync("/api/auth/setup-required");
+        if (check.IsSuccessStatusCode)
+        {
+            SetupRequiredResponse? body =
+                await check.Content.ReadFromJsonAsync<SetupRequiredResponse>();
+            if (body?.Required == true)
+            {
+                await bootstrap.PostAsJsonAsync(
+                    "/api/auth/setup",
+                    new SetupRequest(AdminUsername, AdminPassword)
+                );
+            }
+        }
+    }
+
+    // Returns an HttpClient that is already signed in as the seeded Admin.
+    // Each call creates a fresh client (new cookie jar) so tests remain isolated.
+    public async Task<HttpClient> CreateAuthenticatedClientAsync()
+    {
+        HttpClient client = CreateClient();
+        await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(AdminUsername, AdminPassword)
+        );
+        return client;
+    }
 
     async Task IAsyncLifetime.DisposeAsync()
     {

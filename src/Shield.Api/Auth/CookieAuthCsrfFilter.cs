@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace Shield.Api.Auth;
 
 // Validates the antiforgery token on state-changing requests that authenticated via the
-// Identity cookie scheme. JWT, ApiToken, and SingleUser requests carry no cookie that a
-// malicious page could auto-attach, so they are explicitly exempt.
+// Identity cookie scheme. JWT and ApiToken requests carry no cookie that a malicious page
+// could auto-attach, so they are explicitly exempt.
 public sealed class CookieAuthCsrfFilter : IAsyncActionFilter
 {
     private static readonly HashSet<string> SafeMethods = new(StringComparer.OrdinalIgnoreCase)
@@ -103,10 +103,6 @@ public sealed class CookieAuthCsrfFilter : IAsyncActionFilter
 
     private static bool RequiresCsrfCheck(HttpContext context)
     {
-        // SingleUser principals are synthetic — no cookie is auto-sent by a browser.
-        if (context.User.HasClaim(claim => claim.Type == SingleUserAuthHandler.SingleUserClaimType))
-            return false;
-
         // The browser only auto-attaches a cookie. Bearer / ApiToken requests bring their
         // own Authorization header, so CSRF doesn't apply. Detect cookie auth via the
         // *actual cookie being present* — robust to whatever PolicyEvaluator did to the

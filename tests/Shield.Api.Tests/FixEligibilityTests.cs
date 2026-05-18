@@ -305,7 +305,7 @@ public sealed class FixEligibilityTests : IClassFixture<ShieldWebAppFactory>
 
     private async Task<FindingDetailResponse> GetDetailAsync(Guid id)
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.GetAsync($"/api/findings/{id}");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         FindingDetailResponse? detail =

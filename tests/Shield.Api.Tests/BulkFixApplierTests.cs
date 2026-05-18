@@ -33,7 +33,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         int sourceId = await SeedGithubSourceAsync("dry-run-fixture");
         await SeedFindingsAsync(sourceId, 3);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true }
@@ -53,7 +53,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         int sourceId = await SeedGithubSourceAsync("dry-run-unsupported");
         await SeedFindingsAsync(sourceId, 1, ecosystem: Ecosystem.Nuget);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true }
@@ -76,7 +76,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         int sourceId = await SeedGithubSourceAsync("cooldown-fixture");
         await SetLastBulkApplyAt(sourceId, DateTime.UtcNow.AddHours(-1));
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = false }
@@ -91,7 +91,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         await SetLastBulkApplyAt(sourceId, DateTime.UtcNow.AddHours(-1));
         await SeedFindingsAsync(sourceId, 1);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         // force=true with dryRun=true — proves bypass without actually calling GitHub.
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
@@ -108,7 +108,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
     [Fact]
     public async Task LocalFolderSourceReturns400()
     {
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage createResponse = await client.PostAsJsonAsync(
             "/api/sources",
             new
@@ -404,7 +404,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
             fixedVersion: "2.0.0"
         );
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true, allowMajorBumps = false }
@@ -428,7 +428,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
             fixedVersion: "2.0.0"
         );
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true, allowMajorBumps = true }
@@ -451,7 +451,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         await MarkProduction(sourceId);
         await SeedFindingsAsync(sourceId, 1);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = false, confirmProduction = false }
@@ -466,7 +466,7 @@ public sealed class BulkFixApplierTests : IClassFixture<ShieldWebAppFactory>
         await MarkProduction(sourceId);
         await SeedFindingsAsync(sourceId, 1);
 
-        HttpClient client = _factory.CreateClient();
+        HttpClient client = await _factory.CreateAuthenticatedClientAsync();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             $"/api/sources/{sourceId}/apply-all-fixes",
             new { dryRun = true }
