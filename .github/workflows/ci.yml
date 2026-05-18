@@ -33,6 +33,12 @@ jobs:
       - name: Restore .NET
         run: dotnet restore Shield.sln
 
+      # Surface vulnerable transitive deps from the NuGet graph. NU1903 also fires at
+      # build time via TreatWarningsAsErrors, but listing them here makes the CI log
+      # the canonical place to grep for advisory IDs.
+      - name: Audit .NET deps
+        run: dotnet list Shield.sln package --vulnerable --include-transitive
+
       - name: Build .NET
         run: dotnet build Shield.sln -c Release --no-restore
 
@@ -44,6 +50,13 @@ jobs:
       - name: Install SPA deps
         working-directory: src/Shield.Web
         run: npm ci
+
+      # Fail the build on any high-or-critical advisory in the SPA's npm tree. Moderate
+      # findings are surfaced in the log but don't block — too many noisy false positives
+      # in the transitive devDep set, and they'd be fixed by the next npm-update sweep.
+      - name: Audit SPA deps
+        working-directory: src/Shield.Web
+        run: npm run audit
 
       - name: Build SPA
         working-directory: src/Shield.Web
