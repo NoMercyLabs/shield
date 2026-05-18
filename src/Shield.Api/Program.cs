@@ -478,6 +478,14 @@ builder.Services.AddHsts(options =>
     options.Preload = false;
 });
 
+// Cloudflare-specific forwarded-IP unwrap. Reads CF-Connecting-IP + CF-Visitor when the
+// peer is in Cloudflare's published IP range — a single authoritative client IP that
+// can't be chain-padded the way X-Forwarded-For can. Runs before UseForwardedHeaders so
+// downstream middleware sees the real client IP via context.Connection.RemoteIpAddress.
+builder.Services.Configure<CloudflareForwardedIpOptions>(
+    configuration.GetSection(CloudflareForwardedIpOptions.SectionName)
+);
+
 // Forwarded headers — required when behind a reverse proxy that terminates TLS so
 // HttpsRedirection sees the original https:// scheme instead of the proxy's http:// hop,
 // which would cause a redirect loop. The middleware only rewrites RemoteIp/Scheme when
@@ -944,6 +952,10 @@ if (
         ghsaCadence
     );
 }
+
+// CF-Connecting-IP / CF-Visitor unwrap runs first so RemoteIpAddress + Request.Scheme
+// reflect the real client BEFORE UseForwardedHeaders and HttpsRedirection see them.
+app.UseMiddleware<CloudflareForwardedIpMiddleware>();
 
 // Forwarded headers MUST run before HttpsRedirection so X-Forwarded-Proto is honoured by
 // the redirect logic — otherwise we bounce-loop between the proxy and the app.
