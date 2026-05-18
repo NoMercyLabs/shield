@@ -26,15 +26,22 @@ immediately** with:
 ```bash
 cd c:\Projects\NoMercyLabs\shield\src\Shield.Api
 Shield__Auth__JwtSigningKey="local_dev_key_for_arc_demo_at_least_32_chars_long" \
+Shield__Auth__DataProtectionMasterKey="dev-master-key-at-least-32-chars-long-xx" \
 Shield__SingleUser=true \
 Shield__Db__Shield="Data Source=C:/Projects/NoMercyLabs/shield/data/shield-demo.db" \
 Shield__Db__Feeds="Data Source=C:/Projects/NoMercyLabs/shield/data/feeds-demo.db" \
 Shield__OpenApi__Enabled=true \
-ASPNETCORE_ENVIRONMENT=Production \
-dotnet run --no-build -c Release -- --urls "http://0.0.0.0:8842" \
+ASPNETCORE_ENVIRONMENT=Development \
+dotnet run --no-build -c Release -- --urls "http://localhost:8842" \
   > /tmp/shield-demo.log 2>&1 &
 disown
 ```
+
+**Why localhost and not 0.0.0.0:** binding to `0.0.0.0` makes Windows Defender Firewall prompt on every rebuild because the binary signature changes and the new exe wants to listen on a non-loopback interface. `localhost` binding bypasses the firewall entirely. The public-exposure story is for the published Docker image, not local dev.
+
+**Why ASPNETCORE_ENVIRONMENT=Development:** the ProductionSafetyGate (see `Hardening/ProductionSafetyGate.cs`) refuses to boot with `SingleUser=true`, `OpenApi=true`, or the dev master key in Production. Use Production only when you've replaced all three with real secrets.
+
+**Why master key + dev default:** the keyring under `bin/Release/net9.0/data/keys/` is AES-wrapped. If you start without the env var after a previous boot used one, the runtime can't decrypt and dies on Identity startup. Pass the dev key, or wipe the `keys/` folder.
 
 If your build fails because the dev DB locked or migrations conflict,
 report it — do not wipe `data/*.db` without flagging.

@@ -2,23 +2,20 @@ import { createI18n } from 'vue-i18n'
 
 import en from './locales/en.json'
 
-export const SUPPORTED_LOCALES = ['en', 'nl', 'de', 'fr', 'es'] as const
+// Locales offered in the picker. Anything < ~30% coverage is hidden: vue-i18n falls back
+// to English for missing keys, so a near-empty locale just makes the UI look bilingual at
+// random. Re-add to this list once the JSON has at least the core nav + filter surface.
+export const SUPPORTED_LOCALES = ['en', 'nl'] as const
 export type LocaleCode = (typeof SUPPORTED_LOCALES)[number]
 
 export const LOCALE_LABELS: Record<LocaleCode, string> = {
   en: 'EN',
   nl: 'NL',
-  de: 'DE',
-  fr: 'FR',
-  es: 'ES',
 }
 
 export const LOCALE_FLAGS: Record<LocaleCode, string> = {
   en: '🇬🇧',
   nl: '🇳🇱',
-  de: '🇩🇪',
-  fr: '🇫🇷',
-  es: '🇪🇸',
 }
 
 // English is the canonical shape every other locale is checked against at type level.

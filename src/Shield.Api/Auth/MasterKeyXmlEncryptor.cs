@@ -54,6 +54,6 @@ public sealed class MasterKeyXmlEncryptor : IXmlEncryptor
             new XElement(CipherElement, Convert.ToBase64String(cipher))
         );
 
-        return new EncryptedXmlInfo(envelope, typeof(MasterKeyXmlDecryptor));
+        return new(envelope, typeof(MasterKeyXmlDecryptor));
     }
 }

@@ -151,7 +151,7 @@ public sealed class WebhookChannel : IAlertChannel
             "PUT" => HttpMethod.Put,
             "PATCH" => HttpMethod.Patch,
             "DELETE" => HttpMethod.Delete,
-            _ => new HttpMethod(method.Trim().ToUpperInvariant()),
+            _ => new(method.Trim().ToUpperInvariant()),
         };
     }
 }

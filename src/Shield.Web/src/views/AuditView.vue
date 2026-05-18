@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useAuditQuery } from '@/queries/audit'
 import { formatDate } from '@/lib/format'
-import type { AuditFilter } from '@/types/api'
+import type { AuditEntry, AuditFilter } from '@/types/api'
 
-const TARGET_TYPES = ['Finding', 'Source', 'Channel', 'Setting', 'OAuth'] as const
+const { t } = useI18n()
+
+const TARGET_TYPES = ['Finding', 'Source', 'Channel', 'Setting', 'OAuth', 'Invite'] as const
 const ACTIONS = [
   'finding.ack',
   'finding.resolve',
@@ -23,6 +26,9 @@ const ACTIONS = [
   'settings.update',
   'oauth.connect',
   'oauth.disconnect',
+  'invite.create',
+  'invite.revoke',
+  'invite.accept',
 ] as const
 
 const page = ref(1)
@@ -54,21 +60,37 @@ function toggleTargetType(value: string): void {
   targetType.value = targetType.value === value ? null : value
   page.value = 1
 }
+
+function actorDisplay(entry: AuditEntry): string {
+  return entry.actorLogin ?? entry.actorName ?? 'system'
+}
+
+function actorInitial(entry: AuditEntry): string {
+  const name = actorDisplay(entry)
+  return name.charAt(0).toUpperCase() || '?'
+}
+
+function prettyDetails(json: string | null): string {
+  if (!json) return ''
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2)
+  }
+  catch {
+    return json
+  }
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
-      <h1 class="text-2xl font-semibold">Audit log</h1>
-      <p class="text-sm text-slate-400">
-        Admin actions recorded by the server: finding transitions, source / channel mutations,
-        settings changes, OAuth connect / disconnect.
-      </p>
+      <h1 class="text-2xl font-semibold">{{ t('audit.title') }}</h1>
+      <p class="text-sm text-slate-400">{{ t('audit.subtitle') }}</p>
     </div>
 
     <div class="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
       <div>
-        <div class="mb-1 text-xs uppercase tracking-wide text-slate-500">Target type</div>
+        <div class="mb-1 text-xs uppercase tracking-wide text-slate-500">{{ t('audit.filter_target_type') }}</div>
         <div class="flex flex-wrap gap-1">
           <button
             v-for="type in TARGET_TYPES"
@@ -86,7 +108,7 @@ function toggleTargetType(value: string): void {
       </div>
 
       <div>
-        <div class="mb-1 text-xs uppercase tracking-wide text-slate-500">Action</div>
+        <div class="mb-1 text-xs uppercase tracking-wide text-slate-500">{{ t('audit.filter_action') }}</div>
         <div class="flex flex-wrap gap-1">
           <button
             v-for="value in ACTIONS"
@@ -104,45 +126,76 @@ function toggleTargetType(value: string): void {
       </div>
     </div>
 
-    <p v-if="isLoading" class="text-sm text-slate-400">Loading audit entries…</p>
-    <p v-else-if="isError" class="text-sm text-red-300">Failed to load audit entries.</p>
-    <p v-else-if="!data || data.items.length === 0" class="text-sm text-slate-500">
-      No audit entries match the current filters.
-    </p>
+    <p v-if="isLoading" class="text-sm text-slate-400">{{ t('audit.loading') }}</p>
+    <p v-else-if="isError" class="text-sm text-red-300">{{ t('audit.error') }}</p>
+    <p v-else-if="!data || data.items.length === 0" class="text-sm text-slate-500">{{ t('audit.empty') }}</p>
 
-    <div v-else class="overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-      <table class="w-full text-left text-sm">
+    <div v-else class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900">
+      <table class="w-full min-w-[800px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">When</th>
-            <th class="px-4 py-2">Actor</th>
-            <th class="px-4 py-2">Action</th>
-            <th class="px-4 py-2">Target</th>
-            <th class="px-4 py-2">IP</th>
+            <th class="px-4 py-2">{{ t('audit.col_when') }}</th>
+            <th class="px-4 py-2">{{ t('audit.col_actor') }}</th>
+            <th class="px-4 py-2">{{ t('audit.col_action') }}</th>
+            <th class="px-4 py-2">{{ t('audit.col_target') }}</th>
+            <th class="px-4 py-2">{{ t('audit.col_ip') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <tr v-for="entry in data.items" :key="entry.id" class="hover:bg-slate-800/50">
-            <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ formatDate(entry.at) }}</td>
-            <td class="px-4 py-2 text-slate-200">{{ entry.actorName }}</td>
-            <td class="px-4 py-2">
-              <span class="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-blue-200">
-                {{ entry.action }}
-              </span>
-            </td>
-            <td class="px-4 py-2 text-slate-300">
-              <span class="text-xs text-slate-500">{{ entry.targetType }}</span>
-              <span class="ml-1 font-mono text-xs">{{ entry.targetId }}</span>
-            </td>
-            <td class="px-4 py-2 text-xs text-slate-500">{{ entry.remoteIp ?? '—' }}</td>
-          </tr>
+          <template v-for="entry in data.items" :key="entry.id">
+            <tr class="hover:bg-slate-800/50">
+              <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ formatDate(entry.at) }}</td>
+              <td class="px-4 py-2 text-slate-200">
+                <div class="flex items-center gap-2">
+                  <img
+                    v-if="entry.actorAvatarUrl"
+                    :src="entry.actorAvatarUrl"
+                    :alt="actorDisplay(entry)"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    class="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-slate-700"
+                  />
+                  <span
+                    v-else
+                    class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-700 text-[10px] font-semibold text-slate-200"
+                  >
+                    {{ actorInitial(entry) }}
+                  </span>
+                  <span class="truncate">{{ actorDisplay(entry) }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-2">
+                <span class="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-blue-200">
+                  {{ entry.action }}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-slate-300">
+                <span v-if="entry.targetLabel" class="truncate">{{ entry.targetLabel }}</span>
+                <span v-else class="text-xs">
+                  <span class="text-slate-500">{{ entry.targetType }}</span>
+                  <span class="ml-1 font-mono">#{{ entry.targetId }}</span>
+                </span>
+              </td>
+              <td class="px-4 py-2 text-xs text-slate-500">{{ entry.remoteIp ?? '—' }}</td>
+            </tr>
+            <tr v-if="entry.detailsJson">
+              <td colspan="5" class="px-4 pb-2">
+                <details class="group">
+                  <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
+                    {{ t('audit.details_summary') }}
+                  </summary>
+                  <pre class="mt-2 max-h-64 overflow-auto rounded border border-slate-800 bg-slate-950 p-3 font-mono text-xs text-slate-300"><code>{{ prettyDetails(entry.detailsJson) }}</code></pre>
+                </details>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
 
     <div v-if="data && data.total > pageSize" class="flex items-center justify-between text-sm">
       <span class="text-slate-500">
-        Page {{ page }} of {{ totalPages }} · {{ data.total }} entries
+        {{ t('audit.page_of_total', { page, total: totalPages, count: data.total }) }}
       </span>
       <div class="flex gap-2">
         <button
@@ -151,7 +204,7 @@ function toggleTargetType(value: string): void {
           :disabled="page <= 1"
           @click="page = Math.max(1, page - 1)"
         >
-          Previous
+          {{ t('audit.prev') }}
         </button>
         <button
           type="button"
@@ -159,7 +212,7 @@ function toggleTargetType(value: string): void {
           :disabled="page >= totalPages"
           @click="page = Math.min(totalPages, page + 1)"
         >
-          Next
+          {{ t('audit.next') }}
         </button>
       </div>
     </div>

@@ -10,11 +10,22 @@ public sealed class InboxChannel : IAlertChannel
     private const int DigestThreshold = 5;
 
     private readonly IInboxStore _store;
+    private readonly IAdminAudienceProvider _adminAudience;
+    private readonly INotificationPublisher _publisher;
     private readonly ILogger<InboxChannel> _log;
 
-    public InboxChannel(IInboxStore store, ILogger<InboxChannel> log)
+    // INotificationPublisher here is Shield.Core.Abstractions.INotificationPublisher.
+    // Registered in Shield.Api.Program.cs as AdminAudienceProvider + NotificationPublisher.
+    public InboxChannel(
+        IInboxStore store,
+        IAdminAudienceProvider adminAudience,
+        INotificationPublisher publisher,
+        ILogger<InboxChannel> log
+    )
     {
         _store = store;
+        _adminAudience = adminAudience;
+        _publisher = publisher;
         _log = log;
     }
 
@@ -26,39 +37,89 @@ public sealed class InboxChannel : IAlertChannel
         CancellationToken ct
     )
     {
-        if (findings.Count == 0) return AlertResult.Ok(0);
+        if (findings.Count == 0)
+            return AlertResult.Ok(0);
 
         try
         {
+            IReadOnlyList<Guid> adminIds = await _adminAudience.GetAdminUserIdsAsync(ct);
+
             if (findings.Count >= DigestThreshold)
             {
                 Severity max = findings.Max(finding => finding.Severity);
+                string digestTitle = $"Shield digest · {findings.Count} findings";
+                string digestBody = string.Join(
+                    "\n",
+                    findings.Select(finding =>
+                        $"[{finding.Severity}] {finding.Notes ?? finding.DedupKey}"
+                    )
+                );
+
                 InboxMessage digest = new()
                 {
                     CreatedAt = DateTime.UtcNow,
                     Severity = max,
-                    Title = $"Shield digest · {findings.Count} findings",
-                    Body = string.Join(
-                        "\n",
-                        findings.Select(finding => $"[{finding.Severity}] {finding.DedupKey}")
-                    ),
+                    Title = digestTitle,
+                    Body = digestBody,
                     FindingId = null,
                 };
                 await _store.AddAsync(digest, ct);
+
+                foreach (Guid adminId in adminIds)
+                {
+                    await _publisher.PublishAsync(
+                        new()
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = adminId,
+                            Kind = NotificationKind.Alert,
+                            Severity = max,
+                            Title = digestTitle,
+                            Body = digestBody,
+                            RelatedType = "Finding",
+                            RelatedId = null,
+                            CreatedAt = DateTime.UtcNow,
+                        },
+                        ct
+                    );
+                }
+
                 return AlertResult.Ok(findings.Count);
             }
 
             foreach (Finding finding in findings)
             {
+                string title = $"Shield · {finding.Severity} finding";
+                string body = finding.Notes ?? finding.DedupKey;
+
                 InboxMessage msg = new()
                 {
                     CreatedAt = DateTime.UtcNow,
                     Severity = finding.Severity,
-                    Title = $"Shield · {finding.Severity} finding",
-                    Body = finding.Notes ?? finding.DedupKey,
+                    Title = title,
+                    Body = body,
                     FindingId = finding.Id,
                 };
                 await _store.AddAsync(msg, ct);
+
+                foreach (Guid adminId in adminIds)
+                {
+                    await _publisher.PublishAsync(
+                        new()
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = adminId,
+                            Kind = NotificationKind.Alert,
+                            Severity = finding.Severity,
+                            Title = title,
+                            Body = body,
+                            RelatedType = "Finding",
+                            RelatedId = finding.Id.ToString(),
+                            CreatedAt = DateTime.UtcNow,
+                        },
+                        ct
+                    );
+                }
             }
 
             return AlertResult.Ok(findings.Count);

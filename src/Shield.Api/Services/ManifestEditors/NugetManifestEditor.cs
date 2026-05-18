@@ -9,9 +9,10 @@ public sealed class NugetManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Nuget;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion)
+    public ManifestEditOutcome Apply(string rootPath, InventoryItem item, string suggestedVersion)
     {
-        List<string> changed = new();
+        string packageName = item.Name;
+        List<string> changed = [];
         string escaped = Regex.Escape(packageName);
         Regex packageReference = new(
             $"(<PackageReference\\s+Include=\"{escaped}\"[^/>]*Version=\")([^\"]+)(\")",
@@ -22,7 +23,14 @@ public sealed class NugetManifestEditor : IManifestEditor
             RegexOptions.Compiled | RegexOptions.IgnoreCase
         );
 
-        foreach (string candidate in EnumerateManifests(rootPath))
+        IEnumerable<string> candidates = !string.IsNullOrWhiteSpace(item.ManifestPath)
+            ? new[]
+            {
+                Path.Combine(rootPath, item.ManifestPath.Replace('/', Path.DirectorySeparatorChar)),
+            }
+            : EnumerateManifests(rootPath);
+
+        foreach (string candidate in candidates)
         {
             string source = File.ReadAllText(candidate);
             string updated = packageReference.Replace(
@@ -43,17 +51,24 @@ public sealed class NugetManifestEditor : IManifestEditor
 
         if (changed.Count == 0)
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            string location = !string.IsNullOrWhiteSpace(item.ManifestPath)
+                ? item.ManifestPath
+                : rootPath;
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: $"No <PackageReference> or <PackageVersion> for '{packageName}' found under {rootPath}."
+                UnsupportedReason: $"No <PackageReference> or <PackageVersion> for '{packageName}' found in {location}.",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
-        return new ManifestEditOutcome(
+        return new(
             ChangedFiles: changed,
             FollowUpCommand: "dotnet restore",
-            UnsupportedReason: null
+            UnsupportedReason: null,
+            CleanedFiles: [],
+            CleanedDirectories: []
         );
     }
 

@@ -5,7 +5,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shield.Feeds.NpmRegistry\Shield.Feeds.NpmRegistry.csproj" />
+    <ProjectReference Include="..\..\src\Shield.Feeds\Shield.Feeds.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

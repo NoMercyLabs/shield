@@ -13,7 +13,7 @@
     <PackageReference Include="NSubstitute" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
+    <ProjectReference Include="..\..\src\Shield.Parsers\Shield.Parsers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />

@@ -10,12 +10,14 @@ public sealed class GoManifestEditor : IManifestEditor
 
     public ManifestEditOutcome Apply(
         string rootPath,
-        string packageName,
+        InventoryItem item,
         string suggestedVersion
     ) =>
         new(
-            ChangedFiles: Array.Empty<string>(),
-            FollowUpCommand: $"go get {packageName}@v{suggestedVersion}",
-            UnsupportedReason: "Go manifest editing is not yet supported; run the follow-up command manually."
+            ChangedFiles: [],
+            FollowUpCommand: $"go get {item.Name}@v{suggestedVersion}",
+            UnsupportedReason: "Go manifest editing is not yet supported; run the follow-up command manually.",
+            CleanedFiles: [],
+            CleanedDirectories: []
         );
 }

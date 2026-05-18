@@ -1,60 +1,53 @@
-# Shield + Caddy reverse proxy.
-# Local build by default; swap to the published image by commenting `build:` and uncommenting `image:`.
+# Shield — production reference Compose.
+#
+# Topology: cloudflared runs on the Proxmox / Docker HOST and forwards a Cloudflare Tunnel
+# at http://127.0.0.1:8842. Shield therefore binds ONLY to the loopback interface on the
+# host — port 8842 is unreachable from any other machine on the LAN or the public internet.
+#
+# Need to expose Shield without installing cloudflared on the host? Layer the sidecar:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+# That overlay drops the loopback bind and runs cloudflared in the compose network.
+#
+# Secrets come from .env (next to this file). Copy .env.example -> .env and fill it in.
+
 services:
   shield:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    # image: ghcr.io/nomercylabs/shield:latest
+    image: ghcr.io/nomercylabs/shield:latest
+    # Building from source (contributors only — requires cloning the repo):
+    # build:
+    #   context: ..
+    #   dockerfile: docker/Dockerfile
     container_name: shield
     restart: unless-stopped
     ports:
-      - "8842:8842"
+      # 127.0.0.1 ONLY — cloudflared on the host reaches us via loopback. Do NOT change
+      # to 0.0.0.0 unless you understand you're exposing Shield directly to the LAN.
+      - "127.0.0.1:8842:8842"
     volumes:
-      - shield-data:/data
-      # Separate volume so the keyring can be backed up / replicated with different cadence
-      # than the SQLite files (the keyring rarely changes; the DB changes constantly).
-      - shield-keys:/data/keys
-    environment:
-      # Single-user mode auto-authenticates the lone Admin. Flip to false to require login.
-      Shield__SingleUser: "true"
-      # Two SQLite DBs live under /data so they're picked up by the named volume.
-      Shield__Db__Shield: "Data Source=/data/shield.db"
-      Shield__Db__Feeds: "Data Source=/data/feeds.db"
-      # MUST be replaced with a real >=32 char secret in production. Anything weaker is unsafe.
-      Shield__Auth__JwtSigningKey: "CHANGE_ME_to_a_real_secret_with_at_least_32_chars"
-      # REQUIRED — set this to a random 32+ char string, identical across restarts.
-      # The DataProtection keyring under /data/keys is encrypted with this key; recreate
-      # the container without it and every IDataProtector-protected secret (Discord webhooks,
-      # OAuth client secrets, OIDC client secret) becomes permanently unreadable.
-      # Generate one: `openssl rand -base64 48`
-      Shield__Auth__DataProtectionMasterKey: "CHANGE_ME_or_secrets_die_on_first_container_recreate"
-      Shield__Auth__DataProtectionKeysPath: "/data/keys"
-      # Optional: GitHub PAT for higher-fidelity GHSA + private repo scanning.
-      # Shield__Feeds__Ghsa__Token: ""
+      # One volume holds the SQLite DBs AND the DataProtection keyring under /app/data/keys.
+      # Back this up. Losing /app/data/keys invalidates every encrypted secret (OAuth
+      # tokens, Discord webhook URLs, OIDC client secrets) AND every active session cookie.
+      - shield-data:/app/data
+    env_file:
+      - .env
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8842/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: shield-caddy
-    restart: unless-stopped
-    depends_on:
-      - shield
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+    # mem_limit / mem_reservation are the v2 Compose shorthand that work without Swarm.
+    # Shield's resident set is small (~150 MB steady-state on a busy multi-source deploy).
+    # 512 MB is a generous hard cap that still triggers OOM before the host swaps itself
+    # to death; 128 MB reservation guarantees the scheduler keeps room for a healthy boot.
+    mem_limit: 512m
+    mem_reservation: 128m
+    logging:
+      driver: json-file
+      options:
+        # Without this docker logs grow unbounded and eat the host disk.
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   shield-data:
-  shield-keys:
-  caddy-data:
-  caddy-config:

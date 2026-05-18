@@ -21,7 +21,7 @@ public class NtfyChannelTests : IDisposable
     public NtfyChannelTests()
     {
         _server = WireMockServer.Start();
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddHttpClient(NtfyChannel.HttpClientName);
         _provider = services.BuildServiceProvider();
         _httpClientFactory = _provider.GetRequiredService<IHttpClientFactory>();
@@ -74,7 +74,7 @@ public class NtfyChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 
@@ -100,7 +100,7 @@ public class NtfyChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             NewChannel(authToken: "tk_abc"),
-            new[] { NewFinding(Severity.Medium) },
+            [NewFinding(Severity.Medium)],
             CancellationToken.None
         );
 
@@ -125,7 +125,7 @@ public class NtfyChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             cfg,
-            new[] { NewFinding(Severity.High) },
+            [NewFinding(Severity.High)],
             CancellationToken.None
         );
 

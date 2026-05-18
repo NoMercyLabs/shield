@@ -4,13 +4,13 @@ namespace Shield.Scanners;
 // FS browser can flag interesting directories without instantiating parsers.
 public static class LockfileNames
 {
-    static readonly HashSet<string> Set = new(
+    private static readonly HashSet<string> Set = new(
         ParserRegistry.RecognizedFilenames,
         StringComparer.OrdinalIgnoreCase
     );
 
     // Adjacent manifests we surface in the browser for context (not parsed, not counted).
-    static readonly HashSet<string> ContextSet = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ContextSet = new(StringComparer.OrdinalIgnoreCase)
     {
         "package.json",
         "Cargo.toml",

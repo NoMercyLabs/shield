@@ -65,10 +65,10 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
                     .WithBody(packageDoc)
             );
 
-        HttpClient http = new() { BaseAddress = new Uri(_server.Url!.TrimEnd('/') + "/") };
+        HttpClient http = new() { BaseAddress = new(_server.Url!.TrimEnd('/') + "/") };
         NpmPackageClient client = new(http);
         InMemoryPackageMetaSink sink = new();
-        InMemoryPackageNameSource nameSource = new(new[] { "left-pad" });
+        InMemoryPackageNameSource nameSource = new(["left-pad"]);
         NpmRegistryOptions options = new() { MaxRequestsPerSecond = 50 };
         using NpmRegistryFeedSync feedSync = new(
             client,
@@ -89,13 +89,13 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         v1.Name.Should().Be("left-pad");
         v1.TarballSha.Should().Be("abc123");
         v1.Deprecated.Should().BeFalse();
-        v1.PublishedAt.Should().Be(new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc));
+        v1.PublishedAt.Should().Be(new(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc));
         v1.MaintainersJson.Should().Contain("azer").And.Contain("kik");
 
         PackageMeta v11 = sink.Packages.Single(meta => meta.Version == "1.1.0");
         v11.TarballSha.Should().Be("def456");
         v11.Deprecated.Should().BeTrue();
-        v11.PublishedAt.Should().Be(new DateTime(2024, 2, 15, 9, 30, 0, DateTimeKind.Utc));
+        v11.PublishedAt.Should().Be(new(2024, 2, 15, 9, 30, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -105,10 +105,10 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             .Given(Request.Create().WithPath("/does-not-exist").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(HttpStatusCode.NotFound));
 
-        HttpClient http = new() { BaseAddress = new Uri(_server.Url!.TrimEnd('/') + "/") };
+        HttpClient http = new() { BaseAddress = new(_server.Url!.TrimEnd('/') + "/") };
         NpmPackageClient client = new(http);
         InMemoryPackageMetaSink sink = new();
-        InMemoryPackageNameSource nameSource = new(new[] { "does-not-exist" });
+        InMemoryPackageNameSource nameSource = new(["does-not-exist"]);
         NpmRegistryOptions options = new();
         using NpmRegistryFeedSync feedSync = new(
             client,
@@ -118,7 +118,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         );
 
         FeedSyncResult result = await feedSync.SyncAsync(
-            new FeedSyncState { Feed = Feed.NpmRegistry },
+            new() { Feed = Feed.NpmRegistry },
             CancellationToken.None
         );
 
@@ -134,10 +134,10 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             .Given(Request.Create().WithPath("/boom").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(HttpStatusCode.InternalServerError));
 
-        HttpClient http = new() { BaseAddress = new Uri(_server.Url!.TrimEnd('/') + "/") };
+        HttpClient http = new() { BaseAddress = new(_server.Url!.TrimEnd('/') + "/") };
         NpmPackageClient client = new(http);
         InMemoryPackageMetaSink sink = new();
-        InMemoryPackageNameSource nameSource = new(new[] { "boom" });
+        InMemoryPackageNameSource nameSource = new(["boom"]);
         NpmRegistryOptions options = new();
         using NpmRegistryFeedSync feedSync = new(
             client,
@@ -147,7 +147,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
         );
 
         FeedSyncResult result = await feedSync.SyncAsync(
-            new FeedSyncState { Feed = Feed.NpmRegistry },
+            new() { Feed = Feed.NpmRegistry },
             CancellationToken.None
         );
 
@@ -158,10 +158,10 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
     [Fact]
     public void Feed_property_returns_NpmRegistry()
     {
-        HttpClient http = new() { BaseAddress = new Uri("http://localhost/") };
+        HttpClient http = new() { BaseAddress = new("http://localhost/") };
         NpmPackageClient client = new(http);
         InMemoryPackageMetaSink sink = new();
-        InMemoryPackageNameSource nameSource = new(Array.Empty<string>());
+        InMemoryPackageNameSource nameSource = new([]);
         NpmRegistryOptions options = new();
         using NpmRegistryFeedSync feedSync = new(
             client,

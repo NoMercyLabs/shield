@@ -79,7 +79,7 @@ public sealed class SmtpChannel : IAlertChannel
         using MailMessage message = new()
         {
             From = string.IsNullOrWhiteSpace(config.FromName)
-                ? new MailAddress(config.From)
+                ? new(config.From)
                 : new MailAddress(config.From, config.FromName),
             Subject = subject,
             Body = html,
@@ -139,9 +139,10 @@ public sealed class SmtpChannel : IAlertChannel
         {
             sb.Append("<li>[");
             sb.Append(HtmlEncoder.Default.Encode(finding.Severity.ToString()));
-            sb.Append("] <code>");
-            sb.Append(HtmlEncoder.Default.Encode(finding.DedupKey));
-            sb.Append("</code></li>");
+            sb.Append("] ");
+            string summary = finding.Notes ?? finding.DedupKey;
+            sb.Append(HtmlEncoder.Default.Encode(summary));
+            sb.Append("</li>");
         }
         sb.Append("</ul>");
         if (extra > 0)

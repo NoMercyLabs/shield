@@ -18,6 +18,7 @@ namespace Shield.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[NoApiToken]
 public sealed class SettingsController : ControllerBase
 {
     public static class Keys
@@ -30,20 +31,24 @@ public sealed class SettingsController : ControllerBase
         public const string OidcClientSecret = "oidcClientSecret";
         public const string AlertSeverityFloor = "alertSeverityFloor";
         public const string RetentionDays = "retentionDays";
+
+        // Mirrors AppSettingKeys.OAuthRedirectBase ("oauth.redirectBase") — kept in sync so
+        // BuildResponse + Update read/write the same row that OAuthController consumes.
+        public const string OAuthRedirectBase = "oauth.redirectBase";
     }
 
     // Toggles that flip middleware/OpenApi pipeline at boot; runtime change requires restart.
     private static readonly string[] RestartRequiredKeys =
-    {
+    [
         Keys.SingleUserMode,
         Keys.OpenApiEnabled,
-    };
+    ];
 
     private readonly ShieldDbContext _db;
     private readonly IDataProtector _protector;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
-    private readonly IHttpClientFactory? _httpClientFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAppSettingsService _appSettings;
 
     public SettingsController(
@@ -52,7 +57,7 @@ public sealed class SettingsController : ControllerBase
         IConfiguration configuration,
         IWebHostEnvironment environment,
         IAppSettingsService appSettings,
-        IHttpClientFactory? httpClientFactory = null
+        IHttpClientFactory httpClientFactory
     )
     {
         _db = db;
@@ -71,7 +76,8 @@ public sealed class SettingsController : ControllerBase
     }
 
     [HttpPut]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [RequireOriginalIdentity]
     public async Task<ActionResult<UpdateSettingsResponse>> Update(
         [FromBody] UpdateSettingsRequest request,
         CancellationToken ct
@@ -87,6 +93,7 @@ public sealed class SettingsController : ControllerBase
         updated[Keys.OidcClientId] = request.OidcClientId ?? "";
         updated[Keys.AlertSeverityFloor] = request.AlertSeverityFloor.ToString();
         updated[Keys.RetentionDays] = request.RetentionDays.ToString();
+        updated[Keys.OAuthRedirectBase] = request.OAuthRedirectBase ?? "";
 
         // Only overwrite the secret when caller supplies a non-empty value; otherwise preserve it.
         if (!string.IsNullOrEmpty(request.OidcClientSecret))
@@ -114,7 +121,7 @@ public sealed class SettingsController : ControllerBase
             AppSettingKeys.GoogleOAuthScopes
         );
 
-        List<string> restartKeys = new();
+        List<string> restartKeys = [];
         Guid? updatedBy = ResolveUserId();
         DateTime now = DateTime.UtcNow;
 
@@ -132,7 +139,7 @@ public sealed class SettingsController : ControllerBase
             if (row is null)
             {
                 _db.AppSettings.Add(
-                    new AppSetting
+                    new()
                     {
                         Key = key,
                         ValueEncrypted = encrypted,
@@ -182,7 +189,7 @@ public sealed class SettingsController : ControllerBase
     }
 
     [HttpPost("test-oidc")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
     public async Task<ActionResult<TestOidcResponse>> TestOidc(
         [FromBody] TestOidcRequest request,
         CancellationToken ct
@@ -199,8 +206,7 @@ public sealed class SettingsController : ControllerBase
 
         try
         {
-            using HttpClient client =
-                _httpClientFactory?.CreateClient("oidc-test") ?? new HttpClient();
+            HttpClient client = _httpClientFactory.CreateClient("oidc-test");
             client.Timeout = TimeSpan.FromSeconds(8);
             HttpResponseMessage response = await client.GetAsync(discoveryUrl, ct);
             if (!response.IsSuccessStatusCode)
@@ -343,7 +349,9 @@ public sealed class SettingsController : ControllerBase
             _configuration["Shield:OAuth:Google:ClientId"]
         );
 
-        return new SettingsResponse(
+        string? redirectBase = ReadString(stored, Keys.OAuthRedirectBase);
+
+        return new(
             singleUser,
             openApi,
             oidcEnabled,
@@ -354,7 +362,8 @@ public sealed class SettingsController : ControllerBase
             retention,
             github,
             slack,
-            google
+            google,
+            OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase
         );
     }
 
@@ -371,7 +380,7 @@ public sealed class SettingsController : ControllerBase
         string? scopes = ReadString(stored, scopesKey);
         string? secretMasked = string.IsNullOrEmpty(secret) ? null : MaskProviderSecret(secret);
         bool configured = !string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(secret);
-        return new OAuthProviderConfigResponse(
+        return new(
             string.IsNullOrEmpty(clientId) ? null : clientId,
             secretMasked,
             string.IsNullOrEmpty(scopes) ? null : scopes,
@@ -396,7 +405,7 @@ public sealed class SettingsController : ControllerBase
     private static string MaskSecret(string secret)
     {
         if (secret.Length <= 4)
-            return new string('•', 8);
+            return new('•', 8);
         return new string('•', 8) + secret[^4..];
     }
 

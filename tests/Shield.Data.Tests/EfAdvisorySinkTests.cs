@@ -21,7 +21,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
         DbContextOptions<FeedsDbContext> options = new DbContextOptionsBuilder<FeedsDbContext>()
             .UseSqlite(_connection)
             .Options;
-        _db = new FeedsDbContext(options);
+        _db = new(options);
         await _db.Database.MigrateAsync();
     }
 
@@ -44,7 +44,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
             "[{\"events\":[{\"introduced\":\"0\"},{\"fixed\":\"4.17.21\"}]}]"
         );
 
-        await sink.UpsertAsync(new[] { incoming }, CancellationToken.None);
+        await sink.UpsertAsync([incoming], CancellationToken.None);
 
         List<Advisory> rows = await _db!.Advisories.ToListAsync();
         rows.Should().HaveCount(1);
@@ -58,7 +58,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
     {
         EfAdvisorySink sink = new(_db!);
         Advisory first = MakeAdvisory(Feed.Osv, "GHSA-test-bbbb", "lodash", "[]");
-        await sink.UpsertAsync(new[] { first }, CancellationToken.None);
+        await sink.UpsertAsync([first], CancellationToken.None);
 
         Advisory updated = MakeAdvisory(
             Feed.Osv,
@@ -67,7 +67,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
             "[{\"events\":[{\"introduced\":\"0\"}]}]"
         );
         updated.Summary = "updated summary";
-        await sink.UpsertAsync(new[] { updated }, CancellationToken.None);
+        await sink.UpsertAsync([updated], CancellationToken.None);
 
         List<Advisory> rows = await _db!.Advisories.AsNoTracking().ToListAsync();
         rows.Should().HaveCount(1);
@@ -83,7 +83,7 @@ public class EfAdvisorySinkTests : IAsyncLifetime
     )
     {
         DateTime now = DateTime.UtcNow;
-        return new Advisory
+        return new()
         {
             Id = Guid.NewGuid(),
             Feed = feed,

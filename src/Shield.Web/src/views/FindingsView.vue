@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+import EpssBadge from '@/components/EpssBadge.vue'
+import KevBadge from '@/components/KevBadge.vue'
+import SavedFiltersStrip from '@/components/SavedFiltersStrip.vue'
 import SeverityBadge from '@/components/SeverityBadge.vue'
 import {
   useBulkAckFindingsMutation,
@@ -19,9 +23,12 @@ import {
   FindingStateNames,
   Severity,
   SeverityNames,
+  SortBy,
+  SortDir,
 } from '@/types/api'
-import type { Finding, FindingFilter, FindingsPage } from '@/types/api'
+import type { Finding, FindingFilter, FindingsPage, SavedFilter } from '@/types/api'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const toasts = useToasts()
@@ -34,6 +41,13 @@ interface PersistedFilters {
   ecosystem: Ecosystem[]
   packageName: string[]
   sourceId: number[]
+  hasFix: boolean | null
+  kevOnly: boolean
+  epssMin: number
+  advisoryQuery: string
+  sortBy: SortBy
+  sortDir: SortDir
+  last24h: boolean
 }
 
 const FILTERS_KEY = 'shield.findings.filters'
@@ -45,6 +59,13 @@ function loadFilters(): PersistedFilters {
     ecosystem: [],
     packageName: [],
     sourceId: [],
+    hasFix: null,
+    kevOnly: false,
+    epssMin: 0,
+    advisoryQuery: '',
+    sortBy: SortBy.Severity,
+    sortDir: SortDir.Desc,
+    last24h: false,
   }
   try {
     const raw = localStorage.getItem(FILTERS_KEY)
@@ -56,6 +77,13 @@ function loadFilters(): PersistedFilters {
       ecosystem: Array.isArray(parsed.ecosystem) ? parsed.ecosystem : [],
       packageName: Array.isArray(parsed.packageName) ? parsed.packageName : [],
       sourceId: Array.isArray(parsed.sourceId) ? parsed.sourceId : [],
+      hasFix: parsed.hasFix === true || parsed.hasFix === false ? parsed.hasFix : null,
+      kevOnly: parsed.kevOnly === true,
+      epssMin: typeof parsed.epssMin === 'number' ? parsed.epssMin : 0,
+      advisoryQuery: typeof parsed.advisoryQuery === 'string' ? parsed.advisoryQuery : '',
+      sortBy: typeof parsed.sortBy === 'string' ? (parsed.sortBy as SortBy) : SortBy.Severity,
+      sortDir: typeof parsed.sortDir === 'string' ? (parsed.sortDir as SortDir) : SortDir.Desc,
+      last24h: parsed.last24h === true,
     }
   }
   catch {
@@ -68,8 +96,24 @@ const stateFilter = ref<FindingState[]>([])
 const ecosystemFilter = ref<Ecosystem[]>([])
 const packageNameFilter = ref<string[]>([])
 const sourceIdFilter = ref<number[]>([])
+const hasFixFilter = ref<boolean | null>(null)
+const kevOnlyFilter = ref<boolean>(false)
+const epssMinFilter = ref<number>(0)
+const advisoryQueryFilter = ref<string>('')
+const sortByFilter = ref<SortBy>(SortBy.Severity)
+const sortDirFilter = ref<SortDir>(SortDir.Desc)
 const last24hOnly = ref(false)
 const page = ref(1)
+
+// Debounced advisory query to avoid firing on every keystroke
+const advisoryQueryDebounced = ref<string>('')
+let advisoryDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(advisoryQueryFilter, (value) => {
+  if (advisoryDebounceTimer) clearTimeout(advisoryDebounceTimer)
+  advisoryDebounceTimer = setTimeout(() => {
+    advisoryQueryDebounced.value = value.trim()
+  }, 250)
+})
 
 onMounted(() => {
   const persisted = loadFilters()
@@ -78,6 +122,14 @@ onMounted(() => {
   ecosystemFilter.value = persisted.ecosystem
   packageNameFilter.value = persisted.packageName
   sourceIdFilter.value = persisted.sourceId
+  hasFixFilter.value = persisted.hasFix
+  kevOnlyFilter.value = persisted.kevOnly
+  epssMinFilter.value = persisted.epssMin
+  advisoryQueryFilter.value = persisted.advisoryQuery
+  advisoryQueryDebounced.value = persisted.advisoryQuery
+  sortByFilter.value = persisted.sortBy
+  sortDirFilter.value = persisted.sortDir
+  last24hOnly.value = persisted.last24h
 
   // Allow ?packageName=foo on the URL to seed the package filter once (back-compat with
   // Inventory tree deep-links). After load it merges into the persisted set.
@@ -87,7 +139,20 @@ onMounted(() => {
 })
 
 watch(
-  [severityFilter, stateFilter, ecosystemFilter, packageNameFilter, sourceIdFilter],
+  [
+    severityFilter,
+    stateFilter,
+    ecosystemFilter,
+    packageNameFilter,
+    sourceIdFilter,
+    hasFixFilter,
+    kevOnlyFilter,
+    epssMinFilter,
+    advisoryQueryDebounced,
+    sortByFilter,
+    sortDirFilter,
+    last24hOnly,
+  ],
   () => {
     const snapshot: PersistedFilters = {
       severity: severityFilter.value,
@@ -95,6 +160,13 @@ watch(
       ecosystem: ecosystemFilter.value,
       packageName: packageNameFilter.value,
       sourceId: sourceIdFilter.value,
+      hasFix: hasFixFilter.value,
+      kevOnly: kevOnlyFilter.value,
+      epssMin: epssMinFilter.value,
+      advisoryQuery: advisoryQueryDebounced.value,
+      sortBy: sortByFilter.value,
+      sortDir: sortDirFilter.value,
+      last24h: last24hOnly.value,
     }
     localStorage.setItem(FILTERS_KEY, JSON.stringify(snapshot))
     page.value = 1
@@ -111,6 +183,12 @@ const filter = computed<FindingFilter>(() => ({
   ecosystem: ecosystemFilter.value.length ? ecosystemFilter.value : undefined,
   packageName: packageNameFilter.value.length ? packageNameFilter.value : undefined,
   sourceId: sourceIdFilter.value.length ? sourceIdFilter.value : undefined,
+  hasFix: hasFixFilter.value,
+  kevOnly: kevOnlyFilter.value || undefined,
+  epssMin: epssMinFilter.value > 0 ? epssMinFilter.value : undefined,
+  advisoryQuery: advisoryQueryDebounced.value || undefined,
+  sortBy: sortByFilter.value,
+  sortDir: sortDirFilter.value,
   page: page.value,
   pageSize: 50,
 }))
@@ -195,14 +273,12 @@ async function runBulk(verb: 'ack' | 'resolve' | 'suppress'): Promise<void> {
       suppressOpen.value = false
       suppressReason.value = ''
     }
-    const verbPast = verb === 'ack' ? 'acked' : verb === 'resolve' ? 'resolved' : 'suppressed'
-    const missingNote = response.notFound.length > 0 ? ` (${response.notFound.length} not found)` : ''
-    toasts.push('success', `${response.updated} finding(s) ${verbPast}${missingNote}.`)
+    toasts.push('success', t(`findings.bulk.${verb}_done`, { n: response.updated, missed: response.notFound.length }))
     clearSelection()
     await refetch()
   }
-  catch (error) {
-    toasts.push('error', `Bulk ${verb} failed: ${error instanceof Error ? error.message : String(error)}`)
+  catch {
+    toasts.push('error', t(`findings.bulk.${verb}_error`))
   }
 }
 
@@ -219,28 +295,28 @@ const chips = computed<Chip[]>(() => {
   for (const value of severityFilter.value) {
     out.push({
       key: `sev-${value}`,
-      label: `Severity: ${SeverityNames[value]}`,
+      label: t('findings.chip.severity', { name: SeverityNames[value] }),
       remove: () => { severityFilter.value = severityFilter.value.filter(item => item !== value) },
     })
   }
   for (const value of stateFilter.value) {
     out.push({
       key: `state-${value}`,
-      label: `State: ${FindingStateNames[value]}`,
+      label: t('findings.chip.state', { name: FindingStateNames[value] }),
       remove: () => { stateFilter.value = stateFilter.value.filter(item => item !== value) },
     })
   }
   for (const value of ecosystemFilter.value) {
     out.push({
       key: `eco-${value}`,
-      label: `Ecosystem: ${EcosystemNames[value]}`,
+      label: t('findings.chip.ecosystem', { name: EcosystemNames[value] }),
       remove: () => { ecosystemFilter.value = ecosystemFilter.value.filter(item => item !== value) },
     })
   }
   for (const value of packageNameFilter.value) {
     out.push({
       key: `pkg-${value}`,
-      label: `Package: ${value}`,
+      label: t('findings.chip.package', { name: value }),
       remove: () => { packageNameFilter.value = packageNameFilter.value.filter(item => item !== value) },
     })
   }
@@ -248,15 +324,50 @@ const chips = computed<Chip[]>(() => {
     const name = sourceNameById.value[value] ?? `#${value}`
     out.push({
       key: `src-${value}`,
-      label: `Source: ${name}`,
+      label: t('findings.chip.source', { name }),
       remove: () => { sourceIdFilter.value = sourceIdFilter.value.filter(item => item !== value) },
     })
   }
   if (last24hOnly.value) {
     out.push({
       key: 'last24h',
-      label: 'Last 24h',
+      label: t('findings.chip.last_24h'),
       remove: () => { last24hOnly.value = false },
+    })
+  }
+  if (hasFixFilter.value === true) {
+    out.push({
+      key: 'hasFix-true',
+      label: t('findings.chip.has_fix'),
+      remove: () => { hasFixFilter.value = null },
+    })
+  }
+  if (hasFixFilter.value === false) {
+    out.push({
+      key: 'hasFix-false',
+      label: t('findings.chip.no_fix'),
+      remove: () => { hasFixFilter.value = null },
+    })
+  }
+  if (kevOnlyFilter.value) {
+    out.push({
+      key: 'kev',
+      label: t('findings.chip.kev_only'),
+      remove: () => { kevOnlyFilter.value = false },
+    })
+  }
+  if (epssMinFilter.value > 0) {
+    out.push({
+      key: 'epss',
+      label: t('findings.chip.epss_min', { value: epssMinFilter.value.toFixed(2) }),
+      remove: () => { epssMinFilter.value = 0 },
+    })
+  }
+  if (advisoryQueryDebounced.value) {
+    out.push({
+      key: 'advisory',
+      label: t('findings.chip.advisory_id', { value: advisoryQueryDebounced.value }),
+      remove: () => { advisoryQueryFilter.value = ''; advisoryQueryDebounced.value = '' },
     })
   }
   return out
@@ -264,12 +375,59 @@ const chips = computed<Chip[]>(() => {
 
 const hasAnyFilter = computed<boolean>(() => chips.value.length > 0)
 
+// Serialized snapshot of the current filter selection — fed to SavedFiltersStrip as the
+// payload to save, and read back on apply. Shape matches PersistedFilters for symmetric round-trip.
+const currentFilterJson = computed<string>(() =>
+  JSON.stringify({
+    severity: severityFilter.value,
+    state: stateFilter.value,
+    ecosystem: ecosystemFilter.value,
+    packageName: packageNameFilter.value,
+    sourceId: sourceIdFilter.value,
+    hasFix: hasFixFilter.value,
+    kevOnly: kevOnlyFilter.value,
+    epssMin: epssMinFilter.value,
+    advisoryQuery: advisoryQueryDebounced.value,
+    sortBy: sortByFilter.value,
+    sortDir: sortDirFilter.value,
+    last24h: last24hOnly.value,
+  }),
+)
+
+function applySavedFilter(filter: SavedFilter): void {
+  try {
+    const parsed = JSON.parse(filter.queryJson) as Partial<PersistedFilters>
+    severityFilter.value = Array.isArray(parsed.severity) ? parsed.severity : []
+    stateFilter.value = Array.isArray(parsed.state) ? parsed.state : []
+    ecosystemFilter.value = Array.isArray(parsed.ecosystem) ? parsed.ecosystem : []
+    packageNameFilter.value = Array.isArray(parsed.packageName) ? parsed.packageName : []
+    sourceIdFilter.value = Array.isArray(parsed.sourceId) ? parsed.sourceId : []
+    hasFixFilter.value = parsed.hasFix === true || parsed.hasFix === false ? parsed.hasFix : null
+    kevOnlyFilter.value = parsed.kevOnly === true
+    epssMinFilter.value = typeof parsed.epssMin === 'number' ? parsed.epssMin : 0
+    const parsedAdvisory = typeof parsed.advisoryQuery === 'string' ? parsed.advisoryQuery : ''
+    advisoryQueryFilter.value = parsedAdvisory
+    advisoryQueryDebounced.value = parsedAdvisory
+    sortByFilter.value = typeof parsed.sortBy === 'string' ? (parsed.sortBy as SortBy) : SortBy.Severity
+    sortDirFilter.value = typeof parsed.sortDir === 'string' ? (parsed.sortDir as SortDir) : SortDir.Desc
+    last24hOnly.value = parsed.last24h === true
+  }
+  catch {
+    toasts.push('error', t('saved_filters.filter_parse_error', { name: filter.name }))
+  }
+}
+
 function resetAllFilters(): void {
   severityFilter.value = []
   stateFilter.value = []
   ecosystemFilter.value = []
   packageNameFilter.value = []
   sourceIdFilter.value = []
+  hasFixFilter.value = null
+  kevOnlyFilter.value = false
+  epssMinFilter.value = 0
+  advisoryQueryFilter.value = ''
+  advisoryQueryDebounced.value = ''
   last24hOnly.value = false
   const next = { ...route.query }
   delete next.packageName
@@ -277,7 +435,7 @@ function resetAllFilters(): void {
   router.replace({ path: route.path, query: next })
 }
 
-// ---------- presets ----------
+// ---------- quick presets ----------
 
 function applyCriticalOnly(): void {
   severityFilter.value = [Severity.Critical]
@@ -297,8 +455,6 @@ function applyUnackedOpen(): void {
   last24hOnly.value = false
 }
 
-// In single-user mode the only operator is "me", so "By me" surfaces the work that's
-// still on my plate (Open + Acked) — i.e. excludes Resolved + Suppressed.
 function applyByMe(): void {
   stateFilter.value = [FindingState.Open, FindingState.Acked]
   severityFilter.value = []
@@ -309,6 +465,14 @@ function applyByMe(): void {
 // ---------- add-filter popover ----------
 
 const addFilterOpen = ref(false)
+const sourceSearch = ref('')
+
+const filteredSources = computed(() => {
+  const term = sourceSearch.value.trim().toLowerCase()
+  const sources = sourcesData.value ?? []
+  if (!term) return sources
+  return sources.filter(source => source.name.toLowerCase().includes(term))
+})
 
 function toggleSeverity(value: Severity): void {
   severityFilter.value = severityFilter.value.includes(value)
@@ -330,6 +494,50 @@ function toggleSource(value: number): void {
     ? sourceIdFilter.value.filter(item => item !== value)
     : [...sourceIdFilter.value, value]
 }
+
+// Cycle has-fix tri-state: null → true → false → null
+function cycleHasFix(): void {
+  if (hasFixFilter.value === null) hasFixFilter.value = true
+  else if (hasFixFilter.value === true) hasFixFilter.value = false
+  else hasFixFilter.value = null
+}
+
+const hasFixLabel = computed<string>(() => {
+  if (hasFixFilter.value === true) return t('findings.filter.has_fix_yes')
+  if (hasFixFilter.value === false) return t('findings.filter.has_fix_no')
+  return t('findings.filter.has_fix')
+})
+
+const hasFixActive = computed<boolean>(() => hasFixFilter.value !== null)
+
+interface SortOption {
+  sortBy: SortBy
+  sortDir: SortDir
+  label: string
+}
+
+const sortOptions: SortOption[] = [
+  { sortBy: SortBy.Severity, sortDir: SortDir.Desc, label: 'findings.sort.severity_desc' },
+  { sortBy: SortBy.Severity, sortDir: SortDir.Asc, label: 'findings.sort.severity_asc' },
+  { sortBy: SortBy.DiscoveredAt, sortDir: SortDir.Desc, label: 'findings.sort.discovered_desc' },
+  { sortBy: SortBy.DiscoveredAt, sortDir: SortDir.Asc, label: 'findings.sort.discovered_asc' },
+  { sortBy: SortBy.PackageName, sortDir: SortDir.Asc, label: 'findings.sort.package_asc' },
+  { sortBy: SortBy.SourceName, sortDir: SortDir.Asc, label: 'findings.sort.source_asc' },
+]
+
+const activeSortLabel = computed<string>(() => {
+  const match = sortOptions.find(
+    opt => opt.sortBy === sortByFilter.value && opt.sortDir === sortDirFilter.value,
+  )
+  return match ? t(match.label) : t('findings.sort.severity_desc')
+})
+
+function applySortOption(opt: SortOption): void {
+  sortByFilter.value = opt.sortBy
+  sortDirFilter.value = opt.sortDir
+}
+
+const sortDropdownOpen = ref(false)
 
 const allSeverities: Severity[] = [Severity.Critical, Severity.High, Severity.Medium, Severity.Low]
 const allStates: FindingState[] = [
@@ -358,39 +566,127 @@ watch([allOnPageSelected, someOnPageSelected], () => {
 
 <template>
   <div class="space-y-6 pb-24">
-    <h1 class="text-2xl font-semibold">Findings</h1>
+    <h1 class="text-2xl font-semibold">{{ $t('nav.findings') }}</h1>
 
-    <!-- Preset row -->
+    <!-- Quick filter row -->
     <div class="flex flex-wrap items-center gap-2 text-sm">
-      <span class="text-xs uppercase text-slate-500">Quick filters</span>
+      <span class="text-xs uppercase text-slate-500">{{ $t('findings.filter.quick_filters') }}</span>
       <button
         type="button"
         class="rounded-full border border-red-900/50 bg-red-950/30 px-3 py-1 text-red-200 hover:bg-red-900/40"
         @click="applyCriticalOnly"
       >
-        Critical only
+        {{ $t('findings.filter.critical_only') }}
       </button>
       <button
         type="button"
         class="rounded-full border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
         @click="applyLast24h"
       >
-        Last 24h
+        {{ $t('findings.filter.last_24h') }}
       </button>
       <button
         type="button"
         class="rounded-full border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
         @click="applyUnackedOpen"
       >
-        Unacked open
+        {{ $t('findings.filter.unacked_open') }}
       </button>
       <button
         type="button"
         class="rounded-full border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
         @click="applyByMe"
       >
-        By me
+        {{ $t('findings.filter.by_me') }}
       </button>
+    </div>
+
+    <!-- Saved filters strip -->
+    <SavedFiltersStrip :current-query-json="currentFilterJson" @apply="applySavedFilter" />
+
+    <!-- Security-signal filter bar: has-fix, KEV, EPSS, advisory ID search, sort -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- has-fix tri-state pill -->
+      <button
+        type="button"
+        class="rounded-full border px-3 py-1 text-xs transition-colors"
+        :class="hasFixActive
+          ? 'border-emerald-700 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900/40'
+          : 'border-slate-700 text-slate-300 hover:bg-slate-800'"
+        :aria-pressed="hasFixActive"
+        @click="cycleHasFix"
+      >
+        {{ hasFixLabel }}
+      </button>
+
+      <!-- KEV-only toggle -->
+      <button
+        type="button"
+        class="rounded-full border px-3 py-1 text-xs transition-colors"
+        :class="kevOnlyFilter
+          ? 'border-orange-700 bg-orange-950/40 text-orange-200 hover:bg-orange-900/40'
+          : 'border-slate-700 text-slate-300 hover:bg-slate-800'"
+        :aria-pressed="kevOnlyFilter"
+        @click="kevOnlyFilter = !kevOnlyFilter"
+      >
+        {{ $t('findings.filter.kev_only') }}
+      </button>
+
+      <!-- EPSS slider -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-400" for="epss-slider">{{ $t('findings.filter.epss_min') }}</label>
+        <input
+          id="epss-slider"
+          v-model.number="epssMinFilter"
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          class="h-1 w-24 cursor-pointer accent-blue-500"
+        >
+        <span class="w-8 text-right text-xs tabular-nums text-slate-300">
+          {{ epssMinFilter > 0 ? epssMinFilter.toFixed(2) : 'off' }}
+        </span>
+      </div>
+
+      <!-- Advisory ID / CVE search -->
+      <input
+        v-model="advisoryQueryFilter"
+        type="search"
+        :placeholder="$t('findings.filter.advisory_id_placeholder')"
+        class="rounded border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+        style="width: 18ch;"
+        :aria-label="$t('findings.filter.advisory_id')"
+      >
+
+      <!-- Sort dropdown -->
+      <div class="relative ml-auto">
+        <button
+          type="button"
+          class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          @click="sortDropdownOpen = !sortDropdownOpen"
+        >
+          {{ activeSortLabel }}
+          <span class="ml-1 text-slate-500">▾</span>
+        </button>
+        <div
+          v-if="sortDropdownOpen"
+          class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-slate-700 bg-slate-900 py-1 shadow-xl"
+        >
+          <button
+            v-for="opt in sortOptions"
+            :key="`${opt.sortBy}-${opt.sortDir}`"
+            type="button"
+            class="w-full px-4 py-1.5 text-left text-xs hover:bg-slate-800"
+            :class="opt.sortBy === sortByFilter && opt.sortDir === sortDirFilter
+              ? 'text-blue-300'
+              : 'text-slate-300'"
+            @click="() => { applySortOption(opt); sortDropdownOpen = false }"
+          >
+            {{ $t(opt.label) }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Active chips + add-filter dropdown -->
@@ -417,14 +713,14 @@ watch([allOnPageSelected, someOnPageSelected], () => {
           class="rounded border border-dashed border-slate-600 px-3 py-1 text-xs text-slate-300 hover:border-slate-500 hover:bg-slate-800"
           @click="addFilterOpen = !addFilterOpen"
         >
-          + Add filter
+          {{ $t('findings.filter.add_filter') }}
         </button>
         <div
           v-if="addFilterOpen"
-          class="absolute z-20 mt-2 grid w-[420px] grid-cols-2 gap-4 rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-xl"
+          class="absolute z-20 mt-2 grid w-[440px] grid-cols-2 gap-4 rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-xl"
         >
           <section>
-            <p class="mb-1 text-xs uppercase text-slate-400">Severity</p>
+            <p class="mb-1 text-xs uppercase text-slate-400">{{ $t('findings.filter.severity') }}</p>
             <label v-for="value in allSeverities" :key="value" class="flex items-center gap-2 py-0.5 text-sm">
               <input
                 type="checkbox"
@@ -436,7 +732,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
           </section>
 
           <section>
-            <p class="mb-1 text-xs uppercase text-slate-400">State</p>
+            <p class="mb-1 text-xs uppercase text-slate-400">{{ $t('findings.filter.state') }}</p>
             <label v-for="value in allStates" :key="value" class="flex items-center gap-2 py-0.5 text-sm">
               <input
                 type="checkbox"
@@ -448,7 +744,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
           </section>
 
           <section>
-            <p class="mb-1 text-xs uppercase text-slate-400">Ecosystem</p>
+            <p class="mb-1 text-xs uppercase text-slate-400">{{ $t('findings.filter.ecosystem') }}</p>
             <label v-for="value in allEcosystems" :key="value" class="flex items-center gap-2 py-0.5 text-sm">
               <input
                 type="checkbox"
@@ -460,22 +756,31 @@ watch([allOnPageSelected, someOnPageSelected], () => {
           </section>
 
           <section>
-            <p class="mb-1 text-xs uppercase text-slate-400">Source</p>
-            <div v-if="(sourcesData ?? []).length === 0" class="text-xs text-slate-500">
-              No sources yet.
-            </div>
-            <label
-              v-for="source in sourcesData ?? []"
-              :key="source.id"
-              class="flex items-center gap-2 py-0.5 text-sm"
+            <p class="mb-1 text-xs uppercase text-slate-400">{{ $t('findings.filter.source') }}</p>
+            <!-- Fuzzy source search -->
+            <input
+              v-model="sourceSearch"
+              type="search"
+              :placeholder="$t('findings.filter.source_search')"
+              class="mb-1 w-full rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
             >
-              <input
-                type="checkbox"
-                :checked="sourceIdFilter.includes(source.id)"
-                @change="toggleSource(source.id)"
+            <div v-if="filteredSources.length === 0" class="text-xs text-slate-500">
+              {{ $t('findings.filter.no_sources') }}
+            </div>
+            <div class="max-h-40 overflow-y-auto">
+              <label
+                v-for="source in filteredSources"
+                :key="source.id"
+                class="flex items-center gap-2 py-0.5 text-sm"
               >
-              <span class="truncate">{{ source.name }}</span>
-            </label>
+                <input
+                  type="checkbox"
+                  :checked="sourceIdFilter.includes(source.id)"
+                  @change="toggleSource(source.id)"
+                >
+                <span class="truncate">{{ source.name }}</span>
+              </label>
+            </div>
           </section>
         </div>
       </div>
@@ -486,16 +791,100 @@ watch([allOnPageSelected, someOnPageSelected], () => {
         class="ml-auto text-xs text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
         @click="resetAllFilters"
       >
-        Reset all
+        {{ $t('findings.filter.reset_all') }}
       </button>
     </div>
 
-    <p v-if="isLoading" class="text-sm text-slate-400">Loading…</p>
-    <p v-else-if="isError" class="text-sm text-red-300">Failed to load findings.</p>
+    <p v-if="isLoading" class="text-sm text-slate-400">{{ $t('findings.loading') }}</p>
+    <p v-else-if="isError" class="text-sm text-red-300">{{ $t('findings.error') }}</p>
+
+    <!-- Mobile / narrow viewport: card list -->
+    <ul
+      v-if="filteredData && filteredData.items.length"
+      class="space-y-2 md:hidden"
+    >
+      <li
+        v-for="finding in filteredData.items"
+        :key="`card-${finding.id}`"
+        class="rounded-lg border border-slate-800 bg-slate-900 p-3"
+        :class="selectedIds.has(finding.id) ? 'border-blue-600/60 bg-blue-950/30' : ''"
+      >
+        <div class="flex items-start gap-3">
+          <input
+            type="checkbox"
+            :checked="selectedIds.has(finding.id)"
+            :aria-label="`Select finding ${finding.dedupKey}`"
+            class="mt-1 h-4 w-4 shrink-0 accent-blue-500"
+            @change="toggleOne(finding.id)"
+          >
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <SeverityBadge :severity="finding.severity" />
+              <span class="text-xs uppercase tracking-wide text-slate-500">
+                {{ FindingStateNames[finding.state] }}
+              </span>
+              <span
+                v-if="finding.ecosystem !== null && finding.ecosystem !== undefined"
+                class="text-[10px] uppercase tracking-wider text-slate-600"
+              >
+                {{ EcosystemNames[finding.ecosystem] }}
+              </span>
+            </div>
+            <RouterLink :to="`/findings/${finding.id}`" class="mt-2 block font-mono text-sm text-blue-300 hover:underline">
+              <span class="text-slate-100">{{ finding.packageName ?? '—' }}</span><span
+                v-if="finding.packageVersion"
+                class="text-slate-400"
+              >@{{ finding.packageVersion }}</span>
+            </RouterLink>
+            <p class="mt-1 line-clamp-2 text-sm text-slate-300">{{ finding.advisorySummary ?? '—' }}</p>
+            <p v-if="finding.advisoryExternalId" class="mt-1 font-mono text-xs text-slate-500">
+              {{ finding.advisoryExternalId }}
+            </p>
+            <div
+              v-if="finding.isKev || finding.epssScore != null"
+              class="mt-1 flex flex-wrap items-center gap-1"
+            >
+              <KevBadge :is-kev="finding.isKev" :due-date="finding.kevDueDate" />
+              <EpssBadge :score="finding.epssScore" :percentile="finding.epssPercentile" />
+            </div>
+            <p class="mt-2 text-xs text-slate-500">
+              {{ finding.sourceName ?? `#${finding.sourceId}` }} · {{ formatDate(finding.lastSeenAt) }}
+            </p>
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <footer
+      v-if="filteredData && filteredData.items.length && filteredData.total > filteredData.pageSize"
+      class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400 md:hidden"
+    >
+      <span>
+        {{ $t('findings.page_of_total', { page: filteredData.page, total: Math.ceil(filteredData.total / filteredData.pageSize), count: filteredData.total }) }}
+      </span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="h-11 rounded border border-slate-700 px-3 hover:bg-slate-800 disabled:opacity-40"
+          :disabled="page <= 1"
+          @click="page = page - 1"
+        >
+          {{ $t('action.prev') }}
+        </button>
+        <button
+          type="button"
+          class="h-11 rounded border border-slate-700 px-3 hover:bg-slate-800 disabled:opacity-40"
+          :disabled="page >= Math.ceil(filteredData.total / filteredData.pageSize)"
+          @click="page = page + 1"
+        >
+          {{ $t('action.next') }}
+        </button>
+      </div>
+    </footer>
 
     <div
-      v-else-if="filteredData && filteredData.items.length"
-      class="overflow-hidden rounded-lg border border-slate-800 bg-slate-900"
+      v-if="filteredData && filteredData.items.length"
+      class="hidden overflow-hidden rounded-lg border border-slate-800 bg-slate-900 md:block"
     >
       <table class="w-full text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
@@ -509,12 +898,12 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 @change="toggleAllOnPage"
               >
             </th>
-            <th class="px-4 py-2">Severity</th>
-            <th class="px-4 py-2">Package</th>
-            <th class="px-4 py-2">Advisory</th>
-            <th class="px-4 py-2">Source</th>
-            <th class="px-4 py-2">Last seen</th>
-            <th class="px-4 py-2">State</th>
+            <th class="px-4 py-2">{{ $t('findings.col_severity') }}</th>
+            <th class="px-4 py-2">{{ $t('findings.col_package') }}</th>
+            <th class="px-4 py-2">{{ $t('findings.col_advisory') }}</th>
+            <th class="px-4 py-2">{{ $t('findings.col_source') }}</th>
+            <th class="px-4 py-2">{{ $t('findings.col_last_seen') }}</th>
+            <th class="px-4 py-2">{{ $t('findings.col_state') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
@@ -554,6 +943,13 @@ watch([allOnPageSelected, someOnPageSelected], () => {
               <p v-if="finding.advisoryExternalId" class="font-mono text-xs text-slate-500">
                 {{ finding.advisoryExternalId }}
               </p>
+              <div
+                v-if="finding.isKev || finding.epssScore != null"
+                class="mt-1 flex flex-wrap items-center gap-1"
+              >
+                <KevBadge :is-kev="finding.isKev" :due-date="finding.kevDueDate" />
+                <EpssBadge :score="finding.epssScore" :percentile="finding.epssPercentile" />
+              </div>
             </td>
             <td class="px-4 py-2 text-slate-300">{{ finding.sourceName ?? `#${finding.sourceId}` }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(finding.lastSeenAt) }}</td>
@@ -566,8 +962,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
         class="flex items-center justify-between border-t border-slate-800 px-4 py-2 text-xs text-slate-400"
       >
         <span>
-          Page {{ filteredData.page }} of {{ Math.ceil(filteredData.total / filteredData.pageSize) }}
-          · {{ filteredData.total }} findings
+          {{ $t('findings.page_of_total', { page: filteredData.page, total: Math.ceil(filteredData.total / filteredData.pageSize), count: filteredData.total }) }}
         </span>
         <div class="flex gap-2">
           <button
@@ -576,7 +971,7 @@ watch([allOnPageSelected, someOnPageSelected], () => {
             :disabled="page <= 1"
             @click="page = page - 1"
           >
-            Prev
+            {{ $t('action.prev') }}
           </button>
           <button
             type="button"
@@ -584,27 +979,30 @@ watch([allOnPageSelected, someOnPageSelected], () => {
             :disabled="page >= Math.ceil(filteredData.total / filteredData.pageSize)"
             @click="page = page + 1"
           >
-            Next
+            {{ $t('action.next') }}
           </button>
         </div>
       </footer>
     </div>
 
-    <p v-else class="text-sm text-slate-500">No findings match the current filters.</p>
+    <p v-if="filteredData && !isLoading && !filteredData.items.length" class="text-sm text-slate-500">
+      {{ $t('findings.empty') }}
+    </p>
 
     <!-- Floating bulk action bar -->
     <div
       v-if="selectedIds.size > 0"
-      class="fixed inset-x-0 bottom-4 z-30 mx-auto flex w-fit max-w-3xl items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/95 px-4 py-3 shadow-2xl backdrop-blur"
+      class="fixed inset-x-2 z-30 mx-auto flex w-fit max-w-3xl flex-wrap items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/95 px-4 py-3 shadow-2xl backdrop-blur"
+      style="bottom: max(env(safe-area-inset-bottom), 1rem);"
     >
-      <span class="text-sm text-slate-200">{{ selectedIds.size }} selected</span>
+      <span class="text-sm text-slate-200">{{ $t('findings.bulk.selected', { n: selectedIds.size }) }}</span>
       <button
         type="button"
         class="rounded border border-slate-700 px-3 py-1 text-sm hover:bg-slate-800"
         :disabled="bulkAck.isPending.value"
         @click="runBulk('ack')"
       >
-        Ack ({{ selectedIds.size }})
+        {{ $t('findings.bulk.ack_btn', { n: selectedIds.size }) }}
       </button>
       <button
         type="button"
@@ -612,13 +1010,13 @@ watch([allOnPageSelected, someOnPageSelected], () => {
         :disabled="bulkResolve.isPending.value"
         @click="runBulk('resolve')"
       >
-        Resolve ({{ selectedIds.size }})
+        {{ $t('findings.bulk.resolve_btn', { n: selectedIds.size }) }}
       </button>
       <div v-if="suppressOpen" class="flex items-center gap-2">
         <input
           v-model="suppressReason"
           type="text"
-          placeholder="Reason"
+          :placeholder="$t('finding_detail.suppress_reason')"
           class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
         >
         <button
@@ -627,14 +1025,14 @@ watch([allOnPageSelected, someOnPageSelected], () => {
           :disabled="bulkSuppress.isPending.value || !suppressReason.trim()"
           @click="runBulk('suppress')"
         >
-          Confirm
+          {{ $t('action.confirm') }}
         </button>
         <button
           type="button"
           class="text-xs text-slate-400 hover:text-slate-200"
           @click="() => { suppressOpen = false; suppressReason = '' }"
         >
-          Cancel
+          {{ $t('action.cancel') }}
         </button>
       </div>
       <button
@@ -643,14 +1041,14 @@ watch([allOnPageSelected, someOnPageSelected], () => {
         class="rounded border border-yellow-800 bg-yellow-950/40 px-3 py-1 text-sm text-yellow-200 hover:bg-yellow-900/40"
         @click="suppressOpen = true"
       >
-        Suppress ({{ selectedIds.size }})
+        {{ $t('findings.bulk.suppress_btn', { n: selectedIds.size }) }}
       </button>
       <button
         type="button"
         class="ml-2 text-xs text-slate-400 hover:text-slate-200"
         @click="clearSelection"
       >
-        Clear
+        {{ $t('action.clear') }}
       </button>
     </div>
   </div>

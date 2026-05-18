@@ -18,13 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Shield.Scanners\Shield.Scanners.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Npm\Shield.Parsers.Npm.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Composer\Shield.Parsers.Composer.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Gradle\Shield.Parsers.Gradle.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Python\Shield.Parsers.Python.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Go\Shield.Parsers.Go.csproj" />
-    <ProjectReference Include="..\..\src\Shield.Parsers.Rust\Shield.Parsers.Rust.csproj" />
+    <ProjectReference Include="..\..\src\Shield.Parsers\Shield.Parsers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/**/*" Exclude="" CopyToOutputDirectory="PreserveNewest" />

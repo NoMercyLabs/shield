@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shield.Alerter;
+using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Core.Domain;
 using Shield.Core.Results;
@@ -11,7 +12,8 @@ namespace Shield.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = ShieldPolicies.Admin)]
+[NoApiToken]
 public sealed class ChannelsController : ControllerBase
 {
     private readonly ShieldDbContext _db;
@@ -120,11 +122,7 @@ public sealed class ChannelsController : ControllerBase
             Notes = "Shield test alert",
         };
 
-        IReadOnlyList<AlertEvent> events = await _dispatcher.DispatchAsync(
-            new[] { sample },
-            new[] { channel },
-            ct
-        );
+        IReadOnlyList<AlertEvent> events = await _dispatcher.DispatchAsync([sample], [channel], ct);
 
         bool success = events.All(evt => evt.Status == AlertStatus.Sent);
         string? error = events.FirstOrDefault(evt => evt.Status == AlertStatus.Failed)?.Error;

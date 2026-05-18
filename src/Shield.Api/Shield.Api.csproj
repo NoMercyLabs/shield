@@ -3,16 +3,8 @@
     <ProjectReference Include="..\Shield.Core\Shield.Core.csproj" />
     <ProjectReference Include="..\Shield.Data\Shield.Data.csproj" />
     <ProjectReference Include="..\Shield.Scanners\Shield.Scanners.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Npm\Shield.Parsers.Npm.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Composer\Shield.Parsers.Composer.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Gradle\Shield.Parsers.Gradle.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Python\Shield.Parsers.Python.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Go\Shield.Parsers.Go.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Rust\Shield.Parsers.Rust.csproj" />
-    <ProjectReference Include="..\Shield.Feeds.Osv\Shield.Feeds.Osv.csproj" />
-    <ProjectReference Include="..\Shield.Feeds.Ghsa\Shield.Feeds.Ghsa.csproj" />
-    <ProjectReference Include="..\Shield.Feeds.NpmRegistry\Shield.Feeds.NpmRegistry.csproj" />
+    <ProjectReference Include="..\Shield.Parsers\Shield.Parsers.csproj" />
+    <ProjectReference Include="..\Shield.Feeds\Shield.Feeds.csproj" />
     <ProjectReference Include="..\Shield.Matcher\Shield.Matcher.csproj" />
     <ProjectReference Include="..\Shield.Alerter\Shield.Alerter.csproj" />
     <ProjectReference Include="..\Shield.Channels\Shield.Channels.csproj" />
@@ -26,5 +18,17 @@
     <PackageReference Include="Octokit" />
     <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="Semver" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="WebPush" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shield.Api.Tests" />
+  </ItemGroup>
+  <!-- Inter Variable (SIL OFL, see Services/Assets/Inter-LICENSE.txt) is embedded so the
+       OG image renderer paints identical type on Windows dev, Docker (no system fonts),
+       and any host between. ~880 KB cost is acceptable for fontconfig-free rendering. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Services\Assets\InterVariable.ttf" />
   </ItemGroup>
 </Project>

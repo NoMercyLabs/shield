@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RefreshCw } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 
 import { useFeedsQuery, useRefreshFeedMutation } from '@/queries/feeds'
 import { useToasts } from '@/stores/toast'
@@ -7,6 +8,7 @@ import { formatDate } from '@/lib/format'
 import { FeedNames } from '@/types/api'
 import type { Feed } from '@/types/api'
 
+const { t } = useI18n()
 const { data, isLoading, isError } = useFeedsQuery()
 const refresh = useRefreshFeedMutation()
 const { push } = useToasts()
@@ -14,30 +16,30 @@ const { push } = useToasts()
 async function onRefresh(feed: Feed): Promise<void> {
   try {
     await refresh.mutateAsync(feed)
-    push('success', `${FeedNames[feed]} refresh queued.`)
+    push('success', t('feeds.refresh_queued', { name: FeedNames[feed] }))
   }
   catch {
-    push('error', `Failed to refresh ${FeedNames[feed]}.`)
+    push('error', t('feeds.refresh_failed', { name: FeedNames[feed] }))
   }
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <h1 class="text-2xl font-semibold">Feeds</h1>
+    <h1 class="text-2xl font-semibold">{{ t('feeds.title') }}</h1>
 
-    <p v-if="isLoading" class="text-sm text-slate-400">Loading…</p>
-    <p v-else-if="isError" class="text-sm text-red-300">Failed to load feed status.</p>
+    <p v-if="isLoading" class="text-sm text-slate-400">{{ t('feeds.loading') }}</p>
+    <p v-else-if="isError" class="text-sm text-red-300">{{ t('feeds.error') }}</p>
 
-    <div v-else-if="data && data.length" class="overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-      <table class="w-full text-left text-sm">
+    <div v-else-if="data && data.length" class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900">
+      <table class="w-full min-w-[640px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">Feed</th>
-            <th class="px-4 py-2">Last success</th>
-            <th class="px-4 py-2">Next run</th>
-            <th class="px-4 py-2">Status</th>
-            <th class="px-4 py-2 text-right">Actions</th>
+            <th class="px-4 py-2">{{ t('feeds.col_feed') }}</th>
+            <th class="px-4 py-2">{{ t('feeds.col_last_success') }}</th>
+            <th class="px-4 py-2">{{ t('feeds.col_next_run') }}</th>
+            <th class="px-4 py-2">{{ t('feeds.col_status') }}</th>
+            <th class="px-4 py-2 text-right">{{ t('feeds.col_actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
@@ -46,9 +48,9 @@ async function onRefresh(feed: Feed): Promise<void> {
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.lastSuccessAt) }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.nextRunAt) }}</td>
             <td class="px-4 py-2">
-              <span v-if="status.lastError" class="text-red-300" :title="status.lastError">Error</span>
-              <span v-else-if="!status.registered" class="text-slate-500">Not registered</span>
-              <span v-else class="text-green-300">OK</span>
+              <span v-if="status.lastError" class="text-red-300" :title="status.lastError">{{ t('feeds.status_error') }}</span>
+              <span v-else-if="!status.registered" class="text-slate-500">{{ t('feeds.status_not_registered') }}</span>
+              <span v-else class="text-green-300">{{ t('feeds.status_ok') }}</span>
             </td>
             <td class="px-4 py-2 text-right">
               <button
@@ -58,7 +60,7 @@ async function onRefresh(feed: Feed): Promise<void> {
                 @click="onRefresh(status.feed)"
               >
                 <RefreshCw class="h-3 w-3" />
-                Refresh
+                {{ t('feeds.refresh_btn') }}
               </button>
             </td>
           </tr>
@@ -66,6 +68,12 @@ async function onRefresh(feed: Feed): Promise<void> {
       </table>
     </div>
 
-    <p v-else class="text-sm text-slate-500">No feeds configured.</p>
+    <div
+      v-else
+      class="rounded-lg border border-dashed border-slate-700 bg-slate-900/40 px-6 py-10 text-center"
+    >
+      <p class="text-sm font-medium text-slate-200">{{ t('feeds.empty_title') }}</p>
+      <p class="mt-1 text-xs text-slate-500">{{ t('feeds.empty_body') }}</p>
+    </div>
   </div>
 </template>

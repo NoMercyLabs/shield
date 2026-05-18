@@ -1,59 +1,32 @@
 using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services;
-using Shield.Core.Abstractions;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Domain;
-using Shield.Core.Results;
 using Shield.Data;
-using Shield.Scanners;
 
 namespace Shield.Api.Workers;
 
+// Scheduler: discovers due sources by interval and enqueues persistent ScanQueueEntries
+// rows. The actual drain lives in ScanQueueWorker so a single code path serialises every
+// scan and survives restart. The in-memory ScanQueue channel is retained for any future
+// caller that wants fire-and-forget triggering without touching the DB, but no current
+// production path uses it.
 public sealed class SourceScanWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
 
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ScanQueue _scanQueue;
-    private readonly MatchQueue _matchQueue;
     private readonly ILogger<SourceScanWorker> _log;
 
-    public SourceScanWorker(
-        IServiceScopeFactory scopeFactory,
-        ScanQueue scanQueue,
-        MatchQueue matchQueue,
-        ILogger<SourceScanWorker> log
-    )
+    public SourceScanWorker(IServiceScopeFactory scopeFactory, ILogger<SourceScanWorker> log)
     {
         _scopeFactory = scopeFactory;
-        _scanQueue = scanQueue;
-        _matchQueue = matchQueue;
         _log = log;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Task ondemand = DrainOnDemandAsync(stoppingToken);
-        Task scheduled = RunScheduledAsync(stoppingToken);
-        await Task.WhenAll(ondemand, scheduled);
-    }
-
-    private async Task DrainOnDemandAsync(CancellationToken stoppingToken)
-    {
-        await foreach (int sourceId in _scanQueue.Reader.ReadAllAsync(stoppingToken))
-        {
-            try
-            {
-                await ScanOneAsync(sourceId, stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "Source scan failed for source {SourceId}", sourceId);
-            }
-        }
+        await RunScheduledAsync(stoppingToken);
     }
 
     private async Task RunScheduledAsync(CancellationToken stoppingToken)
@@ -63,8 +36,13 @@ public sealed class SourceScanWorker : BackgroundService
             try
             {
                 List<int> dueIds = await GetDueSourceIdsAsync(stoppingToken);
-                foreach (int id in dueIds)
-                    await _scanQueue.EnqueueAsync(id, stoppingToken);
+                if (dueIds.Count > 0)
+                {
+                    using IServiceScope scope = _scopeFactory.CreateScope();
+                    IPersistentScanQueue persistent =
+                        scope.ServiceProvider.GetRequiredService<IPersistentScanQueue>();
+                    await persistent.EnqueueManyAsync(dueIds, stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -104,54 +82,5 @@ public sealed class SourceScanWorker : BackgroundService
             )
             .Select(source => source.Id)
             .ToList();
-    }
-
-    private async Task ScanOneAsync(int sourceId, CancellationToken ct)
-    {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
-        ScannerRegistry registry = scope.ServiceProvider.GetRequiredService<ScannerRegistry>();
-
-        Source? source = await db.Sources.FirstOrDefaultAsync(s => s.Id == sourceId, ct);
-        if (source is null)
-        {
-            _log.LogWarning("Scan requested for missing source {SourceId}", sourceId);
-            return;
-        }
-
-        IScanner? scanner = registry.FindFor(source.Type);
-        if (scanner is null)
-        {
-            source.LastError = $"No scanner registered for {source.Type}";
-            await db.SaveChangesAsync(ct);
-            return;
-        }
-
-        ScanResult result = await scanner.ScanAsync(source, ct);
-        source.LastScannedAt = DateTime.UtcNow;
-        source.UpdatedAt = DateTime.UtcNow;
-
-        if (!result.Success || result.Snapshot is null)
-        {
-            source.LastError = result.Error ?? "Scan failed";
-            await db.SaveChangesAsync(ct);
-            return;
-        }
-
-        source.LastError = null;
-        db.InventorySnapshots.Add(result.Snapshot);
-        if (result.Items.Count > 0)
-            db.InventoryItems.AddRange(result.Items);
-
-        await db.SaveChangesAsync(ct);
-
-        await _matchQueue.EnqueueAsync(
-            new MatchRequest(result.Snapshot.Id, source.Id, MatchAll: false),
-            ct
-        );
-
-        IAnomalyDetector anomalyDetector =
-            scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
-        await anomalyDetector.AnalyzeNewSnapshotAsync(source.Id, result.Snapshot.Id, ct);
     }
 }

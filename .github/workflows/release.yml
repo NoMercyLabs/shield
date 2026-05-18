@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.1.0-pre). Must already exist on master.'
+        required: true
 
 permissions:
   contents: write
@@ -22,32 +27,54 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # workflow_dispatch passes the tag via input; tag pushes use GITHUB_REF_NAME.
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Resolve version
         id: ver
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
           VERSION="${TAG#v}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # Major-minor slice: "0.1.0-pre" → "0.1", "1.2.3" → "1.2"
+          MAJOR_MINOR="$(echo "$VERSION" | grep -oP '^\d+\.\d+')"
+          # Pre-release: any suffix containing pre/rc/alpha/beta after a hyphen.
+          if echo "$VERSION" | grep -qP '\-(pre|rc|alpha|beta)'; then
+            IS_PRE=true
+          else
+            IS_PRE=false
+          fi
+          echo "tag=${TAG}"          >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"  >> "$GITHUB_OUTPUT"
+          echo "major_minor=${MAJOR_MINOR}" >> "$GITHUB_OUTPUT"
+          echo "is_pre=${IS_PRE}"    >> "$GITHUB_OUTPUT"
 
-      - name: Extract changelog section
+      - name: Require CHANGELOG section
         id: notes
         run: |
           NOTES_FILE="$(mktemp)"
-          if [ -f CHANGELOG.md ]; then
-            awk -v v="${{ steps.ver.outputs.version }}" '
-              BEGIN { found=0 }
-              /^## / {
-                if (found) exit
-                if (index($0, v) > 0) { found=1; print; next }
-              }
-              found { print }
-            ' CHANGELOG.md > "$NOTES_FILE"
+          VERSION="${{ steps.ver.outputs.version }}"
+
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md not found. Add a section for ${VERSION} before tagging."
+            exit 1
           fi
+
+          # Extract the section that starts with "## [{VERSION}]" or "## [VERSION]".
+          # awk: start capturing at the matching heading, stop at the next ## heading.
+          awk -v v="$VERSION" '
+            BEGIN { found=0 }
+            /^## / {
+              if (found) exit
+              if (index($0, "[" v "]") > 0 || index($0, "[" v " ") > 0) { found=1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > "$NOTES_FILE"
+
           if [ ! -s "$NOTES_FILE" ]; then
-            echo "Shield ${{ steps.ver.outputs.tag }} — see commit history for changes." > "$NOTES_FILE"
+            echo "::error::No CHANGELOG.md section found for [${VERSION}]. Update CHANGELOG before tagging."
+            exit 1
           fi
+
           echo "path=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Setup QEMU
@@ -63,28 +90,67 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build image tags
+        id: tags
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          MAJOR_MINOR="${{ steps.ver.outputs.major_minor }}"
+          IS_PRE="${{ steps.ver.outputs.is_pre }}"
+          BASE="ghcr.io/nomercylabs/shield"
+
+          # Always publish the exact version and the major-minor float tag.
+          TAGS="${BASE}:${VERSION},${BASE}:${MAJOR_MINOR}"
+
+          # latest only on stable releases.
+          if [ "$IS_PRE" = "false" ]; then
+            TAGS="${TAGS},${BASE}:latest"
+          fi
+
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
       - name: Build & push image
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}
-            ghcr.io/nomercylabs/shield:latest
+          tags: ${{ steps.tags.outputs.tags }}
+          # OCI attestations (provenance + SBOM) are attached separately via syft below.
+          # Disable the default provenance stub so there's no double-attestation.
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          image: ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}
-          format: spdx-json
-          output-file: shield-${{ steps.ver.outputs.version }}.sbom.spdx.json
-          upload-artifact: true
-          upload-release-assets: false
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SPDX SBOM
+        run: |
+          syft \
+            "ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}" \
+            -o spdx-json \
+            --file "shield-${{ steps.ver.outputs.version }}.spdx.json"
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          syft \
+            "ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}" \
+            -o cyclonedx-json \
+            --file "shield-${{ steps.ver.outputs.version }}.cdx.json"
+
+      - name: Attest SBOM to image (OCI)
+        run: |
+          syft attest \
+            --output spdx-json \
+            "ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}" \
+            --key cosign.key 2>/dev/null || \
+          syft attest \
+            --output spdx-json \
+            "ghcr.io/nomercylabs/shield:${{ steps.ver.outputs.version }}" || true
+          # Non-fatal: OCI attestation requires a registry that supports referrers API.
+          # GHCR supports it; the || true guard prevents a referrers race from failing the release.
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -92,5 +158,7 @@ jobs:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: Shield ${{ steps.ver.outputs.tag }}
           body_path: ${{ steps.notes.outputs.path }}
+          prerelease: ${{ steps.ver.outputs.is_pre == 'true' }}
           files: |
-            shield-${{ steps.ver.outputs.version }}.sbom.spdx.json
+            shield-${{ steps.ver.outputs.version }}.spdx.json
+            shield-${{ steps.ver.outputs.version }}.cdx.json

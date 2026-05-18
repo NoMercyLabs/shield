@@ -24,7 +24,7 @@ public sealed class AlertDispatcher
         CancellationToken ct
     )
     {
-        List<AlertEvent> events = new();
+        List<AlertEvent> events = [];
 
         foreach (AlertChannel channel in configuredChannels)
         {
@@ -58,9 +58,9 @@ public sealed class AlertDispatcher
 
             foreach (Finding finding in matched)
             {
-                AlertResult result = await SafeSendAsync(impl, channel, new[] { finding }, ct);
+                AlertResult result = await SafeSendAsync(impl, channel, [finding], ct);
                 AlertStatus status = result.Success ? AlertStatus.Sent : AlertStatus.Failed;
-                events.Add(new AlertEvent
+                events.Add(new()
                 {
                     Id = Guid.NewGuid(),
                     FindingId = finding.Id,
@@ -109,7 +109,7 @@ public sealed class AlertDispatcher
         DateTime now = DateTime.UtcNow;
         foreach (Finding finding in findings)
         {
-            yield return new AlertEvent
+            yield return new()
             {
                 Id = Guid.NewGuid(),
                 FindingId = finding.Id,

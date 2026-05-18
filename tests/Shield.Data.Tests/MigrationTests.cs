@@ -24,13 +24,13 @@ public class MigrationTests : IAsyncLifetime
         DbContextOptions<ShieldDbContext> shieldOptions = new DbContextOptionsBuilder<ShieldDbContext>()
             .UseSqlite(_shieldConnection)
             .Options;
-        _shieldDb = new ShieldDbContext(shieldOptions);
+        _shieldDb = new(shieldOptions);
         await _shieldDb.Database.MigrateAsync();
 
         DbContextOptions<FeedsDbContext> feedsOptions = new DbContextOptionsBuilder<FeedsDbContext>()
             .UseSqlite(_feedsConnection)
             .Options;
-        _feedsDb = new FeedsDbContext(feedsOptions);
+        _feedsDb = new(feedsOptions);
         await _feedsDb.Database.MigrateAsync();
     }
 
@@ -88,7 +88,7 @@ public class MigrationTests : IAsyncLifetime
     {
         await using DbCommand command = connection.CreateCommand();
         command.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
-        List<string> tables = new();
+        List<string> tables = [];
         await using DbDataReader reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -101,7 +101,7 @@ public class MigrationTests : IAsyncLifetime
     {
         await using DbCommand command = connection.CreateCommand();
         command.CommandText = $"SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='{table}'";
-        List<string> indexes = new();
+        List<string> indexes = [];
         await using DbDataReader reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {

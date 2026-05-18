@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { Plus, Send, Trash2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 
 import {
   useChannelsQuery,
@@ -30,6 +31,7 @@ const FORM_FOR_TYPE: Record<ChannelType, ReturnType<typeof defineAsyncComponent>
   [ChannelType.Inbox]: InboxChannelForm,
 }
 
+const { t } = useI18n()
 const { data, isLoading, isError } = useChannelsQuery()
 const create = useCreateChannelMutation()
 const update = useUpdateChannelMutation()
@@ -103,7 +105,7 @@ function onFormChange(json: string, valid: boolean): void {
 
 async function onSubmit(): Promise<void> {
   if (!formValid.value || !name.value) {
-    push('error', 'Please fill in the required fields.')
+    push('error', t('channels.validation_error'))
     return
   }
   try {
@@ -115,7 +117,7 @@ async function onSubmit(): Promise<void> {
         minSeverity: minSeverity.value,
         enabled: enabled.value,
       })
-      push('success', `Channel "${name.value}" updated.`)
+      push('success', t('channels.updated_toast', { name: name.value }))
     }
     else {
       await create.mutateAsync({
@@ -125,39 +127,39 @@ async function onSubmit(): Promise<void> {
         minSeverity: minSeverity.value,
         enabled: enabled.value,
       })
-      push('success', `Channel "${name.value}" added.`)
+      push('success', t('channels.added_toast', { name: name.value }))
     }
     showForm.value = false
     resetForm()
   }
   catch {
-    push('error', 'Failed to save channel.')
+    push('error', t('channels.save_error'))
   }
 }
 
 async function onTest(id: string): Promise<void> {
   try {
     await testSend.mutateAsync(id)
-    push('success', 'Test sent.')
+    push('success', t('channels.test_success'))
   }
   catch {
-    push('error', 'Test send failed.')
+    push('error', t('channels.test_error'))
   }
 }
 
 async function onDelete(channel: AlertChannel): Promise<void> {
-  if (!confirm(`Delete channel "${channel.name}"?`))
+  if (!confirm(t('channels.confirm_delete', { name: channel.name })))
     return
   try {
     await remove.mutateAsync(channel.id)
-    push('success', `Channel "${channel.name}" deleted.`)
+    push('success', t('channels.deleted_toast', { name: channel.name }))
     if (editingId.value === channel.id) {
       showForm.value = false
       resetForm()
     }
   }
   catch {
-    push('error', 'Failed to delete channel.')
+    push('error', t('channels.delete_error'))
   }
 }
 
@@ -188,7 +190,7 @@ function summarise(channel: AlertChannel): string {
       return `${method} ${url}`
     }
     case ChannelType.Inbox:
-      return 'Always-on, persists until cleared.'
+      return t('channels.inbox_summary')
     default:
       return ''
   }
@@ -203,14 +205,14 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
 <template>
   <div class="space-y-6">
     <header class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Channels</h1>
+      <h1 class="text-2xl font-semibold">{{ t('channels.title') }}</h1>
       <button
         type="button"
         class="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
         @click="startCreate"
       >
         <Plus class="h-4 w-4" />
-        Add channel
+        {{ t('channels.add_btn') }}
       </button>
     </header>
 
@@ -221,7 +223,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
     >
       <div class="grid grid-cols-2 gap-3">
         <label class="block">
-          <span class="text-sm text-slate-300">Name</span>
+          <span class="text-sm text-slate-300">{{ t('channels.form_name') }}</span>
           <input
             v-model="name"
             required
@@ -229,7 +231,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
           />
         </label>
         <label class="block">
-          <span class="text-sm text-slate-300">Type</span>
+          <span class="text-sm text-slate-300">{{ t('channels.form_type') }}</span>
           <select
             v-model.number="type"
             :disabled="editingId !== null"
@@ -246,15 +248,15 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
       </div>
       <div class="grid grid-cols-2 gap-3">
         <label class="block">
-          <span class="text-sm text-slate-300">Minimum severity</span>
+          <span class="text-sm text-slate-300">{{ t('channels.form_min_severity') }}</span>
           <select
             v-model.number="minSeverity"
             class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
-            <option :value="Severity.Critical">Critical</option>
-            <option :value="Severity.High">High</option>
-            <option :value="Severity.Medium">Medium</option>
-            <option :value="Severity.Low">Low</option>
+            <option :value="Severity.Critical">{{ t('severity.critical') }}</option>
+            <option :value="Severity.High">{{ t('severity.high') }}</option>
+            <option :value="Severity.Medium">{{ t('severity.medium') }}</option>
+            <option :value="Severity.Low">{{ t('severity.low') }}</option>
           </select>
         </label>
         <label class="flex items-end gap-2 pb-2 text-sm text-slate-300">
@@ -263,7 +265,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
             type="checkbox"
             class="accent-blue-500"
           />
-          Enabled
+          {{ t('channels.form_enabled') }}
         </label>
       </div>
 
@@ -281,20 +283,20 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
           :disabled="!formValid || !name || create.isPending.value || update.isPending.value"
           class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:bg-blue-900"
         >
-          {{ create.isPending.value || update.isPending.value ? 'Saving…' : (editingId ? 'Update' : 'Save') }}
+          {{ create.isPending.value || update.isPending.value ? t('channels.saving') : (editingId ? t('channels.update_btn') : t('channels.save_btn')) }}
         </button>
         <button
           type="button"
           class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
           @click="(showForm = false), resetForm()"
         >
-          Cancel
+          {{ t('channels.cancel_btn') }}
         </button>
       </div>
     </form>
 
-    <p v-if="isLoading" class="text-sm text-slate-400">Loading…</p>
-    <p v-else-if="isError" class="text-sm text-red-300">Failed to load channels.</p>
+    <p v-if="isLoading" class="text-sm text-slate-400">{{ t('channels.loading') }}</p>
+    <p v-else-if="isError" class="text-sm text-red-300">{{ t('channels.error') }}</p>
 
     <div v-else-if="data && data.length" class="space-y-2">
       <article
@@ -309,7 +311,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
         >
           <p class="text-sm font-medium">{{ channel.name }}</p>
           <p class="text-xs text-slate-500">
-            {{ ChannelTypeNames[channel.type] }} · min {{ severityName(channel.minSeverity) }} · {{ channel.enabled ? 'enabled' : 'disabled' }}
+            {{ ChannelTypeNames[channel.type] }} · min {{ severityName(channel.minSeverity) }} · {{ channel.enabled ? t('channels.channel_enabled') : t('channels.channel_disabled') }}
           </p>
           <p v-if="summarise(channel)" class="mt-0.5 truncate text-xs text-slate-400">
             {{ summarise(channel) }}
@@ -322,7 +324,7 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
             @click="onTest(channel.id)"
           >
             <Send class="h-4 w-4" />
-            Test
+            {{ t('channels.test_btn') }}
           </button>
           <button
             type="button"
@@ -335,6 +337,6 @@ function stringFrom(config: Record<string, unknown>, key: string): string | null
       </article>
     </div>
 
-    <p v-else class="text-sm text-slate-500">No channels yet.</p>
+    <p v-else class="text-sm text-slate-500">{{ t('channels.empty') }}</p>
   </div>
 </template>

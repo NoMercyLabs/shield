@@ -7,18 +7,32 @@ using Shield.Core.Results;
 
 namespace Shield.Scanners;
 
+// Factory hook so Shield.Api can inject an Octokit client wired to the rate-limit handler
+// AND an OAuth-resolved bearer token, without Shield.Scanners taking a direct dependency
+// on Shield.Api's IGitHubClientFactory (and through it the entire OAuth token store).
+public interface IGitHubScannerClientFactory
+{
+    Task<IGitHubClient> CreateForSourceAsync(Source source, CancellationToken ct);
+}
+
 public sealed class GitHubRepoScanner : IScanner
 {
-    readonly IGitHubClient _client;
-    readonly ParserRegistry _parsers;
+    private readonly IGitHubScannerClientFactory _clientFactory;
+    private readonly ParserRegistry _parsers;
 
-    public GitHubRepoScanner(IGitHubClient client, ParserRegistry parsers)
+    public GitHubRepoScanner(IGitHubScannerClientFactory clientFactory, ParserRegistry parsers)
     {
-        _client = client;
+        _clientFactory = clientFactory;
         _parsers = parsers;
     }
 
     public SourceType SourceType => SourceType.GithubRepo;
+
+    private static DateTimeOffset ParseRateLimitReset(Octokit.RateLimitExceededException ex)
+    {
+        DateTimeOffset reset = ex.Reset;
+        return reset > DateTimeOffset.UtcNow ? reset : DateTimeOffset.UtcNow.AddMinutes(1);
+    }
 
     public async ValueTask<ScanResult> ScanAsync(Source source, CancellationToken ct)
     {
@@ -41,10 +55,24 @@ public sealed class GitHubRepoScanner : IScanner
 
         string branch = string.IsNullOrWhiteSpace(config.Branch) ? "main" : config.Branch!;
 
+        IGitHubClient client = await _clientFactory
+            .CreateForSourceAsync(source, ct)
+            .ConfigureAwait(false);
+
         Repository repo;
         try
         {
-            repo = await _client.Repository.Get(config.Owner, config.Repo).ConfigureAwait(false);
+            repo = await client.Repository.Get(config.Owner, config.Repo).ConfigureAwait(false);
+        }
+        catch (Octokit.RateLimitExceededException ex)
+        {
+            throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
+        }
+        catch (Octokit.AbuseException ex)
+        {
+            throw new GitHubScanRateLimitedException(
+                DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)
+            );
         }
         catch (Exception ex)
         {
@@ -54,9 +82,19 @@ public sealed class GitHubRepoScanner : IScanner
         Reference reference;
         try
         {
-            reference = await _client
+            reference = await client
                 .Git.Reference.Get(repo.Id, $"heads/{branch}")
                 .ConfigureAwait(false);
+        }
+        catch (Octokit.RateLimitExceededException ex)
+        {
+            throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
+        }
+        catch (Octokit.AbuseException ex)
+        {
+            throw new GitHubScanRateLimitedException(
+                DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)
+            );
         }
         catch (Exception ex)
         {
@@ -66,16 +104,26 @@ public sealed class GitHubRepoScanner : IScanner
         TreeResponse tree;
         try
         {
-            tree = await _client
+            tree = await client
                 .Git.Tree.GetRecursive(repo.Id, reference.Object.Sha)
                 .ConfigureAwait(false);
+        }
+        catch (Octokit.RateLimitExceededException ex)
+        {
+            throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
+        }
+        catch (Octokit.AbuseException ex)
+        {
+            throw new GitHubScanRateLimitedException(
+                DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)
+            );
         }
         catch (Exception ex)
         {
             return ScanResult.Fail($"Failed to fetch tree: {ex.Message}");
         }
 
-        List<InventoryItem> aggregated = new();
+        List<InventoryItem> aggregated = [];
 
         foreach (TreeItem entry in tree.Tree)
         {
@@ -92,7 +140,7 @@ public sealed class GitHubRepoScanner : IScanner
             Blob blob;
             try
             {
-                blob = await _client.Git.Blob.Get(repo.Id, entry.Sha).ConfigureAwait(false);
+                blob = await client.Git.Blob.Get(repo.Id, entry.Sha).ConfigureAwait(false);
             }
             catch
             {
@@ -109,8 +157,16 @@ public sealed class GitHubRepoScanner : IScanner
                 .ParseAsync(stream, filename, ct)
                 .ConfigureAwait(false);
 
-            if (parsed.Success)
-                aggregated.AddRange(parsed.Items);
+            if (!parsed.Success)
+                continue;
+
+            // entry.Path is the forward-slash relative path from the repo root (GitHub API
+            // always returns forward slashes), e.g. "packages/foo/package.json".
+            string relativeManifestPath = entry.Path;
+            foreach (InventoryItem item in parsed.Items)
+                item.ManifestPath = relativeManifestPath;
+
+            aggregated.AddRange(parsed.Items);
         }
 
         Guid snapshotId = Guid.NewGuid();

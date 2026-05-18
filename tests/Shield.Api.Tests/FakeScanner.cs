@@ -27,6 +27,6 @@ public sealed class FakeScanner : IScanner
             Version = "1.0.0",
             IsDirect = true,
         };
-        return ValueTask.FromResult(ScanResult.Ok(snapshot, new[] { item }));
+        return ValueTask.FromResult(ScanResult.Ok(snapshot, [item]));
     }
 }

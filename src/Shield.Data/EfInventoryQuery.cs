@@ -25,7 +25,7 @@ public sealed class EfInventoryQuery : IInventoryQuery
             .ToListAsync(ct);
 
         if (enabledSourceIds.Count == 0)
-            return Array.Empty<InventoryCoordinate>();
+            return [];
 
         List<InventorySnapshot> snapshots = await _db
             .InventorySnapshots.Where(snapshot => enabledSourceIds.Contains(snapshot.SourceId))
@@ -37,7 +37,7 @@ public sealed class EfInventoryQuery : IInventoryQuery
             .ToHashSet();
 
         if (latestPerSource.Count == 0)
-            return Array.Empty<InventoryCoordinate>();
+            return [];
 
         List<InventoryItem> items = await _db
             .InventoryItems.Where(item => latestPerSource.Contains(item.SnapshotId))

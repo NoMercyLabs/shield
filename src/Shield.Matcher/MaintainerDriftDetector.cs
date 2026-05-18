@@ -17,7 +17,7 @@ public sealed class MaintainerDriftDetector
         ArgumentNullException.ThrowIfNull(package);
         ArgumentNullException.ThrowIfNull(current);
 
-        List<Advisory> advisories = new();
+        List<Advisory> advisories = [];
         IReadOnlyList<string> currentMaintainers = ParseMaintainers(current.MaintainersJson);
 
         if (previous is null)
@@ -91,15 +91,15 @@ public sealed class MaintainerDriftDetector
     private static IReadOnlyList<string> ParseMaintainers(string maintainersJson)
     {
         if (string.IsNullOrWhiteSpace(maintainersJson))
-            return Array.Empty<string>();
+            return [];
 
         try
         {
             using JsonDocument document = JsonDocument.Parse(maintainersJson);
             if (document.RootElement.ValueKind != JsonValueKind.Array)
-                return Array.Empty<string>();
+                return [];
 
-            List<string> maintainers = new();
+            List<string> maintainers = [];
             foreach (JsonElement element in document.RootElement.EnumerateArray())
             {
                 if (element.ValueKind == JsonValueKind.String)
@@ -121,7 +121,7 @@ public sealed class MaintainerDriftDetector
         }
         catch (JsonException)
         {
-            return Array.Empty<string>();
+            return [];
         }
     }
 }

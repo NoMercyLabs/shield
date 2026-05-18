@@ -69,7 +69,7 @@ public class SmtpChannelTests
 
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 
@@ -96,7 +96,7 @@ public class SmtpChannelTests
 
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { NewFinding(Severity.High) },
+            [NewFinding(Severity.High)],
             CancellationToken.None
         );
 
@@ -109,19 +109,19 @@ public class SmtpChannelTests
     [Fact]
     public void SmtpConfigValidatesPortAndRecipients()
     {
-        new SmtpConfig("smtp.example.com", 587, true, "u", "p", "from@x", new[] { "to@x" })
+        new SmtpConfig("smtp.example.com", 587, true, "u", "p", "from@x", ["to@x"])
             .IsValid()
             .Should()
             .BeTrue();
-        new SmtpConfig("", 587, true, null, null, "from@x", new[] { "to@x" })
+        new SmtpConfig("", 587, true, null, null, "from@x", ["to@x"])
             .IsValid()
             .Should()
             .BeFalse();
-        new SmtpConfig("smtp.example.com", 0, true, null, null, "from@x", new[] { "to@x" })
+        new SmtpConfig("smtp.example.com", 0, true, null, null, "from@x", ["to@x"])
             .IsValid()
             .Should()
             .BeFalse();
-        new SmtpConfig("smtp.example.com", 587, true, null, null, "from@x", Array.Empty<string>())
+        new SmtpConfig("smtp.example.com", 587, true, null, null, "from@x", [])
             .IsValid()
             .Should()
             .BeFalse();

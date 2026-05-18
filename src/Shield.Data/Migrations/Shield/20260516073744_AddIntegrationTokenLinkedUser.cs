@@ -42,13 +42,13 @@ namespace Shield.Data.Migrations.Shield
             migrationBuilder.CreateIndex(
                 name: "IX_IntegrationTokens_Provider_LinkedUserId",
                 table: "IntegrationTokens",
-                columns: new[] { "Provider", "LinkedUserId" }
+                columns: ["Provider", "LinkedUserId"]
             );
 
             migrationBuilder.CreateIndex(
                 name: "IX_IntegrationTokens_Provider_Subject",
                 table: "IntegrationTokens",
-                columns: new[] { "Provider", "Subject" }
+                columns: ["Provider", "Subject"]
             );
         }
 

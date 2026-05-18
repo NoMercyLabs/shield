@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Auth;
 using Shield.Api.Contracts;
+using Shield.Api.Services;
 using Shield.Core.Domain;
 using Shield.Data;
 
@@ -16,19 +18,29 @@ public sealed class DashboardController : ControllerBase
 
     private readonly ShieldDbContext _db;
     private readonly FeedsDbContext _feedsDb;
+    private readonly IAccessResolver _access;
 
-    public DashboardController(ShieldDbContext db, FeedsDbContext feedsDb)
+    public DashboardController(ShieldDbContext db, FeedsDbContext feedsDb, IAccessResolver access)
     {
         _db = db;
         _feedsDb = feedsDb;
+        _access = access;
     }
 
     [HttpGet]
     public async Task<ActionResult<DashboardResponse>> Get(CancellationToken ct)
     {
-        List<Finding> openFindings = await _db
-            .Findings.Where(finding => finding.State == FindingState.Open)
-            .ToListAsync(ct);
+        bool isAdmin = User.IsInRole(ShieldRoles.Admin);
+        IReadOnlyList<int>? visible = isAdmin
+            ? null
+            : await _access.GetVisibleSourceIdsAsync(User, ct);
+
+        IQueryable<Finding> openQuery = _db.Findings.Where(finding =>
+            finding.State == FindingState.Open
+        );
+        if (visible is not null)
+            openQuery = openQuery.Where(finding => visible.Contains(finding.SourceId));
+        List<Finding> openFindings = await openQuery.ToListAsync(ct);
 
         OpenCounts counts = new(
             Low: openFindings.Count(finding => finding.Severity == Severity.Low),
@@ -37,7 +49,10 @@ public sealed class DashboardController : ControllerBase
             Critical: openFindings.Count(finding => finding.Severity == Severity.Critical)
         );
 
-        List<Source> sources = await _db.Sources.ToListAsync(ct);
+        IQueryable<Source> sourceQuery = _db.Sources;
+        if (visible is not null)
+            sourceQuery = sourceQuery.Where(source => visible.Contains(source.Id));
+        List<Source> sources = await sourceQuery.ToListAsync(ct);
         DateTime now = DateTime.UtcNow;
         int stale = sources.Count(source =>
             source.LastError is not null
@@ -46,8 +61,11 @@ public sealed class DashboardController : ControllerBase
         );
         int healthy = sources.Count - stale;
 
-        List<Finding> recent = await _db
-            .Findings.OrderByDescending(finding => finding.LastSeenAt)
+        IQueryable<Finding> recentQuery = _db.Findings;
+        if (visible is not null)
+            recentQuery = recentQuery.Where(finding => visible.Contains(finding.SourceId));
+        List<Finding> recent = await recentQuery
+            .OrderByDescending(finding => finding.LastSeenAt)
             .Take(5)
             .ToListAsync(ct);
 
@@ -69,7 +87,7 @@ public sealed class DashboardController : ControllerBase
     )
     {
         if (findings.Count == 0)
-            return new();
+            return [];
 
         HashSet<int> sourceIds = findings.Select(finding => finding.SourceId).ToHashSet();
         HashSet<int> itemIds = findings.Select(finding => finding.InventoryItemId).ToHashSet();

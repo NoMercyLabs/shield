@@ -1,1 +1,0 @@
-import{w as t,I as o,J as a,q as s}from"./index-D4ZhI04c.js";const i={class:"text-sm text-slate-400"},m=t({__name:"InboxChannelForm",emits:["change"],setup(r,{emit:e}){const n=e;return o(()=>n("change","{}",!0)),(c,p)=>(a(),s("p",i," In-app inbox — no configuration required. Findings will appear in the Inbox view and persist until cleared. "))}});export{m as default};

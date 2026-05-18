@@ -58,7 +58,7 @@ public static class PublicPostureTransition
         if (sentinel is null)
         {
             db.AppSettings.Add(
-                new AppSetting
+                new()
                 {
                     Key = PublicPostureSentinelKey,
                     ValueEncrypted = encrypted,

@@ -32,7 +32,7 @@ public sealed class MasterKeyXmlDecryptor : IXmlDecryptor
                     + "Falling back to plaintext passthrough — rotate the keyring once safe.",
                 encryptedElement.Name.LocalName
             );
-            return new XElement(encryptedElement);
+            return new(encryptedElement);
         }
 
         string? nonceB64 = encryptedElement.Attribute(MasterKeyXmlEncryptor.NonceAttribute)?.Value;

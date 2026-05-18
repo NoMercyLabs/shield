@@ -25,12 +25,17 @@ public static class IdentitySeeder
         >();
 
         foreach (
-            string roleName in new[] { ShieldRoles.Admin, ShieldRoles.Maintainer, ShieldRoles.Viewer }
+            string roleName in new[]
+            {
+                ShieldRoles.Admin,
+                ShieldRoles.Maintainer,
+                ShieldRoles.Viewer,
+            }
         )
         {
             if (!await roleManager.RoleExistsAsync(roleName))
             {
-                IdentityResult result = await roleManager.CreateAsync(new ShieldRole(roleName));
+                IdentityResult result = await roleManager.CreateAsync(new(roleName));
                 if (!result.Succeeded)
                     throw new InvalidOperationException(
                         $"Failed to seed role '{roleName}': {string.Join(", ", result.Errors.Select(error => error.Description))}"

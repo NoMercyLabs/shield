@@ -198,7 +198,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
 
         Guid snapshotId = Guid.NewGuid();
         db.InventorySnapshots.Add(
-            new InventorySnapshot
+            new()
             {
                 Id = snapshotId,
                 SourceId = source.Id,
@@ -208,7 +208,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             }
         );
         db.InventoryItems.Add(
-            new InventoryItem
+            new()
             {
                 SnapshotId = snapshotId,
                 Ecosystem = Ecosystem.Npm,
@@ -251,7 +251,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
         // Older snapshot — just lodash, no anomaly possible.
         Guid olderId = Guid.NewGuid();
         shieldDb.InventorySnapshots.Add(
-            new InventorySnapshot
+            new()
             {
                 Id = olderId,
                 SourceId = source.Id,
@@ -261,7 +261,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             }
         );
         shieldDb.InventoryItems.Add(
-            new InventoryItem
+            new()
             {
                 SnapshotId = olderId,
                 Ecosystem = Ecosystem.Npm,
@@ -274,7 +274,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
         // Newer snapshot — lodash unchanged + new "lodahs" typosquat.
         Guid newerId = Guid.NewGuid();
         shieldDb.InventorySnapshots.Add(
-            new InventorySnapshot
+            new()
             {
                 Id = newerId,
                 SourceId = source.Id,
@@ -284,7 +284,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             }
         );
         shieldDb.InventoryItems.Add(
-            new InventoryItem
+            new()
             {
                 SnapshotId = newerId,
                 Ecosystem = Ecosystem.Npm,
@@ -294,7 +294,7 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             }
         );
         shieldDb.InventoryItems.Add(
-            new InventoryItem
+            new()
             {
                 SnapshotId = newerId,
                 Ecosystem = Ecosystem.Npm,

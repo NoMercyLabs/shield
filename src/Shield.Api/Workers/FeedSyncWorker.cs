@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Services;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
@@ -9,6 +11,12 @@ namespace Shield.Api.Workers;
 public sealed class FeedSyncWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
+    private const int FeedDownFailureThreshold = 3;
+
+    // In-memory consecutive-failure counter per Feed. Resets on success. Fires a single
+    // FeedDown notification the cycle the count crosses the threshold so operators don't
+    // get notified hourly while the feed stays broken.
+    private readonly Dictionary<Feed, int> _consecutiveFailures = new();
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly FeedRefreshQueue _refreshQueue;
@@ -100,7 +108,7 @@ public sealed class FeedSyncWorker : BackgroundService
         List<FeedSyncState> states = await db.FeedSyncStates.ToListAsync(ct);
         Dictionary<Feed, FeedSyncState> stateByFeed = states.ToDictionary(state => state.Feed);
 
-        List<Feed> due = new();
+        List<Feed> due = [];
         foreach (IFeedSync sync in syncs)
         {
             if (!stateByFeed.TryGetValue(sync.Feed, out FeedSyncState? state))
@@ -143,17 +151,73 @@ public sealed class FeedSyncWorker : BackgroundService
         FeedSyncResult result = await sync.SyncAsync(state, ct);
         DateTime now = DateTime.UtcNow;
 
+        if (result.IsRateLimited && result.RateLimitResetAt.HasValue)
+        {
+            // Rate-limited is not a failure — quota exhaustion is expected behaviour for
+            // unauthenticated feeds. Push NextRunAt out to the reset time and don't touch
+            // the failure counter.
+            _log.LogInformation(
+                "GHSA rate-limited; next sync at {RetryAt:u}. "
+                    + "To raise the quota from 60/hr to 5000/hr, set Shield:Feeds:Ghsa:Pat "
+                    + "to a GitHub personal access token (read:packages scope is sufficient).",
+                result.RateLimitResetAt.Value
+            );
+            state.NextRunAt = result.RateLimitResetAt.Value.UtcDateTime;
+            state.Cursor = result.NextCursor ?? state.Cursor;
+            state.RateLimitResetAt = result.RateLimitResetAt;
+
+            if (isNew && await db.FeedSyncStates.FindAsync([state.Id], ct) is null)
+                db.FeedSyncStates.Add(state);
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+
         state.LastSuccessAt = result.Success ? now : state.LastSuccessAt;
         state.LastError = result.Success ? null : result.Error;
         state.Cursor = result.NextCursor ?? state.Cursor;
         state.NextRunAt = now + TimeSpan.FromMinutes(15);
+        state.RateLimitResetAt = null;
 
-        if (isNew && await db.FeedSyncStates.FindAsync(new object?[] { state.Id }, ct) is null)
+        if (isNew && await db.FeedSyncStates.FindAsync([state.Id], ct) is null)
             db.FeedSyncStates.Add(state);
 
         await db.SaveChangesAsync(ct);
 
+        await MaybeEmitFeedDownAsync(scope, feed, result, ct);
+
         if (result.Success && result.AdvisoriesIngested + result.AdvisoriesUpdated > 0)
-            await _matchQueue.EnqueueAsync(new MatchRequest(null, null, MatchAll: true), ct);
+            await _matchQueue.EnqueueAsync(new(null, null, MatchAll: true), ct);
+    }
+
+    private async Task MaybeEmitFeedDownAsync(
+        IServiceScope scope,
+        Feed feed,
+        FeedSyncResult result,
+        CancellationToken ct
+    )
+    {
+        if (result.Success)
+        {
+            _consecutiveFailures.Remove(feed);
+            return;
+        }
+
+        int previous = _consecutiveFailures.GetValueOrDefault(feed, 0);
+        int current = previous + 1;
+        _consecutiveFailures[feed] = current;
+        if (current != FeedDownFailureThreshold)
+            return;
+
+        INotificationPublisher publisher =
+            scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        await publisher.BroadcastAsync(
+            NotificationKind.FeedDown,
+            Severity.High,
+            $"Feed down: {feed}",
+            $"{feed} has failed {current} consecutive syncs. Last error: {result.Error ?? "unknown"}.",
+            relatedType: "Feed",
+            relatedId: feed.ToString(),
+            ct
+        );
     }
 }

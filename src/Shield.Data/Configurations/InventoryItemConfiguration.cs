@@ -14,6 +14,7 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         builder.Property(item => item.Name).IsRequired().HasMaxLength(400);
         builder.Property(item => item.Version).IsRequired().HasMaxLength(200);
         builder.Property(item => item.ParentChain).IsRequired();
+        builder.Property(item => item.ManifestPath).HasMaxLength(1000);
 
         builder
             .HasOne(item => item.Snapshot)

@@ -310,7 +310,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/findings/bulk-ack",
-            new BulkFindingsRequest(new[] { first, second, third })
+            new BulkFindingsRequest([first, second, third])
         );
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -322,7 +322,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
 
         using IServiceScope scope = _factory.Services.CreateScope();
         ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
-        Guid[] ids = new[] { first, second, third };
+        Guid[] ids = [first, second, third];
         List<Finding> after = await db
             .Findings.Where(finding => ids.Contains(finding.Id))
             .ToListAsync();
@@ -339,7 +339,7 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         HttpClient client = _factory.CreateClient();
         HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/findings/bulk-resolve",
-            new BulkFindingsRequest(new[] { real, missing })
+            new BulkFindingsRequest([real, missing])
         );
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -482,6 +482,378 @@ public sealed class FindingsTests : IClassFixture<ShieldWebAppFactory>
         shieldDb.Findings.Add(finding);
         await shieldDb.SaveChangesAsync();
         return (finding.Id, source.Id);
+    }
+
+    [Fact]
+    public async Task Sort_by_severity_asc_returns_lowest_first()
+    {
+        string prefix = "sort-sev-asc-" + Guid.NewGuid().ToString("n") + "-";
+        DateTime baseTime = DateTime.UtcNow;
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            db.Findings.Add(MakeFinding(Severity.Critical, prefix + "crit", baseTime));
+            db.Findings.Add(MakeFinding(Severity.Low, prefix + "low", baseTime));
+            db.Findings.Add(MakeFinding(Severity.High, prefix + "high", baseTime));
+            await db.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/findings?sortBy=severity&sortDir=asc&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+
+        List<FindingResponse> relevant = page!
+            .Items.Where(finding => finding.DedupKey.StartsWith(prefix))
+            .ToList();
+        relevant.Should().HaveCount(3);
+
+        for (int position = 0; position < relevant.Count - 1; position++)
+            ((int)relevant[position].Severity)
+                .Should()
+                .BeLessOrEqualTo((int)relevant[position + 1].Severity);
+    }
+
+    [Fact]
+    public async Task Sort_by_discoveredAt_desc_returns_newest_first()
+    {
+        string prefix = "sort-disc-" + Guid.NewGuid().ToString("n") + "-";
+        DateTime baseTime = DateTime.UtcNow;
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            db.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = Guid.NewGuid(),
+                    Severity = Severity.Medium,
+                    FirstSeenAt = baseTime.AddHours(-2),
+                    LastSeenAt = baseTime.AddHours(-2),
+                    State = FindingState.Open,
+                    DedupKey = prefix + "older",
+                }
+            );
+            db.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = Guid.NewGuid(),
+                    Severity = Severity.Medium,
+                    FirstSeenAt = baseTime,
+                    LastSeenAt = baseTime,
+                    State = FindingState.Open,
+                    DedupKey = prefix + "newer",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/findings?sortBy=discoveredAt&sortDir=desc&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+
+        List<FindingResponse> relevant = page!
+            .Items.Where(finding => finding.DedupKey.StartsWith(prefix))
+            .ToList();
+        relevant.Should().HaveCount(2);
+        relevant[0].DedupKey.Should().Be(prefix + "newer");
+        relevant[1].DedupKey.Should().Be(prefix + "older");
+    }
+
+    [Fact]
+    public async Task Advisory_query_filters_by_external_id_substring()
+    {
+        string unique = Guid.NewGuid().ToString("n")[..8];
+        string externalId = "GHSA-test-" + unique + "-xxxx";
+
+        Guid advisoryId = Guid.NewGuid();
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
+            feedsDb.Advisories.Add(
+                new Advisory
+                {
+                    Id = advisoryId,
+                    ExternalId = externalId,
+                    Ecosystem = Ecosystem.Npm,
+                    PackageName = "test-pkg-" + unique,
+                    AffectedRangesJson = "[]",
+                    Severity = Severity.High,
+                    Summary = "advisory query test",
+                    ReferencesJson = "[]",
+                    PublishedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    FetchedAt = DateTime.UtcNow,
+                }
+            );
+            await feedsDb.SaveChangesAsync();
+
+            ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            shieldDb.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = advisoryId,
+                    Severity = Severity.High,
+                    FirstSeenAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                    State = FindingState.Open,
+                    DedupKey = "advisory-query-test-" + unique,
+                }
+            );
+            await shieldDb.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync(
+            $"/api/findings?advisoryQuery={Uri.EscapeDataString(unique)}&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+        page!
+            .Items.Should()
+            .ContainSingle(finding => finding.DedupKey == "advisory-query-test-" + unique);
+    }
+
+    [Fact]
+    public async Task Kev_only_filter_restricts_to_kev_advisories()
+    {
+        string unique = Guid.NewGuid().ToString("n")[..8];
+        Guid kevAdvisoryId = Guid.NewGuid();
+        Guid nonKevAdvisoryId = Guid.NewGuid();
+
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
+            feedsDb.Advisories.Add(
+                new Advisory
+                {
+                    Id = kevAdvisoryId,
+                    ExternalId = "GHSA-kev-" + unique,
+                    Ecosystem = Ecosystem.Npm,
+                    PackageName = "kev-pkg-" + unique,
+                    AffectedRangesJson = "[]",
+                    Severity = Severity.Critical,
+                    Summary = "KEV test",
+                    ReferencesJson = "[]",
+                    PublishedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    FetchedAt = DateTime.UtcNow,
+                    IsKev = true,
+                }
+            );
+            feedsDb.Advisories.Add(
+                new Advisory
+                {
+                    Id = nonKevAdvisoryId,
+                    ExternalId = "GHSA-nokev-" + unique,
+                    Ecosystem = Ecosystem.Npm,
+                    PackageName = "nokev-pkg-" + unique,
+                    AffectedRangesJson = "[]",
+                    Severity = Severity.High,
+                    Summary = "non-KEV test",
+                    ReferencesJson = "[]",
+                    PublishedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    FetchedAt = DateTime.UtcNow,
+                    IsKev = false,
+                }
+            );
+            await feedsDb.SaveChangesAsync();
+
+            ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            shieldDb.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = kevAdvisoryId,
+                    Severity = Severity.Critical,
+                    FirstSeenAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                    State = FindingState.Open,
+                    DedupKey = "kev-finding-" + unique,
+                }
+            );
+            shieldDb.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = nonKevAdvisoryId,
+                    Severity = Severity.High,
+                    FirstSeenAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                    State = FindingState.Open,
+                    DedupKey = "nokev-finding-" + unique,
+                }
+            );
+            await shieldDb.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/findings?kevOnly=true&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+        page!.Items.Should().Contain(finding => finding.DedupKey == "kev-finding-" + unique);
+        page.Items.Should().NotContain(finding => finding.DedupKey == "nokev-finding-" + unique);
+    }
+
+    [Fact]
+    public async Task Epss_min_filter_restricts_to_advisories_above_threshold()
+    {
+        string unique = Guid.NewGuid().ToString("n")[..8];
+        Guid highEpssAdvisoryId = Guid.NewGuid();
+        Guid lowEpssAdvisoryId = Guid.NewGuid();
+
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
+            feedsDb.Advisories.Add(
+                new Advisory
+                {
+                    Id = highEpssAdvisoryId,
+                    ExternalId = "GHSA-epss-high-" + unique,
+                    Ecosystem = Ecosystem.Npm,
+                    PackageName = "epss-high-" + unique,
+                    AffectedRangesJson = "[]",
+                    Severity = Severity.High,
+                    Summary = "high EPSS test",
+                    ReferencesJson = "[]",
+                    PublishedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    FetchedAt = DateTime.UtcNow,
+                    EpssScore = 0.85,
+                }
+            );
+            feedsDb.Advisories.Add(
+                new Advisory
+                {
+                    Id = lowEpssAdvisoryId,
+                    ExternalId = "GHSA-epss-low-" + unique,
+                    Ecosystem = Ecosystem.Npm,
+                    PackageName = "epss-low-" + unique,
+                    AffectedRangesJson = "[]",
+                    Severity = Severity.Medium,
+                    Summary = "low EPSS test",
+                    ReferencesJson = "[]",
+                    PublishedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    FetchedAt = DateTime.UtcNow,
+                    EpssScore = 0.10,
+                }
+            );
+            await feedsDb.SaveChangesAsync();
+
+            ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+            shieldDb.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = highEpssAdvisoryId,
+                    Severity = Severity.High,
+                    FirstSeenAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                    State = FindingState.Open,
+                    DedupKey = "epss-high-finding-" + unique,
+                }
+            );
+            shieldDb.Findings.Add(
+                new Finding
+                {
+                    Id = Guid.NewGuid(),
+                    SourceId = 9999,
+                    InventoryItemId = 1,
+                    AdvisoryRefId = lowEpssAdvisoryId,
+                    Severity = Severity.Medium,
+                    FirstSeenAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                    State = FindingState.Open,
+                    DedupKey = "epss-low-finding-" + unique,
+                }
+            );
+            await shieldDb.SaveChangesAsync();
+        }
+
+        HttpClient client = _factory.CreateClient();
+        // Threshold 0.50 — should include 0.85, exclude 0.10
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/findings?epssMin=0.50&pageSize=200"
+        );
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+        page.Should().NotBeNull();
+        page!.Items.Should().Contain(finding => finding.DedupKey == "epss-high-finding-" + unique);
+        page.Items.Should().NotContain(finding => finding.DedupKey == "epss-low-finding-" + unique);
+    }
+
+    [Fact]
+    public async Task Has_fix_true_returns_only_findings_with_a_known_fix()
+    {
+        string fixtureDir = Path.Combine(
+            Path.GetTempPath(),
+            "shield-has-fix-true-" + Guid.NewGuid().ToString("n")
+        );
+        Directory.CreateDirectory(fixtureDir);
+        try
+        {
+            // Seed a finding with a known fix (rangesJson has a fixed version).
+            (Guid withFixId, _) = await SeedFixScenarioAsync(
+                fixtureDir,
+                ecosystem: Ecosystem.Npm,
+                packageName: "lodash-hasfix",
+                installedVersion: "4.17.20",
+                rangesJson: "[{\"events\":[{\"introduced\":\"0\"},{\"fixed\":\"4.17.21\"}]}]",
+                sourceType: SourceType.LocalFolder
+            );
+
+            HttpClient client = _factory.CreateClient();
+            HttpResponseMessage response = await client.GetAsync(
+                "/api/findings?hasFix=true&pageSize=200"
+            );
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            FindingsPage? page = await response.Content.ReadFromJsonAsync<FindingsPage>();
+            page.Should().NotBeNull();
+            page!.Items.Should().Contain(finding => finding.Id == withFixId);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(fixtureDir, recursive: true);
+            }
+            catch
+            { /* best-effort */
+            }
+        }
     }
 
     // Variant of the shared factory that turns off SingleUserMode so role gates exercise real

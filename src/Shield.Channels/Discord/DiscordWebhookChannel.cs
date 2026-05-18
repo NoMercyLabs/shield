@@ -106,7 +106,7 @@ public sealed class DiscordWebhookChannel : IAlertChannel
 
         IEnumerable<string> lines = findings
             .Take(previewCount)
-            .Select(finding => $"• [{finding.Severity}] {finding.DedupKey}");
+            .Select(finding => $"• [{finding.Severity}] {finding.Notes ?? finding.DedupKey}");
 
         string description = string.Join("\n", lines);
         if (extra > 0) description += $"\nand {extra} more";

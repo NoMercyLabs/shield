@@ -39,7 +39,7 @@ public sealed class OAuthRepoListTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Github,
                 AccessToken: "github-bearer-token",
                 RefreshToken: null,
@@ -54,7 +54,7 @@ public sealed class OAuthRepoListTests
         FakeGitHubHandler handler = factory.Handler;
         // Page 1 returns two repos and points at page 2 via Link: rel="next".
         handler.Pages.Add(
-            new FakePage(
+            new(
                 Body: """
                 [
                   {
@@ -86,7 +86,7 @@ public sealed class OAuthRepoListTests
         );
         // Page 2 returns one repo and no Link header — pagination loop terminates.
         handler.Pages.Add(
-            new FakePage(
+            new(
                 Body: """
                 [
                   {
@@ -130,7 +130,7 @@ public sealed class OAuthRepoListTests
         foreach (CapturedRequest captured in handler.Requests)
         {
             captured.Authorization.Should().Be("Bearer github-bearer-token");
-            captured.UserAgent.Should().Be("shield-oauth");
+            captured.UserAgent.Should().StartWith("Shield/");
             captured.Accept.Should().Contain("application/vnd.github+json");
         }
 
@@ -150,7 +150,7 @@ public sealed class OAuthRepoListTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Github,
                 AccessToken: "github-bearer-token",
                 RefreshToken: null,
@@ -164,7 +164,7 @@ public sealed class OAuthRepoListTests
 
         FakeGitHubHandler handler = factory.Handler;
         handler.Pages.Add(
-            new FakePage(
+            new(
                 Body: """
                 [
                   {
@@ -200,12 +200,14 @@ public sealed class OAuthRepoListTests
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
-                // Attach the fake handler to the named "oauth" HttpClient so GitHubProvider's
-                // CreateClient("oauth") sends through it. PrimaryHandler swap is the standard
-                // ASP.NET Core test seam — no DI rewire needed.
+                // Attach the fake handler to the named "oauth" + "github" HttpClients so both
+                // legacy GitHubProvider paths (oauth) and the new rate-limit-aware repo listing
+                // (github) send through it. PrimaryHandler swap is the standard ASP.NET Core
+                // test seam — no DI rewire needed.
                 services
                     .AddHttpClient("oauth")
                     .ConfigurePrimaryHttpMessageHandler(() => Handler);
+                services.AddHttpClient("github").ConfigurePrimaryHttpMessageHandler(() => Handler);
             });
         }
     }
@@ -221,8 +223,8 @@ public sealed class OAuthRepoListTests
 
     public sealed class FakeGitHubHandler : HttpMessageHandler
     {
-        public List<FakePage> Pages { get; } = new();
-        public List<CapturedRequest> Requests { get; } = new();
+        public List<FakePage> Pages { get; } = [];
+        public List<CapturedRequest> Requests { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -237,7 +239,7 @@ public sealed class OAuthRepoListTests
                 request.Headers.UserAgent.Count > 0 ? request.Headers.UserAgent.ToString() : null;
             string? accept =
                 request.Headers.Accept.Count > 0 ? request.Headers.Accept.ToString() : null;
-            Requests.Add(new CapturedRequest(url, auth, ua, accept));
+            Requests.Add(new(url, auth, ua, accept));
 
             if (Requests.Count > Pages.Count)
             {

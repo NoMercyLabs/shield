@@ -10,12 +10,14 @@ public sealed class RustManifestEditor : IManifestEditor
 
     public ManifestEditOutcome Apply(
         string rootPath,
-        string packageName,
+        InventoryItem item,
         string suggestedVersion
     ) =>
         new(
-            ChangedFiles: Array.Empty<string>(),
-            FollowUpCommand: $"cargo update -p {packageName} --precise {suggestedVersion}",
-            UnsupportedReason: "Rust manifest editing is not yet supported; run the follow-up command manually."
+            ChangedFiles: [],
+            FollowUpCommand: $"cargo update -p {item.Name} --precise {suggestedVersion}",
+            UnsupportedReason: "Rust manifest editing is not yet supported; run the follow-up command manually.",
+            CleanedFiles: [],
+            CleanedDirectories: []
         );
 }

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 
 import OnboardingChannel from '@/views/OnboardingChannel.vue'
 import OnboardingDone from '@/views/OnboardingDone.vue'
@@ -11,6 +12,7 @@ import { useDismissOnboarding } from '@/queries/onboarding'
 
 type Step = 1 | 2 | 3 | 4
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const dismiss = useDismissOnboarding()
@@ -18,12 +20,12 @@ const dismiss = useDismissOnboarding()
 const step = ref<Step>(1)
 const finishing = ref(false)
 
-const steps: { id: Step, label: string }[] = [
-  { id: 1, label: 'Welcome' },
-  { id: 2, label: 'Source' },
-  { id: 3, label: 'Channel' },
-  { id: 4, label: 'Done' },
-]
+const steps = computed<{ id: Step, label: string }[]>(() => [
+  { id: 1 as Step, label: t('onboarding.step_welcome') },
+  { id: 2 as Step, label: t('onboarding.step_source') },
+  { id: 3 as Step, label: t('onboarding.step_channel') },
+  { id: 4 as Step, label: t('onboarding.step_done') },
+])
 
 const canBack = computed(() => step.value > 1)
 const isFinal = computed(() => step.value === 4)
@@ -63,14 +65,14 @@ onMounted(() => {
       <header class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-sm text-slate-300">
           <ShieldCheck class="h-5 w-5 text-blue-400" />
-          <span class="font-medium">Shield setup</span>
+          <span class="font-medium">{{ t('onboarding.setup_label') }}</span>
         </div>
         <button
           type="button"
           class="text-xs text-slate-500 hover:text-slate-300 hover:underline"
           @click="finish"
         >
-          Skip onboarding
+          {{ t('onboarding.skip_btn') }}
         </button>
       </header>
 
@@ -132,7 +134,7 @@ onMounted(() => {
           class="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
           @click="finish"
         >
-          {{ finishing ? 'Finishing…' : 'Take me to the Dashboard' }}
+          {{ finishing ? t('onboarding.finishing') : t('onboarding.take_to_dashboard') }}
         </button>
       </footer>
     </div>

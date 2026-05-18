@@ -27,7 +27,7 @@ internal sealed class FailNTimesHandler : DelegatingHandler
         {
             _remainingFailures--;
             FailureCalls++;
-            return new HttpResponseMessage(_failureStatus) { RequestMessage = request };
+            return new(_failureStatus) { RequestMessage = request };
         }
 
         if (matchesPath) SuccessCalls++;

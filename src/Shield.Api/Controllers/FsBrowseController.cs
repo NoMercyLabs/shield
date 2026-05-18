@@ -10,7 +10,7 @@ namespace Shield.Api.Controllers;
 
 [ApiController]
 [Route("api/fs")]
-[Authorize(Roles = ShieldRoles.Admin)]
+[Authorize(Policy = ShieldPolicies.Admin)]
 public sealed class FsBrowseController : ControllerBase
 {
     // Cheap probe — avoid pathological directories with thousands of immediate children.
@@ -64,7 +64,7 @@ public sealed class FsBrowseController : ControllerBase
         if (!Directory.Exists(normalised))
             return BadRequest(new { error = $"Path does not exist: {normalised}" });
 
-        List<FsEntry> entries = new();
+        List<FsEntry> entries = [];
         bool dirHasLockfilesDirectly = false;
 
         IEnumerable<string> subdirs;
@@ -80,7 +80,7 @@ public sealed class FsBrowseController : ControllerBase
                 new FsBrowseResponse(
                     Path: normalised,
                     Parent: GetParent(normalised),
-                    Entries: Array.Empty<FsEntry>(),
+                    Entries: [],
                     Roots: roots,
                     HasLockfiles: false
                 )
@@ -105,7 +105,7 @@ public sealed class FsBrowseController : ControllerBase
             bool hasGitRepo = SafeDirExists(Path.Combine(dir, ".git"));
 
             entries.Add(
-                new FsEntry(
+                new(
                     Name: name,
                     Path: dir,
                     IsDirectory: true,
@@ -139,7 +139,7 @@ public sealed class FsBrowseController : ControllerBase
                 dirHasLockfilesDirectly = true;
 
             entries.Add(
-                new FsEntry(
+                new(
                     Name: name,
                     Path: file,
                     IsDirectory: false,
@@ -246,7 +246,7 @@ public sealed class FsBrowseController : ControllerBase
                 .Select(drive => drive.RootDirectory.FullName)
                 .ToArray();
         }
-        return new[] { "/" };
+        return ["/"];
     }
 
     private bool IsAllowed(string fullPath)

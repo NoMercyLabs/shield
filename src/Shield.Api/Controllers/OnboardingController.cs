@@ -100,7 +100,7 @@ public sealed class OnboardingController : ControllerBase
         if (existing is null)
         {
             _db.AppSettings.Add(
-                new AppSetting
+                new()
                 {
                     Key = AppSettingKeys.OnboardingDismissed,
                     ValueEncrypted = encrypted,

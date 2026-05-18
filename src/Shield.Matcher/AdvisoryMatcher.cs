@@ -29,7 +29,7 @@ public sealed class AdvisoryMatcher
 
         Dictionary<string, Finding> existingByKey = existingFindings.ToDictionary(finding => finding.DedupKey);
         Dictionary<(Ecosystem, string), List<Advisory>> advisoryIndex = BuildAdvisoryIndex(advisories);
-        List<Finding> results = new();
+        List<Finding> results = [];
 
         foreach (InventoryItem item in items)
         {
@@ -54,7 +54,11 @@ public sealed class AdvisoryMatcher
                 }
                 else
                 {
-                    results.Add(new Finding
+                    // Human-readable summary the alert channels (Discord/Slack/Ntfy/SMTP/Inbox)
+                    // prefer over the SHA dedup key. Channels still fall back to DedupKey when
+                    // Notes is null (legacy rows from before this lands).
+                    string notes = $"{item.Name}@{item.Version} → {advisory.ExternalId}";
+                    results.Add(new()
                     {
                         Id = Guid.NewGuid(),
                         SourceId = snapshot.SourceId,
@@ -65,6 +69,7 @@ public sealed class AdvisoryMatcher
                         LastSeenAt = nowUtc,
                         State = FindingState.Open,
                         DedupKey = dedupKey,
+                        Notes = notes,
                     });
                 }
             }
@@ -81,7 +86,7 @@ public sealed class AdvisoryMatcher
             (Ecosystem, string) key = (advisory.Ecosystem, NormalizeName(advisory.PackageName));
             if (!index.TryGetValue(key, out List<Advisory>? bucket))
             {
-                bucket = new List<Advisory>();
+                bucket = [];
                 index[key] = bucket;
             }
             bucket.Add(advisory);
@@ -103,7 +108,7 @@ public sealed class AdvisoryMatcher
     private static IReadOnlyList<VersionRange> ParseRanges(string affectedRangesJson)
     {
         if (string.IsNullOrWhiteSpace(affectedRangesJson))
-            return Array.Empty<VersionRange>();
+            return [];
 
         try
         {
@@ -111,9 +116,9 @@ public sealed class AdvisoryMatcher
             JsonElement root = document.RootElement;
 
             if (root.ValueKind != JsonValueKind.Array)
-                return Array.Empty<VersionRange>();
+                return [];
 
-            List<VersionRange> ranges = new();
+            List<VersionRange> ranges = [];
             foreach (JsonElement element in root.EnumerateArray())
             {
                 if (element.ValueKind != JsonValueKind.Object)
@@ -138,7 +143,7 @@ public sealed class AdvisoryMatcher
         }
         catch (JsonException)
         {
-            return Array.Empty<VersionRange>();
+            return [];
         }
     }
 

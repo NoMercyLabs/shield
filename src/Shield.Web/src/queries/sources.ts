@@ -14,6 +14,7 @@ import type {
   FsBrowseResponse,
   InventoryItemResponse,
   PagedResponse,
+  SetIsProductionRequest,
   SnapshotDiffResponse,
   SnapshotListItem,
   Source,
@@ -230,6 +231,20 @@ export const useUpdateSourceAutoFixModeMutation = () => {
   return useMutation({
     mutationFn: async (input: { id: number, autoFixMode: AutoFixMode }): Promise<Source> => {
       const { data } = await api.patch<Source>(`/sources/${input.id}/auto-fix-mode`, { autoFixMode: input.autoFixMode })
+      return data
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] })
+      queryClient.invalidateQueries({ queryKey: ['sources', input.id] })
+    },
+  })
+}
+
+export const useSetIsProductionMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: number, payload: SetIsProductionRequest }): Promise<Source> => {
+      const { data } = await api.patch<Source>(`/sources/${input.id}/is-production`, input.payload)
       return data
     },
     onSuccess: (_data, input) => {

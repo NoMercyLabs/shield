@@ -9,6 +9,6 @@ public class FeedsDbContextFactory : IDesignTimeDbContextFactory<FeedsDbContext>
     {
         DbContextOptionsBuilder<FeedsDbContext> options = new();
         options.UseSqlite("Data Source=feeds.db");
-        return new FeedsDbContext(options.Options);
+        return new(options.Options);
     }
 }

@@ -2,17 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Shield.Api.Contracts;
 using Shield.Api.Hardening;
-using Shield.Api.Persistence;
-using Shield.Core.Abstractions;
-using Shield.Data;
-using Shield.Scanners;
 using Xunit;
 
 namespace Shield.Api.Tests;
@@ -26,18 +19,19 @@ public sealed class HardeningTests
     private static IConfiguration BuildConfig(Dictionary<string, string?> overrides) =>
         new ConfigurationBuilder().AddInMemoryCollection(overrides).Build();
 
-    private static IHostEnvironment ProductionEnvironment() => new StubHostEnvironment("Production");
+    private static IHostEnvironment ProductionEnvironment() =>
+        new StubHostEnvironment("Production");
 
     [Fact]
     public void Production_throws_when_single_user_mode_enabled_without_override()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "true",
                 ["Shield:OpenApi:Enabled"] = "false",
-                ["Shield:Auth:JwtSigningKey"] = new string('k', 64),
-                ["Shield:Auth:DataProtectionMasterKey"] = new string('m', 64),
+                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
+                ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
             }
         );
 
@@ -53,12 +47,12 @@ public sealed class HardeningTests
     public void Production_throws_when_swagger_enabled()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "true",
-                ["Shield:Auth:JwtSigningKey"] = new string('k', 64),
-                ["Shield:Auth:DataProtectionMasterKey"] = new string('m', 64),
+                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
+                ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
             }
         );
 
@@ -71,14 +65,14 @@ public sealed class HardeningTests
     public void Public_throws_when_https_not_required()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "false",
                 ["Shield:Public"] = "true",
                 ["Shield:OpenApi:Enabled"] = "false",
                 ["Shield:Auth:RequireHttps"] = "false",
-                ["Shield:Auth:JwtSigningKey"] = new string('k', 64),
-                ["Shield:Auth:DataProtectionMasterKey"] = new string('m', 64),
+                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
+                ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
             }
         );
 
@@ -91,12 +85,13 @@ public sealed class HardeningTests
     public void Public_throws_when_master_key_is_dev_default()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "false",
-                ["Shield:Auth:JwtSigningKey"] = new string('k', 64),
-                ["Shield:Auth:DataProtectionMasterKey"] = "dev-master-key-at-least-32-chars-long-xx",
+                ["Shield:Auth:JwtSigningKey"] = new('k', 64),
+                ["Shield:Auth:DataProtectionMasterKey"] =
+                    "dev-master-key-at-least-32-chars-long-xx",
             }
         );
 
@@ -109,12 +104,12 @@ public sealed class HardeningTests
     public void Production_throws_when_jwt_signing_key_too_short()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "false",
                 ["Shield:OpenApi:Enabled"] = "false",
-                ["Shield:Auth:JwtSigningKey"] = new string('k', 32), // below 48-char floor
-                ["Shield:Auth:DataProtectionMasterKey"] = new string('m', 64),
+                ["Shield:Auth:JwtSigningKey"] = new('k', 32), // below 48-char floor
+                ["Shield:Auth:DataProtectionMasterKey"] = new('m', 64),
             }
         );
 
@@ -127,14 +122,15 @@ public sealed class HardeningTests
     public void Development_skips_all_checks()
     {
         IConfiguration config = BuildConfig(
-            new Dictionary<string, string?>
+            new()
             {
                 ["Shield:SingleUser"] = "true",
                 ["Shield:OpenApi:Enabled"] = "true",
                 ["Shield:Public"] = "true",
                 ["Shield:Auth:RequireHttps"] = "false",
                 ["Shield:Auth:JwtSigningKey"] = "short",
-                ["Shield:Auth:DataProtectionMasterKey"] = "dev-master-key-at-least-32-chars-long-xx",
+                ["Shield:Auth:DataProtectionMasterKey"] =
+                    "dev-master-key-at-least-32-chars-long-xx",
             }
         );
 

@@ -1,12 +1,18 @@
 using FluentAssertions;
 using Shield.Core.Abstractions;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Dart;
+using Shield.Parsers.Elixir;
 using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
+using Shield.Parsers.Maven;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
 using Shield.Parsers.Python;
+using Shield.Parsers.Ruby;
 using Shield.Parsers.Rust;
+using Shield.Parsers.Swift;
+using Shield.Parsers.Vcpkg;
 using Shield.Scanners;
 using Xunit;
 
@@ -14,15 +20,21 @@ namespace Shield.Scanners.Tests;
 
 public class ParserRegistryTests
 {
-    static ParserRegistry NewRegistry() =>
+    private static ParserRegistry NewRegistry() =>
         new(
-            new NpmLockParser(),
-            new NugetLockParser(),
-            new ComposerLockParser(),
-            new GradleLockfileParser(),
-            new PythonLockParser(),
-            new GoLockParser(),
-            new RustLockParser()
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new()
         );
 
     [Theory]
@@ -40,6 +52,12 @@ public class ParserRegistryTests
     [InlineData("go.mod", typeof(GoLockParser))]
     [InlineData("Cargo.lock", typeof(RustLockParser))]
     [InlineData("Cargo.toml", typeof(RustLockParser))]
+    [InlineData("Gemfile.lock", typeof(GemfileLockParser))]
+    [InlineData("Package.resolved", typeof(PackageResolvedParser))]
+    [InlineData("pubspec.lock", typeof(PubspecLockParser))]
+    [InlineData("pom.xml", typeof(PomXmlParser))]
+    [InlineData("mix.lock", typeof(MixLockParser))]
+    [InlineData("vcpkg.json", typeof(VcpkgJsonParser))]
     public void FindFor_routes_filenames_to_correct_parser(string filename, Type expected)
     {
         ParserRegistry registry = NewRegistry();

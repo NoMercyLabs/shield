@@ -1,67 +1,124 @@
 # Shield
 
-Cross-ecosystem dependency vulnerability warning system. Self-hosted. Headless API + web UI.
+Self-hosted dependency vulnerability watcher. Cross-ecosystem. Cross-host. Team-aware.
 
 [![CI](https://github.com/nomercylabs/shield/actions/workflows/ci.yml/badge.svg)](https://github.com/nomercylabs/shield/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker pulls](https://img.shields.io/docker/pulls/nomercylabs/shield?logo=docker)](https://github.com/nomercylabs/shield/pkgs/container/shield)
-[![Shield](https://your-shield.example.com/api/badge/NoMercyLabs/shield.svg)](docs/sources.md#health-badge)
 
 ## What it does
 
-Shield watches the lockfiles in your code — every `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `packages.lock.json`, `composer.lock`, and `gradle.lockfile` — across the GitHub repos and local folders you point it at. It pulls advisories from OSV.dev, the GitHub Advisory Database, and the npm registry feed (for maintainer drift and deprecation signals), joins them against your inventory, and pushes alerts to a Discord webhook and an in-app inbox the moment a match shows up. One Docker image, one SQLite volume, one pane of glass.
+Shield watches the lockfiles in the GitHub repos and local folders you point it at, joins them against advisories from OSV.dev, the GitHub Advisory Database, the npm registry, CISA's Known Exploited Vulnerabilities catalog, and EPSS, then routes alerts to Discord / Slack / ntfy / SMTP / generic webhooks / an in-app inbox / mobile push the moment a match shows up.
 
-## Quickstart
+One Docker image. One SQLite volume. One pane of glass for the entire team — admin grants per-source access, invites collaborators via GitHub identity, and impersonates them when they say something's broken.
+
+## Coverage
+
+**Ecosystems (13):** npm, NuGet, Composer, Gradle, Maven, Python, Go, Rust, Ruby (Bundler), Swift (SwiftPM), Dart/Flutter (pub), Elixir (Hex), C/C++ (vcpkg).
+
+**Advisory feeds:** OSV.dev (cross-ecosystem), GitHub Advisory Database, npm registry (deprecation + maintainer drift), CISA KEV (known exploited), EPSS (exploit probability scores).
+
+**Alert channels:** Discord webhooks, Slack apps, ntfy, SMTP, generic outbound webhook, in-app inbox, mobile Web Push.
+
+**Identity:** ASP.NET Identity with single-user mode, multi-user with role-based ACL (Admin / Maintainer / Viewer), GitHub OAuth signin (auth-code popup AND device flow), session revocation, 2FA TOTP, API tokens (scope-bound, source-filtered).
+
+## Install from GHCR
+
+Images are published to `ghcr.io/nomercylabs/shield` on every tagged release. No account
+or token needed to pull — the package is public.
+
+**Docker run (quickest):**
 
 ```bash
 docker run -d --name shield \
-  -p 8080:8080 \
-  -v shield-data:/data \
-  -v shield-keys:/data/keys \
+  -p 127.0.0.1:8842:8842 \
+  -v shield-data:/app/data \
   -e Shield__Auth__JwtSigningKey="$(openssl rand -base64 48)" \
-  -e Shield__Auth__DataProtectionMasterKey="$(openssl rand -base64 48)" \
+  -e Shield__Auth__DataProtectionMasterKey="$(openssl rand -base64 36)" \
   ghcr.io/nomercylabs/shield:latest
-# Open http://localhost:8842 — single-user mode is on by default
 ```
 
-**Save both secrets somewhere safe.** `Shield__Auth__DataProtectionMasterKey` encrypts the keyring under `/data/keys` and must be supplied on every container restart — recreate the container without it and every Discord webhook, OAuth token, and OIDC client secret becomes permanently unreadable.
+**Docker Compose (recommended for production):**
 
-The first request lands you straight in the dashboard. Add a source from **Sources -> New**, configure a Discord webhook from **Channels**, and the next scan tick will start populating findings.
+```yaml
+services:
+  shield:
+    image: ghcr.io/nomercylabs/shield:latest
+    container_name: shield
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8842:8842"
+    volumes:
+      - shield-data:/app/data
+    env_file:
+      - .env
 
-## Roadmap
+volumes:
+  shield-data:
+```
 
-| Phase | Status | Scope |
-|---|---|---|
-| Phase 1 | shipping now | GitHub repo + local folder sources, npm/NuGet/Composer/Gradle parsers, OSV + GHSA + npm registry feeds, Discord + in-app inbox, ASP.NET Identity auth with single-user mode, Vue + Moooom UI, single Docker image |
-| Phase 2 | planned | Linux host scanning via agent + SSH (dpkg/rpm/apk), Trivy DB feed, deps.dev + Socket.dev feeds, ntfy + SMTP channels, OIDC plugin (Keycloak/Authentik/Auth0/GitHub), inventory diff view, encrypted channel configs |
-| Phase 3 | planned | Dev-machine pre-install hook (`nm-shield`), CycloneDX SBOM upload mode, public docs site, hosted SaaS offering |
+Copy `docker/.env.example` to `docker/.env`, fill in `Shield__Auth__JwtSigningKey` and
+`Shield__Auth__DataProtectionMasterKey` (see [`docs/deploy.md`](docs/deploy.md)), then
+`docker compose up -d`.
+
+Open <http://localhost:8842>. Single-user mode is on by default — first request lands in
+the dashboard. Pick a source via GitHub (one-click via the bundled OAuth App, no
+registration needed) or browse a local folder, configure a channel, the next scan tick
+populates findings.
+
+**Save both env vars somewhere safe.** `Shield__Auth__DataProtectionMasterKey` encrypts
+the keyring under `/app/data/keys` and must be supplied on every container restart —
+recreate the container without it and every channel config, OAuth token, and OIDC client
+secret becomes permanently unreadable.
+
+Available tags:
+
+| Tag | What you get |
+|-----|-------------|
+| `latest` | Latest stable release |
+| `v0.1` | Latest patch in the 0.1 minor line |
+| `v0.1.0` | Exact release |
+| `v0.1.0-alpha.1` | Pre-release (not tagged `latest`) |
+
+For production behind a tunnel/proxy see [`docs/internet-exposure.md`](docs/internet-exposure.md).
+
+## Build from source
+
+Clone the repo and build the image locally — useful for contributors or air-gapped hosts:
+
+```bash
+git clone https://github.com/nomercylabs/shield.git
+cd shield/docker
+cp .env.example .env
+# fill in .env, then:
+docker compose build --pull
+docker compose up -d
+```
+
+The Compose file's `build:` block points at `docker/Dockerfile`. SPA assets are baked
+into the runtime image, so any change under `src/Shield.Web/` requires a rebuild.
+
+## Why Shield
+
+Dependabot is push-style and locked to GitHub. Snyk and Sonatype are SaaS. Trivy is CLI-only. GitHub Advanced Security is enterprise-tier. There's a gap for a self-hosted, cross-host, polished tool that a small team owns end-to-end. That's Shield.
+
+If you ship software you maintain on machines you don't own, you probably need this.
 
 ## Docs
 
 - [Getting started](docs/getting-started.md) — Docker quickstart, env vars, first-run walkthrough
-- [Sources](docs/sources.md) — GitHub repo + local folder config schemas
-- [Feeds](docs/feeds.md) — what each advisory feed covers
-- [Auth](docs/auth.md) — single-user mode, multi-user, OIDC plans
+- [Deploy](docs/deploy.md) — production deploy on Docker (Proxmox, generic Linux host)
+- [Internet exposure](docs/internet-exposure.md) — hardening recipe for public deploys via Cloudflare Tunnel
+- [Auth](docs/auth.md) — single-user mode, multi-user, invite flow, OAuth providers, GitHub device flow, API tokens, 2FA
+- [Sources](docs/sources.md) — GitHub repo + local folder config schemas, scan cadence
+- [Feeds](docs/feeds.md) — what each advisory feed covers, refresh cadence, GHSA token setup
+- [Channels](docs/channels.md) — Discord/Slack/ntfy/SMTP/webhook/inbox/push config + payload shapes
 - [Architecture](docs/architecture.md) — pipeline, two-DB design, extension points
-
-## Why Shield
-
-We built Shield because learning about npm worms (Shai-Hulud, s1ngularity, slop-squat campaigns) from a YouTube video is unacceptable for a self-hosted product that ships to other people's hardware. Dependabot is a great push-style PR bot but it doesn't watch hosts, doesn't merge ecosystems, and doesn't fan out to the channels we already pay attention to. Snyk and Socket are excellent tools that we don't fully control. Shield is the boring answer: a single Docker container, our advisory feeds joined against our inventory, alerts to the chat we read.
-
-If you ship software you maintain, you probably need the same thing.
-
-## Not yet
-
-Shield is honest about what hasn't landed yet:
-
-- **No host scanning.** Linux package coverage (Debian/Ubuntu/Alpine/RHEL via dpkg/rpm/apk) is Phase 2. The agent stub exists but the ingest API isn't wired.
-- **No OS-level CVE feed.** Trivy DB is Phase 2 — it lights up when host scanning lands.
-- **No SBOM upload.** CycloneDX/SPDX ingest is Phase 3.
-- **Channel configs aren't encrypted at rest.** The DB column is named `ConfigJsonEncrypted` but Phase 1 stores plaintext. Don't put a Discord webhook URL in Shield that you wouldn't put in a private GitHub repo.
-- **OIDC is not implemented.** Auth is ASP.NET Identity (cookie + JWT) with single-user mode. OIDC arrives in Phase 2.
-- **No registration UI.** Multi-user mode currently requires a user seeded directly in the database. Use single-user mode for solo installs.
-- **No ntfy or SMTP channels.** Discord and in-app inbox only in Phase 1.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Security
+
+Found a vulnerability? See [SECURITY.md](SECURITY.md).

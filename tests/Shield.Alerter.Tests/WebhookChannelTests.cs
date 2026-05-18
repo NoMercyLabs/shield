@@ -21,7 +21,7 @@ public class WebhookChannelTests : IDisposable
     public WebhookChannelTests()
     {
         _server = WireMockServer.Start();
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddHttpClient(WebhookChannel.HttpClientName);
         _provider = services.BuildServiceProvider();
         _httpClientFactory = _provider.GetRequiredService<IHttpClientFactory>();
@@ -79,7 +79,7 @@ public class WebhookChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             cfg,
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 
@@ -115,7 +115,7 @@ public class WebhookChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             cfg,
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 
@@ -136,7 +136,7 @@ public class WebhookChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             cfg,
-            new[] { NewFinding(Severity.Low) },
+            [NewFinding(Severity.Low)],
             CancellationToken.None
         );
 

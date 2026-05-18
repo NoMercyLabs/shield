@@ -10,17 +10,17 @@ namespace Shield.Scanners;
 
 public sealed class LocalFolderScanner : IScanner
 {
-    static readonly IReadOnlyList<string> DefaultIgnoreGlobs = new[]
-    {
+    private static readonly IReadOnlyList<string> DefaultIgnoreGlobs =
+    [
         "node_modules",
         "vendor",
         "bin",
         "obj",
         ".git",
-    };
+    ];
 
-    readonly ParserRegistry _parsers;
-    readonly IDetectedRemoteHostPolicy? _remoteHostPolicy;
+    private readonly ParserRegistry _parsers;
+    private readonly IDetectedRemoteHostPolicy? _remoteHostPolicy;
 
     public LocalFolderScanner(
         ParserRegistry parsers,
@@ -58,7 +58,7 @@ public sealed class LocalFolderScanner : IScanner
             : DefaultIgnoreGlobs;
         HashSet<string> ignoreSet = new(ignore, StringComparer.OrdinalIgnoreCase);
 
-        List<InventoryItem> aggregated = new();
+        List<InventoryItem> aggregated = [];
 
         foreach (string filePath in EnumerateFiles(config.Path, ignoreSet))
         {
@@ -69,13 +69,21 @@ public sealed class LocalFolderScanner : IScanner
             if (parser is null)
                 continue;
 
+            string relativeManifestPath = Path.GetRelativePath(config.Path, filePath)
+                .Replace('\\', '/');
+
             await using FileStream stream = File.OpenRead(filePath);
             ParseResult parsed = await parser
                 .ParseAsync(stream, filename, ct)
                 .ConfigureAwait(false);
 
-            if (parsed.Success)
-                aggregated.AddRange(parsed.Items);
+            if (!parsed.Success)
+                continue;
+
+            foreach (InventoryItem item in parsed.Items)
+                item.ManifestPath = relativeManifestPath;
+
+            aggregated.AddRange(parsed.Items);
         }
 
         Guid snapshotId = Guid.NewGuid();
@@ -99,7 +107,7 @@ public sealed class LocalFolderScanner : IScanner
 
     // Refresh source.DetectedRemote from the live `.git/config`. Mutates source in place;
     // the scan worker writes the row back to the DB so the API picks up the change.
-    void UpdateDetectedRemote(Source source, string path)
+    private void UpdateDetectedRemote(Source source, string path)
     {
         DetectedRemote? detected = GitRemoteParser.DetectFromWorkingTree(path);
         string? serialised = null;
@@ -114,7 +122,7 @@ public sealed class LocalFolderScanner : IScanner
             source.DetectedRemote = serialised;
     }
 
-    static IEnumerable<string> EnumerateFiles(string root, HashSet<string> ignoreSet)
+    private static IEnumerable<string> EnumerateFiles(string root, HashSet<string> ignoreSet)
     {
         Stack<string> stack = new();
         stack.Push(root);

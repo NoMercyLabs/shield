@@ -38,7 +38,7 @@ public sealed class OAuthTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Github,
                 AccessToken: "ghs_test_token_value",
                 RefreshToken: null,
@@ -68,7 +68,7 @@ public sealed class OAuthTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Github,
                 AccessToken: "raw-access-token",
                 RefreshToken: null,
@@ -93,7 +93,7 @@ public sealed class OAuthTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Slack,
                 AccessToken: "plaintext-bot-token",
                 RefreshToken: null,
@@ -125,7 +125,7 @@ public sealed class OAuthTests
 
         IOAuthTokenStore store = factory.Services.GetRequiredService<IOAuthTokenStore>();
         await store.SaveAsync(
-            new OAuthTokenSnapshot(
+            new(
                 OAuthProvider.Slack,
                 AccessToken: "xoxb-test",
                 RefreshToken: null,
@@ -182,7 +182,7 @@ public sealed class OAuthTests
     {
         using ConfiguredOAuthFactory factory = new();
         HttpClient client = factory.CreateClient(
-            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            new()
             {
                 AllowAutoRedirect = false,
             }
@@ -246,7 +246,7 @@ public sealed class OAuthTests
             singleUser: false
         );
         HttpClient client = factory.CreateClient(
-            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            new()
             {
                 AllowAutoRedirect = false,
             }
@@ -256,7 +256,7 @@ public sealed class OAuthTests
         const string state = "test-state-first";
         stateStore.Save(
             state,
-            new OAuthStateEntry(
+            new(
                 OAuthProvider.Github,
                 CodeVerifier: "v",
                 ReturnUrl: "/",
@@ -264,11 +264,11 @@ public sealed class OAuthTests
                 Intent: OAuthIntent.Signin
             )
         );
-        FakeOAuthProvider.NextResult = new OAuthSigninResult(
+        FakeOAuthProvider.NextResult = new(
             Subject: "github-id-1001",
             Login: "first-admin",
             Email: "first@example.com",
-            Token: new OAuthTokenSnapshot(
+            Token: new(
                 OAuthProvider.Github,
                 AccessToken: "fake-access",
                 RefreshToken: null,
@@ -312,7 +312,7 @@ public sealed class OAuthTests
             singleUser: false
         );
         HttpClient client = factory.CreateClient(
-            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            new()
             {
                 AllowAutoRedirect = false,
             }
@@ -329,7 +329,7 @@ public sealed class OAuthTests
         const string state = "test-state-link";
         stateStore.Save(
             state,
-            new OAuthStateEntry(
+            new(
                 OAuthProvider.Github,
                 CodeVerifier: "v",
                 ReturnUrl: "/",
@@ -337,11 +337,11 @@ public sealed class OAuthTests
                 Intent: OAuthIntent.Signin
             )
         );
-        FakeOAuthProvider.NextResult = new OAuthSigninResult(
+        FakeOAuthProvider.NextResult = new(
             Subject: "github-id-link",
             Login: "seed-admin-external",
             Email: "seed@example.com",
-            Token: new OAuthTokenSnapshot(
+            Token: new(
                 OAuthProvider.Github,
                 AccessToken: "fake-access",
                 RefreshToken: null,
@@ -380,7 +380,7 @@ public sealed class OAuthTests
             singleUser: false
         );
         HttpClient client = factory.CreateClient(
-            new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            new()
             {
                 AllowAutoRedirect = false,
             }
@@ -397,7 +397,7 @@ public sealed class OAuthTests
         const string state = "test-state-rejected";
         stateStore.Save(
             state,
-            new OAuthStateEntry(
+            new(
                 OAuthProvider.Github,
                 CodeVerifier: "v",
                 ReturnUrl: "/login",
@@ -405,11 +405,11 @@ public sealed class OAuthTests
                 Intent: OAuthIntent.Signin
             )
         );
-        FakeOAuthProvider.NextResult = new OAuthSigninResult(
+        FakeOAuthProvider.NextResult = new(
             Subject: "github-id-reject",
             Login: "stranger",
             Email: "stranger@example.com",
-            Token: new OAuthTokenSnapshot(
+            Token: new(
                 OAuthProvider.Github,
                 AccessToken: "fake-access",
                 RefreshToken: null,

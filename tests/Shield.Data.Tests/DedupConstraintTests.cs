@@ -21,7 +21,7 @@ public class DedupConstraintTests : IAsyncLifetime
         DbContextOptions<ShieldDbContext> options = new DbContextOptionsBuilder<ShieldDbContext>()
             .UseSqlite(_connection)
             .Options;
-        _db = new ShieldDbContext(options);
+        _db = new(options);
         await _db.Database.MigrateAsync();
     }
 
@@ -59,7 +59,7 @@ public class DedupConstraintTests : IAsyncLifetime
     private static Finding NewFinding(string dedupKey)
     {
         DateTime now = DateTime.UtcNow;
-        return new Finding
+        return new()
         {
             Id = Guid.NewGuid(),
             SourceId = 1,

@@ -31,7 +31,7 @@ public sealed class DataProtectionTests
         info.EncryptedElement.Name.LocalName.Should().Be("encryptedKey");
         info.DecryptorType.Should().Be(typeof(MasterKeyXmlDecryptor));
 
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddSingleton(new MasterKeyDataProtectionExtensions.MasterKeyHolder(key));
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
         using ServiceProvider provider = services.BuildServiceProvider();
@@ -48,7 +48,7 @@ public sealed class DataProtectionTests
     public void Decrypt_falls_back_to_plaintext_passthrough_when_envelope_missing()
     {
         byte[] key = MakeKey("legacy-fallback-secret-also-32chrs");
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddSingleton(new MasterKeyDataProtectionExtensions.MasterKeyHolder(key));
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
         using ServiceProvider provider = services.BuildServiceProvider();
@@ -75,7 +75,7 @@ public sealed class DataProtectionTests
             plaintext
         );
 
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddSingleton(new MasterKeyDataProtectionExtensions.MasterKeyHolder(readKey));
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
         using ServiceProvider provider = services.BuildServiceProvider();

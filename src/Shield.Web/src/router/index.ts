@@ -22,10 +22,34 @@ const routes: RouteRecordRaw[] = [
     meta: { skipOnboardingGate: true },
   },
   {
+    path: '/account/sessions',
+    name: 'account-sessions',
+    component: () => import('@/views/SessionsView.vue'),
+    meta: { skipOnboardingGate: true },
+  },
+  {
+    path: '/account/security',
+    name: 'account-security',
+    component: () => import('@/views/AccountView.vue'),
+    meta: { skipOnboardingGate: true },
+  },
+  {
+    path: '/account/tokens',
+    name: 'account-tokens',
+    component: () => import('@/views/TokensView.vue'),
+    meta: { skipOnboardingGate: true },
+  },
+  {
     path: '/welcome',
     name: 'onboarding',
     component: () => import('@/views/OnboardingView.vue'),
     // Wizard owns its own full-screen layout; bypass AppShell via meta.public.
+    meta: { public: true, skipOnboardingGate: true },
+  },
+  {
+    path: '/accept-invite',
+    name: 'accept-invite',
+    component: () => import('@/views/AcceptInvite.vue'),
     meta: { public: true, skipOnboardingGate: true },
   },
   {
@@ -56,9 +80,19 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: '/updates',
+    name: 'updates',
+    component: () => import('@/views/UpdatesView.vue'),
+  },
+  {
     path: '/channels',
     name: 'channels',
     component: () => import('@/views/ChannelsView.vue'),
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: () => import('@/views/NotificationsView.vue'),
   },
   {
     path: '/feeds',
@@ -72,9 +106,21 @@ const routes: RouteRecordRaw[] = [
     meta: { skipOnboardingGate: true },
   },
   {
+    path: '/access',
+    name: 'access',
+    component: () => import('@/views/AccessView.vue'),
+    meta: { adminOnly: true },
+  },
+  {
     path: '/audit',
     name: 'audit',
     component: () => import('@/views/AuditView.vue'),
+    meta: { adminOnly: true },
+  },
+  {
+    path: '/security',
+    name: 'security',
+    component: () => import('@/views/SecurityView.vue'),
     meta: { adminOnly: true },
   },
   {

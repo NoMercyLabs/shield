@@ -17,6 +17,12 @@ public enum Ecosystem
     Python = 5,
     Go = 6,
     Rust = 7,
+    RubyGems = 8,
+    SwiftPM = 9,
+    Pub = 10,
+    Maven = 11,
+    Hex = 12,
+    Vcpkg = 13,
 }
 
 public enum Severity
@@ -33,6 +39,7 @@ public enum FindingState
     Acked = 1,
     Resolved = 2,
     Suppressed = 3,
+    AutoResolved = 4,
 }
 
 public enum ChannelType
@@ -53,6 +60,8 @@ public enum Feed
     DepsDev = 3,
     Socket = 4,
     TrivyDb = 5,
+    Kev = 6,
+    Epss = 7,
 }
 
 public enum AlertStatus
@@ -73,4 +82,11 @@ public enum SourceAccessLevel
 {
     Read = 0,
     Triage = 1,
+}
+
+public enum AutoFixMode
+{
+    Off = 0,
+    WeeklyDigest = 1,
+    OnEveryScan = 2,
 }

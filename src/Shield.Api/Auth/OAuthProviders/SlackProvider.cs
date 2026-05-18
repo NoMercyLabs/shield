@@ -102,7 +102,7 @@ public sealed class SlackProvider : IOAuthProvider
             ? scopeEl.GetString() ?? ""
             : "";
 
-        return new OAuthTokenSnapshot(
+        return new(
             OAuthProvider.Slack,
             botAccessToken,
             null,
@@ -132,7 +132,7 @@ public sealed class SlackProvider : IOAuthProvider
     {
         HttpClient http = _httpClientFactory.CreateClient("oauth");
         using HttpRequestMessage request = new(HttpMethod.Post, RevokeUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        request.Headers.Authorization = new("Bearer", token.AccessToken);
         try
         {
             using HttpResponseMessage response = await http.SendAsync(request, ct);
@@ -204,7 +204,7 @@ public sealed class SlackProvider : IOAuthProvider
             : "";
 
         using HttpRequestMessage userRequest = new(HttpMethod.Get, SigninUserInfoUrl);
-        userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        userRequest.Headers.Authorization = new("Bearer", accessToken);
         using HttpResponseMessage userResponse = await http.SendAsync(userRequest, ct);
         userResponse.EnsureSuccessStatusCode();
 
@@ -233,11 +233,6 @@ public sealed class SlackProvider : IOAuthProvider
             subject,
             null
         );
-        return new OAuthSigninResult(
-            subject,
-            name,
-            string.IsNullOrEmpty(email) ? null : email,
-            snapshot
-        );
+        return new(subject, name, string.IsNullOrEmpty(email) ? null : email, snapshot);
     }
 }

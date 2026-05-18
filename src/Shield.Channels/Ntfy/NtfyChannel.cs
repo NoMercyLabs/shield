@@ -64,7 +64,7 @@ public sealed class NtfyChannel : IAlertChannel
         request.Headers.TryAddWithoutValidation("Priority", priority.ToString());
         request.Headers.TryAddWithoutValidation("Tags", tags);
         if (!string.IsNullOrWhiteSpace(config.AuthToken))
-            request.Headers.Authorization = new AuthenticationHeaderValue(
+            request.Headers.Authorization = new(
                 "Bearer",
                 config.AuthToken
             );
@@ -97,7 +97,7 @@ public sealed class NtfyChannel : IAlertChannel
         int extra = findings.Count - previewCount;
         IEnumerable<string> lines = findings
             .Take(previewCount)
-            .Select(finding => $"[{finding.Severity}] {finding.DedupKey}");
+            .Select(finding => $"[{finding.Severity}] {finding.Notes ?? finding.DedupKey}");
         string body = string.Join("\n", lines);
         if (extra > 0)
             body += $"\nand {extra} more";

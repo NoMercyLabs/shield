@@ -7,6 +7,7 @@ using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Api.Services;
 using Shield.Api.Workers;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Domain;
 using Shield.Data;
 
@@ -150,10 +151,7 @@ public sealed class WebhooksController : ControllerBase
             if (source is not null)
             {
                 matchedSourceId = source.Id;
-                await _matchQueue.EnqueueAsync(
-                    new MatchRequest(null, source.Id, MatchAll: true),
-                    ct
-                );
+                await _matchQueue.EnqueueAsync(new(null, source.Id, MatchAll: true), ct);
             }
         }
 
@@ -169,7 +167,7 @@ public sealed class WebhooksController : ControllerBase
     }
 
     [HttpPost("secrets")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
     public async Task<ActionResult<WebhookSecretsResponse>> SetSecrets(
         [FromBody] WebhookSecretsRequest request,
         CancellationToken ct
@@ -192,7 +190,7 @@ public sealed class WebhooksController : ControllerBase
         if (string.IsNullOrEmpty(secret))
         {
             _logger.LogWarning("Webhook secret not configured for {Path}", Request.Path);
-            return (false, Array.Empty<byte>(), "Webhook secret not configured");
+            return (false, [], "Webhook secret not configured");
         }
 
         Request.EnableBuffering();
@@ -222,7 +220,7 @@ public sealed class WebhooksController : ControllerBase
         string referencesJson = BuildReferences(advisory, alert.HtmlUrl);
         DateTime fetchedAt = DateTime.UtcNow;
 
-        return new Advisory
+        return new()
         {
             Id = Guid.NewGuid(),
             Feed = Feed.Ghsa,
@@ -244,7 +242,7 @@ public sealed class WebhooksController : ControllerBase
     {
         if (vuln is null)
             return "[]";
-        List<object> events = new();
+        List<object> events = [];
         if (!string.IsNullOrWhiteSpace(vuln.VulnerableVersionRange))
             events.Add(new { introduced = "0" });
         if (!string.IsNullOrWhiteSpace(vuln.FirstPatchedVersion?.Identifier))
@@ -265,7 +263,7 @@ public sealed class WebhooksController : ControllerBase
 
     private static string BuildReferences(DependabotSecurityAdvisory advisory, string? htmlUrl)
     {
-        List<object> entries = new() { new { type = "DEPENDABOT", url = htmlUrl ?? string.Empty } };
+        List<object> entries = [new { type = "DEPENDABOT", url = htmlUrl ?? string.Empty }];
         if (advisory.References is not null)
         {
             foreach (DependabotReference reference in advisory.References)

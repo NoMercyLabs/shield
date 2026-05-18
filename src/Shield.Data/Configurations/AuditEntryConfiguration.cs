@@ -16,6 +16,11 @@ public class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
         builder.Property(entry => entry.ActorName).HasMaxLength(200).IsRequired();
         builder.Property(entry => entry.RemoteIp).HasMaxLength(64);
         // Filter chips on the UI hit (Action, TargetType); list view orders by At desc.
-        builder.HasIndex(entry => new { entry.At, entry.Action, entry.TargetType });
+        builder.HasIndex(entry => new
+        {
+            entry.At,
+            entry.Action,
+            entry.TargetType,
+        });
     }
 }

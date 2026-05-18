@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Shield.Api.Services;
 using Shield.Core.Domain;
 
 namespace Shield.Api.Contracts;
@@ -21,7 +20,8 @@ public sealed record UpdateSourceRequest(
     [Required] string Name,
     JsonElement ConfigJson,
     TimeSpan? ScanInterval = null,
-    bool Enabled = true
+    bool Enabled = true,
+    int? MinPackageAgeHours = null
 );
 
 public sealed record DetectedRemoteDto(
@@ -45,11 +45,23 @@ public sealed record SourceResponse(
     DateTime UpdatedAt,
     DetectedRemoteDto? DetectedRemote,
     DateTime? LastBulkApplyAt = null,
-    AutoFixMode AutoFixMode = AutoFixMode.Off
+    AutoFixMode AutoFixMode = AutoFixMode.Off,
+    bool IsProduction = false,
+    DateTime? LastManualBulkApplyAt = null,
+    DateTime? ManualCooldownUntil = null,
+    int MinPackageAgeHours = 48
 )
 {
-    public static SourceResponse From(Source source) =>
-        new(
+    public static SourceResponse From(Source source)
+    {
+        // ManualCooldownUntil is the wall-clock the SPA shows next to a disabled "Bulk apply"
+        // button. Null when no cooldown is active. Mirrors the controller gate (24h fixed).
+        DateTime? cooldownUntil =
+            source.LastManualBulkApplyAt.HasValue
+            && (DateTime.UtcNow - source.LastManualBulkApplyAt.Value) < TimeSpan.FromHours(24)
+                ? source.LastManualBulkApplyAt.Value.AddHours(24)
+                : null;
+        return new(
             source.Id,
             source.Type,
             source.Name,
@@ -62,8 +74,13 @@ public sealed record SourceResponse(
             source.UpdatedAt,
             ParseDetectedRemote(source.DetectedRemote),
             source.LastBulkApplyAt,
-            source.AutoFixMode
+            source.AutoFixMode,
+            source.IsProduction,
+            source.LastManualBulkApplyAt,
+            cooldownUntil,
+            source.MinPackageAgeHours
         );
+    }
 
     private static readonly JsonSerializerOptions DetectedRemoteOptions = new(
         JsonSerializerDefaults.Web
@@ -84,140 +101,4 @@ public sealed record SourceResponse(
     }
 }
 
-public sealed record SnapshotSummary(
-    Guid Id,
-    DateTime TakenAt,
-    string ContentsSha,
-    int ItemCount,
-    IReadOnlyDictionary<Ecosystem, int> Ecosystems
-);
-
 public sealed record SourceDetailResponse(SourceResponse Source, SnapshotSummary? LatestSnapshot);
-
-public sealed record SnapshotListItem(
-    Guid Id,
-    DateTime TakenAt,
-    string ContentsSha,
-    int ItemCount,
-    Guid? PrevSnapshotId
-);
-
-// Anomaly signals flagged by the supply-chain detector on snapshot-to-snapshot diffs.
-// Evaluated only on items added in the newer snapshot — removals/version-bumps don't
-// trigger anomaly checks (a known-good package downgrading isn't a supply-chain signal,
-// it's a regression bug for a different surface).
-[Flags]
-public enum AnomalyFlags
-{
-    None = 0,
-
-    // PackageMeta.PublishedAt within the last 30 days at evaluation time.
-    BrandNew = 1,
-
-    // Exactly one maintainer on the added version. Single point of compromise.
-    SingleMaintainer = 2,
-
-    // Maintainer set differs from the most-recent prior PackageMeta for the same
-    // (ecosystem, name). Covers both additions and replacements.
-    NewMaintainerThisVersion = 4,
-
-    // Levenshtein distance <= 2 to a popular package name AND not itself popular.
-    Typosquat = 8,
-
-    // PackageMeta.Deprecated true.
-    Deprecated = 16,
-
-    // Scoped npm package whose inner name doesn't match the scope
-    // (e.g. "@lodash/lodash" — scope `lodash`, inner name `lodash` is the
-    // hallmark scope-confusion squat against the unscoped `lodash`).
-    HighScopeMismatch = 32,
-}
-
-public sealed record InventoryDiffEntry(
-    Ecosystem Ecosystem,
-    string Name,
-    string Version,
-    bool IsDirect,
-    string? ParentChain,
-    AnomalyFlags Anomaly
-);
-
-public sealed record InventoryDiffChange(
-    Ecosystem Ecosystem,
-    string Name,
-    string FromVersion,
-    string ToVersion,
-    bool IsDirect
-);
-
-public sealed record SnapshotDiffResponse(
-    SnapshotSummary Older,
-    SnapshotSummary Newer,
-    IReadOnlyList<InventoryDiffEntry> Added,
-    IReadOnlyList<InventoryDiffEntry> Removed,
-    IReadOnlyList<InventoryDiffChange> VersionChanged
-);
-
-public sealed record InventoryItemResponse(
-    int Id,
-    Ecosystem Ecosystem,
-    string Name,
-    string Version,
-    bool IsDirect,
-    string ParentChain
-);
-
-public sealed record PagedResponse<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
-
-public sealed record ScanQueuedResponse(
-    bool Accepted,
-    DateTime QueuedAt,
-    DateTime? EstimatedCompletion
-);
-
-// "Pick from GitHub" bulk-add — one selection per repo the operator ticked. Branch is
-// optional; when null the scanner falls back to the repo's default branch.
-public sealed record BulkSelection(string Owner, string Name, string? Branch);
-
-public sealed record BulkFromGithubRequest(
-    IReadOnlyList<BulkSelection> Selections,
-    TimeSpan? DefaultScanInterval = null
-);
-
-public sealed record BulkFromGithubResponse(
-    int Created,
-    int SkippedExisting,
-    IReadOnlyList<SourceResponse> Sources
-);
-
-public sealed record BulkApplyRequest(
-    bool DryRun = false,
-    int? MaxPackages = null,
-    bool Force = false
-);
-
-public sealed record SetAutoFixModeRequest(AutoFixMode AutoFixMode);
-
-// Mirrors BulkApplyResult from BulkFixApplier for API consumers.
-public sealed record BulkApplyResponse(
-    bool DryRun,
-    string? PullRequestUrl,
-    IReadOnlyList<BulkApplyEntry> Entries,
-    IReadOnlyList<BulkApplyError> Errors,
-    string? ReusedBranch
-);
-
-public sealed record ScanQueueFailureItem(
-    Guid Id,
-    int SourceId,
-    DateTime EnqueuedAt,
-    DateTime CompletedAt,
-    int Attempts,
-    string ErrorMessage
-);
-
-public sealed record ScanQueueStatusResponse(
-    int Pending,
-    int InProgress,
-    IReadOnlyList<ScanQueueFailureItem> RecentFailures
-);

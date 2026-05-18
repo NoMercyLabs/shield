@@ -1,13 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\Shield.Core\Shield.Core.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Npm\Shield.Parsers.Npm.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Nuget\Shield.Parsers.Nuget.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Composer\Shield.Parsers.Composer.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Gradle\Shield.Parsers.Gradle.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Python\Shield.Parsers.Python.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Go\Shield.Parsers.Go.csproj" />
-    <ProjectReference Include="..\Shield.Parsers.Rust\Shield.Parsers.Rust.csproj" />
+    <ProjectReference Include="..\Shield.Parsers\Shield.Parsers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Octokit" />

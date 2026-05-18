@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Shield.Api": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://+:8842",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Shield__Db__Shield": "Data Source=../../data/shield-demo.db",
+        "Shield__Db__Feeds": "Data Source=../../data/feeds-demo.db",
+        "Shield__Auth__DataProtectionKeysPath": "../../data/keys"
+      }
+    }
+  }
+}

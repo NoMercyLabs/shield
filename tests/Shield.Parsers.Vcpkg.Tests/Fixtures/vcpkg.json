@@ -1,0 +1,19 @@
+{
+  "name": "demo",
+  "version-string": "0.1.0",
+  "builtin-baseline": "1f1cba1cb5d0e057d04d5e2b6d3a5a87bce05bf6",
+  "dependencies": [
+    "fmt",
+    "zlib",
+    {
+      "name": "boost-asio",
+      "version>=": "1.84.0"
+    }
+  ],
+  "overrides": [
+    {
+      "name": "fmt",
+      "version": "10.2.1"
+    }
+  ]
+}

@@ -366,7 +366,7 @@ namespace Shield.Data.Migrations.Shield
             migrationBuilder.CreateIndex(
                 name: "IX_AlertEvents_FindingId_SentAt",
                 table: "AlertEvents",
-                columns: new[] { "FindingId", "SentAt" }
+                columns: ["FindingId", "SentAt"]
             );
 
             migrationBuilder.CreateIndex(
@@ -441,7 +441,7 @@ namespace Shield.Data.Migrations.Shield
             migrationBuilder.CreateIndex(
                 name: "IX_InventoryItems_SnapshotId_Ecosystem_Name_Version",
                 table: "InventoryItems",
-                columns: new[] { "SnapshotId", "Ecosystem", "Name", "Version" }
+                columns: ["SnapshotId", "Ecosystem", "Name", "Version"]
             );
 
             migrationBuilder.CreateIndex(

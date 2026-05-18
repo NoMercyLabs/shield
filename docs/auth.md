@@ -1,24 +1,31 @@
 # Auth
 
-Shield's auth model is deliberately small. Defaults work for solo installs without any configuration. Multi-user is supported but Phase 1 has no UI for adding users yet — see below.
+Shield's auth stack supports solo installs without any configuration and full multi-user
+deployments with roles, TOTP, API tokens, invite flows, and GitHub OAuth sign-in.
 
-## Single-user mode (default)
+## Single-user mode
 
 ```env
 Shield__SingleUser=true
 ```
 
-This is the default in `appsettings.json`. A request middleware short-circuits authentication and treats every incoming request as `Admin`. There is no login screen, no password to set, no session to manage.
+When enabled, `SingleUserAuthHandler` auto-authenticates every request as an Admin-seeded
+local user (`single-user@shield.local`). No login screen, no password, no session to manage.
+
+The handler stamps a marker claim (`shield.auth.single-user`) on the synthetic principal so
+`SessionTrackingMiddleware` — which ordinarily requires the `shield.session` session cookie —
+can tell the difference and let SingleUser requests through without a session row.
 
 **When to use it:**
 
-- You're running Shield on `localhost` or behind a VPN
-- You're running it behind a reverse proxy that handles auth (Caddy + Authelia, Cloudflare Access, etc.)
-- You're the only person who will ever touch this instance
+- Running Shield on `localhost` or behind a VPN with your own auth-enforcing proxy.
+- You're the only person who will ever touch this instance.
 
 **When NOT to use it:**
 
-- The Shield port is reachable from the public internet without an auth-enforcing proxy in front of it. Single-user mode skips ALL authentication checks — anyone who can reach `:8080` becomes Admin.
+- The Shield port is reachable from the public internet without an auth-enforcing proxy.
+  `ProductionSafetyGate` blocks startup when `Shield__SingleUser=true` and
+  `Shield__Auth__AllowSingleUserInProduction` is not explicitly set to `true`.
 
 ## Multi-user mode
 
@@ -26,66 +33,142 @@ This is the default in `appsettings.json`. A request middleware short-circuits a
 Shield__SingleUser=false
 ```
 
-Disables the bypass middleware. ASP.NET Identity takes over:
+ASP.NET Core Identity handles authentication:
 
-- Cookie auth for the SPA
-- JWT bearer for API clients (`Shield__Auth__JwtSigningKey` is the symmetric signing key)
-- TOTP 2FA enrollment + verification endpoints
-- Lockout on repeated failed sign-ins
-- Roles: `Admin`, `Viewer`
+- Cookie auth (`shield.auth`) for the SPA — issued by `SignInManager` on login.
+- Session tracking via a second opaque cookie (`shield.session`) — issued by
+  `SessionCookieIssuer` on every sign-in path (password, invite accept, OAuth). The
+  `SessionTrackingMiddleware` reads this cookie to coalesce `LastActiveAt` writes and
+  enforce revocation. A missing or revoked `shield.session` cookie with a live `shield.auth`
+  cookie returns 401 and signs the user out.
+- JWT bearer for API clients — signed with `Shield__Auth__JwtSigningKey`.
+- TOTP 2FA enrollment and verification endpoints.
+- Lockout on repeated failed sign-ins.
+- Roles: `Admin`, `Maintainer`, `Viewer`.
 
-### Seeding the first user
+### First user
 
-**Phase 1 has no registration endpoint and no admin-seed env var.** This is a known gap. To bootstrap multi-user mode today you need to insert a row into `AspNetUsers` in `shield.db` directly (and a matching row in `AspNetUserRoles` to grant `Admin`). Phase 2 will add either an admin-seed env var or a one-time setup wizard — pick whichever the issue thread converges on.
+The first account registered via `POST /api/auth/register` becomes `Admin` automatically
+(first-user-wins). Subsequent registrations land as `Viewer`.
 
-If you've turned off single-user mode without seeding a user, the login endpoint will reject every credential — there's nothing to authenticate against.
+## API tokens (`shld_` prefix)
 
-## OIDC
+Operators can mint scoped, long-lived tokens without exposing their main credentials.
 
-OIDC (Keycloak / Authentik / Auth0 / GitHub) is **planned for Phase 2**. The spec defines an `OidcConfig` row and the `Shield:Oidc:Enabled` flag, but Phase 1 ships **no OIDC handler code**. Don't set `Shield:Oidc:Enabled=true` yet — there's nothing on the other end of that flag.
+```
+POST /api/api-tokens
+{ "name": "CI scanner", "scopes": ["findings:read", "sources:read"], "expiresInDays": 90 }
+```
 
-When OIDC lands in Phase 2, it will:
+The plaintext token (`shld_…`) is returned **once** at creation time and hashed at rest.
+Subsequent reads return a summary with the first 8 characters (`prefix`) for display only.
 
-- Add an OIDC handler alongside (not replacing) local Identity — admins choose whether to disable local sign-in
-- Map OIDC claims to Shield roles via configurable claim -> role rules
-- Be tested against Keycloak, Authentik, GitHub, and Auth0
+Available scopes: `findings:read`, `findings:write`, `sources:read`, `sbom:write`.
 
-A separate `docs/auth-oidc.md` will land alongside the implementation.
+Tokens also accept an optional `sourceIdFilter` list to restrict which sources the token can
+see — independently of the owning user's existing ACL.
 
-## API tokens
+Send as `Authorization: Bearer shld_<token>` on API requests. Channel and settings mutations
+are blocked for API token principals (`[NoApiToken]` attribute on those controllers).
 
-API clients can sign in via `POST /api/auth/login` and receive a JWT bearer token signed with `Shield__Auth__JwtSigningKey`. Send it as `Authorization: Bearer <token>` on subsequent requests.
+## Invite flow
 
-In single-user mode the bypass middleware also short-circuits API requests, so no token is needed when `Shield__SingleUser=true`. Don't expose this to anything you don't fully trust.
+Admins invite users via `POST /api/access/invite`. A time-limited token (7-day TTL) is
+emailed to the invitee. The invite can carry a target role and source group membership.
+Invitees accept at `/accept-invite?token=<token>`, which creates their `ShieldUser` row.
 
-## Agent auth
+Invites can also be pre-bound to a GitHub identity — the invitee's first sign-in via GitHub
+OAuth is automatically linked to the pre-bound account without a separate connect step.
 
-Linux agent enrollment (Phase 2) uses bearer tokens minted in the UI, hashed at rest with Argon2, single-use until rotated. Replay protection via timestamp + nonce window. None of this code ships in Phase 1.
+## Impersonation
+
+Admins can temporarily sign in as another (non-admin) user via
+`POST /api/impersonation/start`. A short-lived `shield.impersonate` cookie carries the
+payload; `ImpersonationMiddleware` swaps the `HttpContext.User` for the target on every
+subsequent request. The impersonating admin's identity is preserved as claims
+(`imp.admin.name`) so the audit log always attributes back to the real actor.
+End impersonation with `POST /api/impersonation/stop`.
+
+## GitHub OAuth (device flow + sign-in)
+
+**As an integration** (connect a GitHub token for webhook comments, org-membership checks):
+Shield ships with a published OAuth App client ID (`Ov23libI6hv5NBmkaxjV`) and uses
+GitHub's Device Flow. Visit `https://github.com/login/device`, enter the code, and Shield
+finishes the handshake server-side. Override the baked-in client ID with:
+
+```env
+Shield__OAuth__GitHub__DefaultClientId=<your-client-id>
+```
+
+**As a sign-in method**: GitHub can also be used as a primary identity provider. When an
+OAuth App with a client secret is configured under **Settings → Integrations → GitHub**,
+a **Sign in with GitHub** button appears on the login page. This uses an authorization-code
+flow and creates (or links to) a `ShieldUser` row on first sign-in.
+
+Disable device flow with:
+
+```env
+Shield__OAuth__GitHub__DeviceFlow__Enabled=false
+```
+
+## Cookies
+
+| Cookie | Purpose |
+|---|---|
+| `shield.auth` | ASP.NET Identity application cookie — carries the authenticated session |
+| `shield.session` | Opaque Shield session row token — used by `SessionTrackingMiddleware` for revocation and `LastActiveAt` tracking |
+| `shield.impersonate` | Short-lived impersonation payload, AES-GCM protected |
 
 ## Data protection keyring
 
-Shield wraps Discord webhook URLs, OAuth client secrets, OIDC client secrets, and SMTP passwords through ASP.NET's `IDataProtection`. The keyring itself lives on disk; lose it and every encrypted value becomes unreadable.
-
-Two env vars control where it lives and how it's protected:
+Shield wraps Discord webhook URLs, OAuth client secrets, SMTP passwords, and OIDC client
+secrets through ASP.NET's `IDataProtection`. The keyring lives on the `shield-data` volume
+at `/app/data/keys/`.
 
 ```env
-Shield__Auth__DataProtectionKeysPath=/data/keys
-Shield__Auth__DataProtectionMasterKey=<random 32+ char secret>
+Shield__Auth__DataProtectionMasterKey=<32+ char secret>
 ```
 
-- **`DataProtectionKeysPath`** — directory the framework writes keyring XML into. Default is `<AppContext.BaseDirectory>/data/keys` for dev; the Docker image points at `/data/keys` on the named `shield-keys` volume.
-- **`DataProtectionMasterKey`** — operator-supplied secret. Shield SHA-256s it to a 32-byte AES key and wraps every keyring XML element in an AES-GCM envelope (`<encryptedKey nonce="…" tag="…"><cipher>…</cipher></encryptedKey>`). A stolen DB file is unreadable without this env var; a recreated container with the same env var + the same `shield-keys` volume decrypts existing secrets exactly as before.
-
-**Production behaviour:** missing `DataProtectionMasterKey` throws at startup. Development bypasses the check (writes the keyring unwrapped) but logs a warning so you don't accidentally ship without it.
-
-**Generate one:**
+Required outside `Development`. Missing or empty key prevents startup. Generate with:
 
 ```bash
 openssl rand -base64 48
 ```
 
-**Rotation:** to swap the master key, decrypt with the old key, encrypt with the new one. The decryptor falls back to plaintext passthrough for unwrapped legacy entries (and logs a warning), so flipping protection on for the first time on an existing dev install is non-destructive.
+A stolen DB file is unreadable without the master key. A recreated container with the same
+key + the same volume decrypts everything exactly as before. Losing the key invalidates every
+encrypted value and every active session cookie.
+
+## JWT signing key
+
+```env
+Shield__Auth__JwtSigningKey=<48+ char secret>
+```
+
+Minimum 32 chars; `ProductionSafetyGate` refuses shorter keys in Production. Used to sign
+bearer tokens returned by `POST /api/auth/login` and minted during OAuth callbacks.
 
 ## Audit log
 
-Every admin-significant write — finding ack / resolve / suppress, source / channel mutations, settings updates, OAuth connect / disconnect — is appended to the `AuditEntries` table. The middleware sits after the auth pipeline and only records 2xx responses, so failed attempts don't pollute the log. Surface via `GET /api/audit?page=&pageSize=&action=&targetType=` (Admin only) or the **Audit** page in the SPA.
+Every admin-significant write — finding ack/resolve/suppress, source/channel mutations,
+settings updates, OAuth connect/disconnect, session create/revoke, invite send/accept/revoke,
+impersonation start/stop — is appended to `AuditEntries`. Access via
+`GET /api/audit?page=&pageSize=&action=&targetType=` (Admin only) or the **Audit** page
+in the SPA.
+
+## Cloudflare Tunnel deployment
+
+See `docs/deploy.md` for the full setup. Required env vars when fronting Shield with a
+Cloudflare Tunnel:
+
+```env
+Shield__Public=true
+Shield__Auth__RequireHttps=true
+Shield__Auth__CookieDomain=shield.example.com
+Shield__Auth__DataProtectionMasterKey=<32+ char secret>
+Shield__Auth__JwtSigningKey=<48+ char secret>
+Shield__ForwardedHeaders__KnownProxies=127.0.0.1
+```
+
+`ProductionSafetyGate` refuses to start if any of these are missing or below the minimum
+when `ASPNETCORE_ENVIRONMENT=Production`.

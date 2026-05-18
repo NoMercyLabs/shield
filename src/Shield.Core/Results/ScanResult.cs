@@ -13,5 +13,5 @@ public sealed record ScanResult(
         new(snapshot, items, true, null);
 
     public static ScanResult Fail(string error) =>
-        new(null, Array.Empty<InventoryItem>(), false, error);
+        new(null, [], false, error);
 }

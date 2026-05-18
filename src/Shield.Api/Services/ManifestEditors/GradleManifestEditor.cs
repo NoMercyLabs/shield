@@ -9,22 +9,25 @@ public sealed class GradleManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Gradle;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion)
+    public ManifestEditOutcome Apply(string rootPath, InventoryItem item, string suggestedVersion)
     {
+        string packageName = item.Name;
         int colon = packageName.LastIndexOf(':');
         if (colon <= 0)
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: "Gradle package names are expected as 'group:artifact'."
+                UnsupportedReason: "Gradle package names are expected as 'group:artifact'.",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
         string coords = $"{Regex.Escape(packageName)}:";
         Regex pattern = new($"({coords})([\\w\\d.\\-+]+)", RegexOptions.Compiled);
 
-        List<string> changed = new();
+        List<string> changed = [];
         foreach (string candidate in EnumerateBuildFiles(rootPath))
         {
             string source = File.ReadAllText(candidate);
@@ -38,17 +41,21 @@ public sealed class GradleManifestEditor : IManifestEditor
 
         if (changed.Count == 0)
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: $"No literal '{packageName}' coordinate found; may be variable-substituted (not yet supported)."
+                UnsupportedReason: $"No literal '{packageName}' coordinate found; may be variable-substituted (not yet supported).",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
-        return new ManifestEditOutcome(
+        return new(
             ChangedFiles: changed,
             FollowUpCommand: "./gradlew dependencies --refresh-dependencies",
-            UnsupportedReason: null
+            UnsupportedReason: null,
+            CleanedFiles: [],
+            CleanedDirectories: []
         );
     }
 

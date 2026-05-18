@@ -59,17 +59,17 @@ public class AlertDispatcherTests
     [Fact]
     public async Task FiltersByMinSeverity()
     {
-        List<IReadOnlyList<Finding>> sent = new();
+        List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
-        AlertDispatcher dispatcher = new(new[] { impl }, NullLogger<AlertDispatcher>.Instance);
+        AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
         Finding low = NewFinding(Severity.Low);
         Finding high = NewFinding(Severity.High);
         AlertChannel channel = NewChannel(ChannelType.Inbox, Severity.High);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
-            new[] { low, high },
-            new[] { channel },
+            [low, high],
+            [channel],
             CancellationToken.None
         );
 
@@ -83,9 +83,9 @@ public class AlertDispatcherTests
     [Fact]
     public async Task DigestsWhenFiveOrMoreFindings()
     {
-        List<IReadOnlyList<Finding>> sent = new();
+        List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
-        AlertDispatcher dispatcher = new(new[] { impl }, NullLogger<AlertDispatcher>.Instance);
+        AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
         List<Finding> findings = Enumerable.Range(0, 6)
             .Select(_ => NewFinding(Severity.High))
@@ -94,7 +94,7 @@ public class AlertDispatcherTests
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
             findings,
-            new[] { channel },
+            [channel],
             CancellationToken.None
         );
 
@@ -108,9 +108,9 @@ public class AlertDispatcherTests
     [Fact]
     public async Task SendsOnePerFindingWhenBelowDigestThreshold()
     {
-        List<IReadOnlyList<Finding>> sent = new();
+        List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
-        AlertDispatcher dispatcher = new(new[] { impl }, NullLogger<AlertDispatcher>.Instance);
+        AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
         List<Finding> findings = Enumerable.Range(0, 4)
             .Select(_ => NewFinding(Severity.High))
@@ -119,7 +119,7 @@ public class AlertDispatcherTests
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
             findings,
-            new[] { channel },
+            [channel],
             CancellationToken.None
         );
 
@@ -132,10 +132,10 @@ public class AlertDispatcherTests
     public async Task FailedChannelLogsButDoesNotBreakOthers()
     {
         IAlertChannel failing = StubChannel(ChannelType.Discord, AlertResult.Fail("boom"));
-        List<IReadOnlyList<Finding>> sent = new();
+        List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel ok = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
         AlertDispatcher dispatcher = new(
-            new[] { failing, ok },
+            [failing, ok],
             NullLogger<AlertDispatcher>.Instance
         );
 
@@ -144,8 +144,8 @@ public class AlertDispatcherTests
         AlertChannel inbox = NewChannel(ChannelType.Inbox);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
-            new[] { finding },
-            new[] { discord, inbox },
+            [finding],
+            [discord, inbox],
             CancellationToken.None
         );
 
@@ -169,7 +169,7 @@ public class AlertDispatcherTests
             .Returns<ValueTask<AlertResult>>(_ => throw new InvalidOperationException("kaboom"));
 
         AlertDispatcher dispatcher = new(
-            new[] { throwing },
+            [throwing],
             NullLogger<AlertDispatcher>.Instance
         );
 
@@ -177,8 +177,8 @@ public class AlertDispatcherTests
         AlertChannel discord = NewChannel(ChannelType.Discord);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
-            new[] { finding },
-            new[] { discord },
+            [finding],
+            [discord],
             CancellationToken.None
         );
 
@@ -190,16 +190,16 @@ public class AlertDispatcherTests
     [Fact]
     public async Task DisabledChannelsAreSkipped()
     {
-        List<IReadOnlyList<Finding>> sent = new();
+        List<IReadOnlyList<Finding>> sent = [];
         IAlertChannel impl = StubChannel(ChannelType.Inbox, recordFindings: sent.Add);
-        AlertDispatcher dispatcher = new(new[] { impl }, NullLogger<AlertDispatcher>.Instance);
+        AlertDispatcher dispatcher = new([impl], NullLogger<AlertDispatcher>.Instance);
 
         Finding finding = NewFinding(Severity.High);
         AlertChannel channel = NewChannel(ChannelType.Inbox, enabled: false);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
-            new[] { finding },
-            new[] { channel },
+            [finding],
+            [channel],
             CancellationToken.None
         );
 
@@ -211,7 +211,7 @@ public class AlertDispatcherTests
     public async Task MissingChannelImplementationMarksFindingsFailed()
     {
         AlertDispatcher dispatcher = new(
-            Array.Empty<IAlertChannel>(),
+            [],
             NullLogger<AlertDispatcher>.Instance
         );
 
@@ -219,8 +219,8 @@ public class AlertDispatcherTests
         AlertChannel channel = NewChannel(ChannelType.Discord);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
-            new[] { finding },
-            new[] { channel },
+            [finding],
+            [channel],
             CancellationToken.None
         );
 
@@ -235,17 +235,17 @@ public class AlertDispatcherTests
         IAlertChannel discordImpl = StubChannel(ChannelType.Discord);
         IAlertChannel inboxImpl = StubChannel(ChannelType.Inbox);
         AlertDispatcher dispatcher = new(
-            new[] { discordImpl, inboxImpl },
+            [discordImpl, inboxImpl],
             NullLogger<AlertDispatcher>.Instance
         );
 
-        List<Finding> findings = new() { NewFinding(Severity.High), NewFinding(Severity.High) };
+        List<Finding> findings = [NewFinding(Severity.High), NewFinding(Severity.High)];
         AlertChannel discord = NewChannel(ChannelType.Discord);
         AlertChannel inbox = NewChannel(ChannelType.Inbox);
 
         IReadOnlyList<AlertEvent> events = await dispatcher.DispatchAsync(
             findings,
-            new[] { discord, inbox },
+            [discord, inbox],
             CancellationToken.None
         );
 

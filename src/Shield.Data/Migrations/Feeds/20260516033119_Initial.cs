@@ -83,13 +83,13 @@ namespace Shield.Data.Migrations.Feeds
             migrationBuilder.CreateIndex(
                 name: "IX_Advisories_Ecosystem_PackageName",
                 table: "Advisories",
-                columns: new[] { "Ecosystem", "PackageName" }
+                columns: ["Ecosystem", "PackageName"]
             );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Advisories_Feed_ExternalId",
                 table: "Advisories",
-                columns: new[] { "Feed", "ExternalId" },
+                columns: ["Feed", "ExternalId"],
                 unique: true
             );
 
@@ -103,7 +103,7 @@ namespace Shield.Data.Migrations.Feeds
             migrationBuilder.CreateIndex(
                 name: "IX_PackageMetas_Ecosystem_Name_Version",
                 table: "PackageMetas",
-                columns: new[] { "Ecosystem", "Name", "Version" },
+                columns: ["Ecosystem", "Name", "Version"],
                 unique: true
             );
         }

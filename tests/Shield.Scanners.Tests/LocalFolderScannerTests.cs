@@ -3,12 +3,18 @@ using FluentAssertions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using Shield.Parsers.Composer;
+using Shield.Parsers.Dart;
+using Shield.Parsers.Elixir;
 using Shield.Parsers.Go;
 using Shield.Parsers.Gradle;
+using Shield.Parsers.Maven;
 using Shield.Parsers.Npm;
 using Shield.Parsers.Nuget;
 using Shield.Parsers.Python;
+using Shield.Parsers.Ruby;
 using Shield.Parsers.Rust;
+using Shield.Parsers.Swift;
+using Shield.Parsers.Vcpkg;
 using Shield.Scanners;
 using Xunit;
 
@@ -16,20 +22,26 @@ namespace Shield.Scanners.Tests;
 
 public class LocalFolderScannerTests
 {
-    static ParserRegistry NewParserRegistry() =>
+    private static ParserRegistry NewParserRegistry() =>
         new(
-            new NpmLockParser(),
-            new NugetLockParser(),
-            new ComposerLockParser(),
-            new GradleLockfileParser(),
-            new PythonLockParser(),
-            new GoLockParser(),
-            new RustLockParser()
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new(),
+            new()
         );
 
-    static LocalFolderScanner NewScanner() => new(NewParserRegistry());
+    private static LocalFolderScanner NewScanner() => new(NewParserRegistry());
 
-    static string CopyFixtureTree()
+    private static string CopyFixtureTree()
     {
         string fixtureRoot = Path.Combine(AppContext.BaseDirectory, "Fixtures");
         string tempRoot = Path.Combine(
@@ -40,7 +52,7 @@ public class LocalFolderScannerTests
         return tempRoot;
     }
 
-    static void CopyDirectory(string source, string destination)
+    private static void CopyDirectory(string source, string destination)
     {
         Directory.CreateDirectory(destination);
         foreach (string file in Directory.EnumerateFiles(source))
@@ -153,6 +165,77 @@ public class LocalFolderScannerTests
 
             result.Success.Should().BeTrue();
             result.Items.Should().Contain(item => item.Name == "ghost");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ManifestPath_is_set_to_relative_forward_slash_path_for_root_lockfile()
+    {
+        string root = CopyFixtureTree();
+        try
+        {
+            LocalFolderScanner scanner = NewScanner();
+            Source source = new()
+            {
+                Id = 10,
+                Type = SourceType.LocalFolder,
+                ConfigJson = JsonSerializer.Serialize(new { path = root }),
+            };
+
+            ScanResult result = await scanner.ScanAsync(source, CancellationToken.None);
+
+            result.Success.Should().BeTrue(result.Error);
+            InventoryItem npmItem = result.Items.First(item =>
+                item.Ecosystem == Ecosystem.Npm && item.Name == "lodash"
+            );
+            npmItem.ManifestPath.Should().Be("package-lock.json");
+
+            InventoryItem composerItem = result.Items.First(item =>
+                item.Ecosystem == Ecosystem.Composer
+            );
+            composerItem.ManifestPath.Should().Be("composer.lock");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ManifestPath_uses_forward_slashes_for_subdirectory_manifests()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "shield-manifestpath-" + Guid.NewGuid().ToString("N")
+        );
+        Directory.CreateDirectory(root);
+        string subDir = Path.Combine(root, "packages", "core");
+        Directory.CreateDirectory(subDir);
+
+        File.WriteAllText(
+            Path.Combine(subDir, "package-lock.json"),
+            "{\"lockfileVersion\":3,\"packages\":{\"\":{\"dependencies\":{\"react\":\"^18.0.0\"}},\"node_modules/react\":{\"version\":\"18.2.0\"}}}"
+        );
+        try
+        {
+            LocalFolderScanner scanner = NewScanner();
+            Source source = new()
+            {
+                Id = 11,
+                Type = SourceType.LocalFolder,
+                ConfigJson = JsonSerializer.Serialize(new { path = root }),
+            };
+
+            ScanResult result = await scanner.ScanAsync(source, CancellationToken.None);
+
+            result.Success.Should().BeTrue(result.Error);
+            InventoryItem item = result.Items.Should().ContainSingle().Subject;
+            item.ManifestPath.Should().Be("packages/core/package-lock.json");
+            item.ManifestPath.Should().NotContain("\\");
         }
         finally
         {

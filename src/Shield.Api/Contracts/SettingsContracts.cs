@@ -13,7 +13,8 @@ public sealed record SettingsResponse(
     int RetentionDays,
     OAuthProviderConfigResponse Github,
     OAuthProviderConfigResponse Slack,
-    OAuthProviderConfigResponse Google
+    OAuthProviderConfigResponse Google,
+    string? OAuthRedirectBase = null
 );
 
 // Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is "****<last4>" when present.
@@ -35,7 +36,11 @@ public sealed record UpdateSettingsRequest(
     int RetentionDays,
     OAuthProviderConfigPatch? Github = null,
     OAuthProviderConfigPatch? Slack = null,
-    OAuthProviderConfigPatch? Google = null
+    OAuthProviderConfigPatch? Google = null,
+    // Override for the base URL Shield uses when constructing redirect_uri for OAuth code
+    // flows. Falls back to `{Request.Scheme}://{Request.Host}` when null — set explicitly
+    // when running behind a proxy/tunnel where the auto-detected scheme is wrong.
+    string? OAuthRedirectBase = null
 );
 
 // ClientSecret semantics: null = leave existing, "" = clear, non-empty = overwrite.

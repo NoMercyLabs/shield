@@ -82,6 +82,21 @@ async function bootstrapCounts(): Promise<void> {
   }
 }
 
+// Wipe in-memory state and re-bootstrap from the current identity's /dashboard.
+// Called when impersonation start/stop flips /me — the existing SignalR connection
+// is still joined to the admin's hub group, so live deltas during a brief
+// impersonation session may surface admin events. Tradeoff: a point-in-time
+// snapshot is cheap and correct enough; dropping + reconnecting the hub to
+// re-join under the impersonated identity is the heavier fix we skip for now.
+export async function resetLiveFindings(): Promise<void> {
+  lowCount.value = 0
+  mediumCount.value = 0
+  highCount.value = 0
+  criticalCount.value = 0
+  recent.value = []
+  await bootstrapCounts()
+}
+
 async function ensureStarted(): Promise<void> {
   if (started) return
   started = true

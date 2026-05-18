@@ -95,12 +95,12 @@ public sealed class NugetVersionComparer : IVersionComparer
             parsed.IsMinInclusive && parsed.IsMaxInclusive &&
             parsed.MinVersion == parsed.MaxVersion)
         {
-            exact = new[] { parsed.MinVersion!.ToNormalizedString() };
+            exact = [parsed.MinVersion!.ToNormalizedString()];
             gtOrEq = null;
             ltOrEq = null;
         }
 
-        return new VersionRange(
+        return new(
             GtOrEq: gtOrEq,
             Lt: lt,
             GtOrEqExclusive: gtOrEqExclusive,

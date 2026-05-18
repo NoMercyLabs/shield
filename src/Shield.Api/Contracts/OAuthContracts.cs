@@ -5,7 +5,10 @@ namespace Shield.Api.Contracts;
 // Returned by /api/oauth/{provider}/start — UI redirects the browser here.
 public sealed record OAuthStartResponse(string AuthorizationUrl, string State);
 
-// Status flips connected=true once the callback persists a token row.
+// Status flips connected=true once the callback persists a token row. DeviceFlowAvailable
+// is GitHub-specific today — set when the runtime can resolve a baked-in or configured
+// client_id and Shield:OAuth:GitHub:DeviceFlow:Enabled isn't disabled. Other providers
+// always return false for that field.
 public sealed record OAuthStatusResponse(
     OAuthProvider Provider,
     bool Connected,
@@ -13,8 +16,28 @@ public sealed record OAuthStatusResponse(
     string? AccountId,
     string? Scopes,
     DateTime? ExpiresAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    bool DeviceFlowAvailable = false
 );
+
+// Device-flow contracts. flowId is the server-issued handle the SPA uses to poll; the
+// real github device_code never crosses the wire to the browser.
+public sealed record GitHubDeviceStartResponse(
+    string FlowId,
+    string UserCode,
+    string VerificationUri,
+    int ExpiresIn,
+    int Interval,
+    // Pre-filled github.com/login/device URL when GitHub returns one — the SPA opens this
+    // so the user_code field is already populated and the user just clicks Authorize.
+    string? VerificationUriComplete = null
+);
+
+public sealed record GitHubDevicePollRequest(string FlowId);
+
+public sealed record GitHubDevicePollResponse(string Status, GitHubDevicePollUser? User = null);
+
+public sealed record GitHubDevicePollUser(string Login, string Id, string? AvatarUrl);
 
 public sealed record SlackChannelInfo(string Id, string Name, bool IsPrivate);
 

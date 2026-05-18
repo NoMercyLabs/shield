@@ -15,4 +15,18 @@ body,
 
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Prevents a horizontal scrollbar appearing whenever a child has a stray overflow at
+     narrow widths — Shield is a fixed-shell app, never legitimately wider than viewport. */
+  overflow-x: hidden;
+}
+
+/* iOS Safari zooms the viewport on focus when the input font-size is below 16px. Below
+   the md breakpoint we force every text-like input/select/textarea to 16px so the keyboard
+   open doesn't trigger that jarring zoom. md+ keeps the existing tighter type scale. */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

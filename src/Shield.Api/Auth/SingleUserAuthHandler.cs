@@ -42,6 +42,13 @@ public sealed class SingleUserAuthHandler : AuthenticationHandler<Authentication
         _configuration = configuration;
     }
 
+    // Marker claim that SessionTrackingMiddleware (and any other middleware) can use to
+    // distinguish a SingleUser auto-auth principal from a real cookie-auth principal.
+    // SignInManager.CreateUserPrincipalAsync tags the inner identity with
+    // AuthenticationType=IdentityConstants.ApplicationScheme — identical to a real cookie — so
+    // a plain identity-type check can't tell them apart.
+    public const string SingleUserClaimType = "shield.auth.single-user";
+
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!_shieldOptions.Value.SingleUser)
@@ -77,6 +84,8 @@ public sealed class SingleUserAuthHandler : AuthenticationHandler<Authentication
 
         System.Security.Claims.ClaimsPrincipal principal =
             await _signInManager.CreateUserPrincipalAsync(user);
+        if (principal.Identity is System.Security.Claims.ClaimsIdentity identity)
+            identity.AddClaim(new(SingleUserClaimType, "true"));
         AuthenticationTicket ticket = new(principal, SchemeName);
         return AuthenticateResult.Success(ticket);
     }

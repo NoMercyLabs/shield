@@ -60,7 +60,7 @@ public sealed class FindingsHubTests : IClassFixture<ShieldWebAppFactory>
             DedupKey = "hub-test-" + Guid.NewGuid().ToString("n"),
         };
 
-        await broadcaster.PublishNewAsync(new[] { finding }, CancellationToken.None);
+        await broadcaster.PublishNewAsync([finding], CancellationToken.None);
 
         await proxy
             .Received(1)

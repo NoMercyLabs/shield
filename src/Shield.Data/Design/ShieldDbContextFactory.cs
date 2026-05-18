@@ -9,6 +9,6 @@ public class ShieldDbContextFactory : IDesignTimeDbContextFactory<ShieldDbContex
     {
         DbContextOptionsBuilder<ShieldDbContext> options = new();
         options.UseSqlite("Data Source=shield.db");
-        return new ShieldDbContext(options.Options);
+        return new(options.Options);
     }
 }

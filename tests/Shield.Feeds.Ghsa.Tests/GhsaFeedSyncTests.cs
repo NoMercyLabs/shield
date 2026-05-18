@@ -141,7 +141,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
                     .WithBody(graphqlBody)
             );
 
-        HttpClient http = new() { BaseAddress = new Uri($"{_server.Url}/graphql") };
+        HttpClient http = new() { BaseAddress = new($"{_server.Url}/graphql") };
         GhsaGraphQLClient client = new(http);
         InMemoryAdvisorySink sink = new();
         GhsaOptions options = new() { PageSize = 100 };
@@ -160,14 +160,13 @@ public sealed class GhsaFeedSyncTests : IDisposable
         sink.Advisories.Select(advisory => advisory.ExternalId)
             .Should()
             .Contain(
-                new[]
-                {
+                [
                     "GHSA-aaaa-aaaa-aaaa",
                     "GHSA-bbbb-bbbb-bbbb",
                     "GHSA-cccc-cccc-cccc",
                     "GHSA-dddd-dddd-dddd",
-                    "GHSA-eeee-eeee-eeee",
-                }
+                    "GHSA-eeee-eeee-eeee"
+                ]
             );
 
         result.NextCursor.Should().NotBeNull();
@@ -177,14 +176,14 @@ public sealed class GhsaFeedSyncTests : IDisposable
             System.Globalization.DateTimeStyles.AdjustToUniversal
                 | System.Globalization.DateTimeStyles.AssumeUniversal
         );
-        cursorParsed.Should().Be(new DateTime(2026, 5, 5, 10, 0, 0, DateTimeKind.Utc));
+        cursorParsed.Should().Be(new(2026, 5, 5, 10, 0, 0, DateTimeKind.Utc));
         state.Cursor.Should().Be(result.NextCursor);
     }
 
     [Fact]
     public void Feed_property_returns_Ghsa()
     {
-        HttpClient http = new() { BaseAddress = new Uri("http://localhost/graphql") };
+        HttpClient http = new() { BaseAddress = new("http://localhost/graphql") };
         GhsaGraphQLClient client = new(http);
         InMemoryAdvisorySink sink = new();
         GhsaOptions options = new();

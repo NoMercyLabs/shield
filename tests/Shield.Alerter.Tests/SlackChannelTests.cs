@@ -21,7 +21,7 @@ public class SlackChannelTests : IDisposable
     public SlackChannelTests()
     {
         _server = WireMockServer.Start();
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddHttpClient(SlackChannel.HttpClientName);
         _provider = services.BuildServiceProvider();
         _httpClientFactory = _provider.GetRequiredService<IHttpClientFactory>();
@@ -74,7 +74,7 @@ public class SlackChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 

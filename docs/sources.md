@@ -118,6 +118,22 @@ Anonymous endpoint: `GET /api/badge/{owner}/{repo}.svg` returns a shields.io-sty
 
 When no source matches, the badge shows `shield | not watched` in grey.
 
+## Per-source access control
+
+By default, Admin users see all sources. Non-admin users (Viewer, Maintainer) only see sources they have been granted access to.
+
+Access is managed via **Source Groups** and **direct grants**, both configured under `GET/POST /api/access/groups` and `POST /api/access/sources/{id}/grant`.
+
+| Entity | Purpose |
+|---|---|
+| `SourceGroup` | Named collection of users. An admin creates a group, adds members, then grants the group access to one or more sources. |
+| `GroupMembership` | Binds a Shield user to a group. |
+| `SourceAccess` | A single grant — either a direct `userId` or a `groupId` — with an access level (`Read` or `Triage`). |
+
+**Effective level** for a user on a given source = max of all `SourceAccess` rows that reach that user (direct grants + every group they belong to).
+
+Admins bypass all ACL checks and see every source regardless of grants.
+
 ## Per-source scan interval
 
 `ScanInterval` is a .NET `TimeSpan`. Common values:

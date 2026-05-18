@@ -1,0 +1,34 @@
+# Optional overlay — runs cloudflared as a sidecar instead of on the Docker host.
+#
+# Bring up:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml up -d
+#
+# Bring down:
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflared.yml down
+#
+# Requires TUNNEL_TOKEN in .env. Create the tunnel in the Cloudflare dashboard
+# (Zero Trust -> Networks -> Tunnels -> Create), copy the connector token, and point
+# the tunnel's public hostname at http://shield:8842 in the dashboard's Public Hostname
+# tab — that DNS-style hostname resolves inside the compose network, NOT to localhost.
+
+services:
+  shield:
+    # Drop the loopback port bind — cloudflared reaches Shield via the compose network
+    # at http://shield:8842, so the host no longer needs to see the port at all.
+    ports: !reset []
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: shield-cloudflared
+    restart: unless-stopped
+    depends_on:
+      shield:
+        condition: service_healthy
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?TUNNEL_TOKEN missing — set it in .env}"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

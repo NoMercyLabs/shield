@@ -15,5 +15,5 @@ public sealed record ParseResult(
     ) => new(items, diagnostics ?? new Dictionary<string, string>(), true, null);
 
     public static ParseResult Fail(string error) =>
-        new(Array.Empty<InventoryItem>(), new Dictionary<string, string>(), false, error);
+        new([], new Dictionary<string, string>(), false, error);
 }

@@ -15,4 +15,9 @@ public class Advisory
     public DateTime PublishedAt { get; set; }
     public DateTime ModifiedAt { get; set; }
     public DateTime FetchedAt { get; set; }
+    public bool IsKev { get; set; }
+    public DateTime? KevAddedAt { get; set; }
+    public DateTime? KevDueDate { get; set; }
+    public double? EpssScore { get; set; }
+    public double? EpssPercentile { get; set; }
 }

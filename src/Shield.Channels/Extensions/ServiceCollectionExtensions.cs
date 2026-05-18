@@ -7,6 +7,8 @@ namespace Shield.Channels.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    // Discord webhook UA is set globally via ConfigureHttpClientDefaults in Shield.Api Program.cs
+    // so no per-client UA wiring is needed here.
     public static IServiceCollection AddShieldChannels(this IServiceCollection services)
     {
         services.AddHttpClient(DiscordWebhookChannel.HttpClientName);

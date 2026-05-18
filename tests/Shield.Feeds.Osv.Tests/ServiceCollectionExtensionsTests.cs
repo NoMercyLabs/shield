@@ -13,7 +13,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddOsvFeed_RegistersIFeedSync_AndOsvFeedSync()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddOsvFeed();
 
         ServiceProvider provider = services.BuildServiceProvider();
@@ -29,7 +29,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddOsvFeed_RegistersHttpClient_WithCorrectBaseAddress()
     {
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddOsvFeed();
 
         ServiceProvider provider = services.BuildServiceProvider();

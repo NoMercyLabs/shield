@@ -20,12 +20,37 @@ public sealed record RegisterRequest(string Username, string Password, string? E
 
 public sealed record RegisterResponse(string UserId, string Username, IReadOnlyList<string> Roles);
 
+// Issued by POST /api/auth/token for headless clients. The JWT embeds the user's current
+// SecurityStamp so it's revoked automatically on password change / 2FA toggle / lockout.
+public sealed record TokenResponse(
+    string? UserId,
+    string? Username,
+    IReadOnlyList<string> Roles,
+    string Token
+);
+
 public sealed record MeResponse(
     string? UserId,
     string? Username,
     IReadOnlyList<string> Roles,
-    bool SingleUserMode
+    bool SingleUserMode,
+    // Decoration pulled from the user's connected code-host identity (e.g. GitHub) — used by
+    // the SPA to render avatar / display-name in the topbar without an extra round-trip.
+    // Null when the user hasn't connected any external provider.
+    string? DisplayName = null,
+    string? AvatarUrl = null,
+    string? ProfileUrl = null,
+    string? ProviderLogin = null,
+    string? ProviderKey = null,
+    // Impersonation surface — non-null when this response is being returned through an active
+    // "Admin viewing as X" override. SPA renders the banner + Exit button off these fields.
+    string? ImpersonatedBy = null,
+    string? ImpersonatorLogin = null
 );
+
+public sealed record ImpersonationStartRequest(string UserId);
+
+public sealed record ImpersonationStartResponse(Guid UserId, string Username);
 
 public sealed record TwoFactorEnrollResponse(string SharedKey, string AuthenticatorUri);
 

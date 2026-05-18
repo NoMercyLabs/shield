@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Shield.Api.Contracts;
 using Shield.Api.Services;
 using Shield.Core.Domain;
+using Shield.Core.Http;
 
 namespace Shield.Api.Auth.OAuthProviders;
 
@@ -26,7 +27,11 @@ public sealed class GitHubProvider : IOAuthProvider
     public string DefaultScopes => "read:user public_repo";
 
     // GitHub signin needs read:user (login + id) and user:email so the callback can match by email.
-    public string SigninDefaultScopes => "read:user user:email";
+    // read:org is required so GithubAccessResolver can mirror the user's org memberships onto
+    // Shield's source ACL post-signin. Existing tokens minted under the narrower scope still
+    // work for signin itself; the access mirror just returns an empty org list until the user
+    // re-signs-in once and consents to the new scope.
+    public string SigninDefaultScopes => "read:user user:email read:org";
     public bool SupportsPkce => true;
 
     public string BuildAuthorizationUrl(
@@ -70,7 +75,7 @@ public sealed class GitHubProvider : IOAuthProvider
                 }
             ),
         };
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.Accept.Add(new("application/json"));
 
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
@@ -86,7 +91,7 @@ public sealed class GitHubProvider : IOAuthProvider
         DateTime? expiresAt =
             body.ExpiresIn > 0 ? DateTime.UtcNow.AddSeconds(body.ExpiresIn) : null;
 
-        return new OAuthTokenSnapshot(
+        return new(
             OAuthProvider.Github,
             body.AccessToken,
             body.RefreshToken,
@@ -120,7 +125,7 @@ public sealed class GitHubProvider : IOAuthProvider
                 }
             ),
         };
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.Accept.Add(new("application/json"));
 
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
@@ -158,10 +163,8 @@ public sealed class GitHubProvider : IOAuthProvider
         string basic = Convert.ToBase64String(
             System.Text.Encoding.UTF8.GetBytes($"{config.ClientId}:{config.ClientSecret}")
         );
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
-        request.Headers.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/vnd.github+json")
-        );
+        request.Headers.Authorization = new("Basic", basic);
+        request.Headers.Accept.Add(new("application/vnd.github+json"));
         try
         {
             using HttpResponseMessage response = await http.SendAsync(request, ct);
@@ -180,11 +183,9 @@ public sealed class GitHubProvider : IOAuthProvider
     )
     {
         using HttpRequestMessage request = new(HttpMethod.Get, UserUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.UserAgent.ParseAdd("shield-oauth");
-        request.Headers.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/vnd.github+json")
-        );
+        request.Headers.Authorization = new("Bearer", accessToken);
+        request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
+        request.Headers.Accept.Add(new("application/vnd.github+json"));
 
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
@@ -226,8 +227,9 @@ public sealed class GitHubProvider : IOAuthProvider
         if (maxRepos <= 0)
             maxRepos = 1000;
 
-        HttpClient http = _httpClientFactory.CreateClient("oauth");
-        List<GitHubRepoEntry> repos = new();
+        // Use the rate-limit-aware "github" client so the 1k-repo cap doesn't burn the bucket.
+        HttpClient http = _httpClientFactory.CreateClient("github");
+        List<GitHubRepoEntry> repos = [];
 
         string? nextUrl =
             "https://api.github.com/user/repos?per_page="
@@ -239,11 +241,9 @@ public sealed class GitHubProvider : IOAuthProvider
         while (!string.IsNullOrEmpty(nextUrl) && repos.Count < maxRepos)
         {
             using HttpRequestMessage request = new(HttpMethod.Get, nextUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            request.Headers.UserAgent.ParseAdd("shield-oauth");
-            request.Headers.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/vnd.github+json")
-            );
+            request.Headers.Authorization = new("Bearer", accessToken);
+            request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
+            request.Headers.Accept.Add(new("application/vnd.github+json"));
 
             using HttpResponseMessage response = await http.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
@@ -318,7 +318,7 @@ public sealed class GitHubProvider : IOAuthProvider
                 ? langEl.GetString()
                 : null;
 
-        return new GitHubRepoEntry(
+        return new(
             id,
             owner,
             name,
@@ -366,7 +366,7 @@ public sealed class GitHubProvider : IOAuthProvider
         HttpClient http = _httpClientFactory.CreateClient("oauth");
         string? email = await ProbePrimaryEmailAsync(http, snapshot.AccessToken, ct);
         // AccountId is the numeric GitHub user id; AccountLogin is the handle.
-        return new OAuthSigninResult(
+        return new(
             Subject: snapshot.AccountId ?? string.Empty,
             Login: snapshot.AccountLogin,
             Email: email,
@@ -385,11 +385,9 @@ public sealed class GitHubProvider : IOAuthProvider
             HttpMethod.Get,
             "https://api.github.com/user/emails"
         );
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.UserAgent.ParseAdd("shield-oauth");
-        request.Headers.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/vnd.github+json")
-        );
+        request.Headers.Authorization = new("Bearer", accessToken);
+        request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
+        request.Headers.Accept.Add(new("application/vnd.github+json"));
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
             return null;

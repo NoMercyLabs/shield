@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Api.Workers;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -11,7 +13,7 @@ namespace Shield.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = ShieldPolicies.Admin)]
 public sealed class FeedsController : ControllerBase
 {
     private readonly FeedsDbContext _db;
@@ -41,20 +43,21 @@ public sealed class FeedsController : ControllerBase
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.Key, item => item.Count, ct);
 
-        List<FeedStatusResponse> response = new();
+        List<FeedStatusResponse> response = [];
         foreach (Feed feed in registered)
         {
             stateByFeed.TryGetValue(feed, out FeedSyncState? state);
             advisoryCounts.TryGetValue(feed, out int count);
             response.Add(
-                new FeedStatusResponse(
+                new(
                     feed,
                     state?.LastSuccessAt,
                     state?.LastError,
                     state?.NextRunAt ?? DateTime.UtcNow,
                     state?.Cursor,
                     Registered: true,
-                    AdvisoryCount: count
+                    AdvisoryCount: count,
+                    RateLimitResetAt: state?.RateLimitResetAt
                 )
             );
         }

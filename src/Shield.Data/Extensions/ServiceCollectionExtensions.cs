@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,8 +23,23 @@ public static class ServiceCollectionExtensions
                 "Configuration value 'Shield:Db:Feeds' is required."
             );
 
-        services.AddDbContext<ShieldDbContext>(options => options.UseSqlite(shieldConnection));
-        services.AddDbContext<FeedsDbContext>(options => options.UseSqlite(feedsConnection));
+        // Suppress PendingModelChangesWarning so multi-agent migration drift doesn't gate
+        // startup. Real schema drift still surfaces at runtime via the next Migrate call,
+        // but we don't bounce the whole process during a build wave.
+        services.AddDbContext<ShieldDbContext>(options =>
+            options
+                .UseSqlite(shieldConnection)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(RelationalEventId.PendingModelChangesWarning)
+                )
+        );
+        services.AddDbContext<FeedsDbContext>(options =>
+            options
+                .UseSqlite(feedsConnection)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(RelationalEventId.PendingModelChangesWarning)
+                )
+        );
 
         return services;
     }

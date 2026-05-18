@@ -9,13 +9,12 @@ namespace Shield.Matcher.Tests;
 public class AdvisoryMatcherTests
 {
     private static AdvisoryMatcher BuildMatcher()
-        => new(new IVersionComparer[]
-        {
+        => new([
             new SemverVersionComparer(Ecosystem.Npm),
             new SemverVersionComparer(Ecosystem.Composer),
             new NugetVersionComparer(),
-            new GradleVersionComparer(),
-        });
+            new GradleVersionComparer()
+        ]);
 
     private static InventorySnapshot Snapshot(int sourceId = 7, Guid? id = null)
         => new()
@@ -69,9 +68,9 @@ public class AdvisoryMatcherTests
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            Array.Empty<Finding>(),
+            [item],
+            [advisory],
+            [],
             DateTime.UtcNow);
 
         findings.Should().HaveCount(1);
@@ -94,9 +93,9 @@ public class AdvisoryMatcherTests
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            Array.Empty<Finding>(),
+            [item],
+            [advisory],
+            [],
             DateTime.UtcNow);
 
         findings.Should().BeEmpty();
@@ -117,9 +116,9 @@ public class AdvisoryMatcherTests
         DateTime firstRun = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         IReadOnlyList<Finding> first = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            Array.Empty<Finding>(),
+            [item],
+            [advisory],
+            [],
             firstRun);
 
         Finding firstFinding = first.Single();
@@ -128,9 +127,9 @@ public class AdvisoryMatcherTests
         DateTime secondRun = firstRun.AddDays(1);
         IReadOnlyList<Finding> second = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            new[] { firstFinding },
+            [item],
+            [advisory],
+            [firstFinding],
             secondRun);
 
         second.Should().HaveCount(1);
@@ -153,9 +152,9 @@ public class AdvisoryMatcherTests
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            Array.Empty<Finding>(),
+            [item],
+            [advisory],
+            [],
             DateTime.UtcNow);
 
         string expected = DedupKey.Compute(42, Ecosystem.Nuget, "Newtonsoft.Json", "GHSA-nuget-1");
@@ -176,9 +175,9 @@ public class AdvisoryMatcherTests
 
         IReadOnlyList<Finding> findings = matcher.Match(
             snapshot,
-            new[] { item },
-            new[] { advisory },
-            Array.Empty<Finding>(),
+            [item],
+            [advisory],
+            [],
             DateTime.UtcNow);
 
         findings.Should().BeEmpty();

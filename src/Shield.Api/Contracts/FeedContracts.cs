@@ -9,5 +9,6 @@ public sealed record FeedStatusResponse(
     DateTime NextRunAt,
     string? Cursor,
     bool Registered,
-    int AdvisoryCount
+    int AdvisoryCount,
+    DateTimeOffset? RateLimitResetAt = null
 );

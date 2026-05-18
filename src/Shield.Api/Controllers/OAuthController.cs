@@ -11,8 +11,10 @@ using Microsoft.Extensions.Caching.Memory;
 using Shield.Api.Auth;
 using Shield.Api.Auth.OAuthProviders;
 using Shield.Api.Contracts;
+using Shield.Api.Middleware;
 using Shield.Api.Services;
 using Shield.Core.Domain;
+using Shield.Data;
 using Shield.Data.Identity;
 
 namespace Shield.Api.Controllers;
@@ -31,9 +33,27 @@ public sealed class OAuthController : ControllerBase
     private readonly SignInManager<ShieldUser> _signInManager;
     private readonly RoleManager<ShieldRole> _roleManager;
     private readonly IMemoryCache _memoryCache;
+    private readonly IGitHubDeviceFlowClient _deviceFlowClient;
+    private readonly IGitHubDeviceFlowStore _deviceFlowStore;
+    private readonly ISessionTracker _sessionTracker;
+    private readonly ISessionCookieIssuer _sessionCookieIssuer;
+    private readonly IAuditLogger _audit;
+    private readonly ISessionAuditor _sessionAuditor;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<OAuthController> _logger;
 
     private static readonly TimeSpan GithubReposCacheTtl = TimeSpan.FromMinutes(5);
+
+    // GitHub's published Shield OAuth App — public client_id, baked in so self-hosted users
+    // never have to register their own OAuth App for the device flow. Overridable via
+    // Shield:OAuth:GitHub:DefaultClientId in config (and per-user via the existing GithubOAuth
+    // ClientId setting, which takes precedence).
+    private const string BakedInGithubDeviceFlowClientId = "Ov23libI6hv5NBmkaxjV";
+
+    // read:org is required so post-signin we can mirror the user's GitHub org memberships into
+    // Shield's per-source ACL (see GithubAccessResolver). Users with tokens minted under the
+    // old narrower scope need to re-sign-in once before the new scope kicks in.
+    private const string GithubDeviceFlowScopes = "read:user user:email public_repo read:org";
 
     public OAuthController(
         IAppSettingsService settings,
@@ -45,6 +65,13 @@ public sealed class OAuthController : ControllerBase
         SignInManager<ShieldUser> signInManager,
         RoleManager<ShieldRole> roleManager,
         IMemoryCache memoryCache,
+        IGitHubDeviceFlowClient deviceFlowClient,
+        IGitHubDeviceFlowStore deviceFlowStore,
+        ISessionTracker sessionTracker,
+        ISessionCookieIssuer sessionCookieIssuer,
+        IAuditLogger audit,
+        ISessionAuditor sessionAuditor,
+        IConfiguration configuration,
         ILogger<OAuthController> logger
     )
     {
@@ -57,6 +84,13 @@ public sealed class OAuthController : ControllerBase
         _signInManager = signInManager;
         _roleManager = roleManager;
         _memoryCache = memoryCache;
+        _deviceFlowClient = deviceFlowClient;
+        _deviceFlowStore = deviceFlowStore;
+        _sessionTracker = sessionTracker;
+        _sessionCookieIssuer = sessionCookieIssuer;
+        _audit = audit;
+        _sessionAuditor = sessionAuditor;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -105,7 +139,7 @@ public sealed class OAuthController : ControllerBase
 
         _stateStore.Save(
             state,
-            new OAuthStateEntry(
+            new(
                 parsedProvider,
                 codeVerifier,
                 returnUrl,
@@ -239,6 +273,7 @@ public sealed class OAuthController : ControllerBase
             (ShieldUser? created, string? rejectReason) = await TryProvisionUserAsync(
                 adapter.Provider,
                 result,
+                entry.ReturnUrl,
                 ct
             );
             if (created is null)
@@ -252,13 +287,63 @@ public sealed class OAuthController : ControllerBase
 
         await _tokenStore.SaveSigninAsync(result.Token, result.Subject, user.Id, ct);
 
+        // Mirror the binding into AspNetUserLogins so UserManager.FindByLoginAsync /
+        // GetLoginsAsync see it. Accept-invite + future password-less flows read from here.
+        // No-op if the same (provider, subject) already exists for the user.
+        IList<UserLoginInfo> existingExternalLogins = await _userManager.GetLoginsAsync(user);
+        // Lowercased to match the external-login pipeline's "github" convention so
+        // FindByLoginAsync from either signin path hits the same AspNetUserLogins row.
+        string providerKey = adapter.Provider.ToString().ToLowerInvariant();
+        if (
+            !existingExternalLogins.Any(login =>
+                string.Equals(login.LoginProvider, providerKey, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(login.ProviderKey, result.Subject, StringComparison.Ordinal)
+            )
+        )
+        {
+            await _userManager.AddLoginAsync(user, new(providerKey, result.Subject, result.Login));
+        }
+
+        // Mirror GitHub org/repo permissions into Shield's ACL on the way in so the user's
+        // first authenticated render of /sources already shows their team's repos. Best-effort:
+        // a failure here MUST NOT kill signin (the manual ACL layer still applies).
+        if (adapter.Provider == OAuthProvider.Github)
+        {
+            try
+            {
+                IGithubAccessResolver githubAccess =
+                    HttpContext.RequestServices.GetRequiredService<IGithubAccessResolver>();
+                _ = await githubAccess.RefreshAsync(user.Id, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "GitHub access mirror failed during signin for user {UserId}; manual ACL still applies",
+                    user.Id
+                );
+            }
+        }
+
         await _signInManager.SignInAsync(user, isPersistent: true);
+        UserSession session = await _sessionCookieIssuer.IssueAsync(HttpContext, user.Id, ct);
+
+        SigninMethod oauthMethod = adapter.Provider switch
+        {
+            OAuthProvider.Github => SigninMethod.GithubOAuth,
+            OAuthProvider.Google => SigninMethod.GoogleOAuth,
+            OAuthProvider.Slack => SigninMethod.SlackOAuth,
+            _ => SigninMethod.GithubOAuth,
+        };
+        await _sessionAuditor.RecordSigninAsync(user, session, oauthMethod, ct);
+
         return Redirect(string.IsNullOrEmpty(entry.ReturnUrl) ? "/" : entry.ReturnUrl);
     }
 
     private async Task<(ShieldUser? user, string? reject)> TryProvisionUserAsync(
         OAuthProvider provider,
         OAuthSigninResult signin,
+        string? returnUrl,
         CancellationToken ct
     )
     {
@@ -269,12 +354,48 @@ public sealed class OAuthController : ControllerBase
         );
 
         AppSettingsSnapshot snapshot = await _settings.GetAsync(ct);
-        if (!isFirstUser && !snapshot.RegistrationOpen)
+
+        // Pending-invite path: when the signin originated from /accept-invite?token=X, look up
+        // the invite. A valid + unaccepted + not-revoked invite whose pre-bound subject matches
+        // (or no pre-binding) is a stronger grant than RegistrationOpen — proceed regardless.
+        bool hasValidInvite = false;
+        if (!isFirstUser && !string.IsNullOrEmpty(returnUrl))
+        {
+            string? inviteToken = TryExtractInviteToken(returnUrl);
+            if (!string.IsNullOrEmpty(inviteToken))
+            {
+                ShieldDbContext db =
+                    HttpContext.RequestServices.GetRequiredService<ShieldDbContext>();
+                Invite? invite = await db.Invites.FirstOrDefaultAsync(
+                    item => item.Token == inviteToken,
+                    ct
+                );
+                if (
+                    invite is not null
+                    && invite.AcceptedAt is null
+                    && invite.RevokedAt is null
+                    && invite.ExpiresAt > DateTime.UtcNow
+                )
+                {
+                    bool subjectOk =
+                        string.IsNullOrEmpty(invite.PreBoundSubjectId)
+                        || string.Equals(
+                            invite.PreBoundSubjectId,
+                            signin.Subject,
+                            StringComparison.Ordinal
+                        );
+                    if (subjectOk)
+                        hasValidInvite = true;
+                }
+            }
+        }
+
+        if (!isFirstUser && !snapshot.RegistrationOpen && !hasValidInvite)
             return (null, "oauth_signin_rejected");
 
         string role = isFirstUser ? ShieldRoles.Admin : ShieldRoles.Viewer;
         if (!await _roleManager.RoleExistsAsync(role))
-            await _roleManager.CreateAsync(new ShieldRole(role));
+            await _roleManager.CreateAsync(new(role));
 
         // Identity's default allowed-username set is alphanumeric, so flatten ":" and "-" out
         // of `<provider>:<login>` rather than fight the policy at startup.
@@ -313,8 +434,37 @@ public sealed class OAuthController : ControllerBase
         return (user, null);
     }
 
+    // ReturnUrl is sanitised earlier so it's a relative path. Pull `?token=…` out so we can
+    // resolve the matching Invite row for the OAuth provision policy. Returns null when the
+    // url isn't an accept-invite path or has no token param.
+    private static string? TryExtractInviteToken(string returnUrl)
+    {
+        if (string.IsNullOrEmpty(returnUrl))
+            return null;
+        int qIndex = returnUrl.IndexOf('?');
+        if (qIndex < 0)
+            return null;
+        string path = returnUrl.Substring(0, qIndex);
+        if (
+            !path.StartsWith("/accept-invite", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWith("accept-invite", StringComparison.OrdinalIgnoreCase)
+        )
+            return null;
+        string query = returnUrl.Substring(qIndex + 1);
+        foreach (string pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eq = pair.IndexOf('=');
+            if (eq < 0)
+                continue;
+            string name = pair.Substring(0, eq);
+            if (string.Equals(name, "token", StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair.Substring(eq + 1));
+        }
+        return null;
+    }
+
     [HttpPost("{provider}/disconnect")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
     public async Task<IActionResult> Disconnect(string provider, CancellationToken ct)
     {
         if (!TryParseProvider(provider, out OAuthProvider parsedProvider))
@@ -350,6 +500,8 @@ public sealed class OAuthController : ControllerBase
         if (!TryParseProvider(provider, out OAuthProvider parsedProvider))
             return BadRequest(new { error = $"Unknown provider '{provider}'" });
 
+        bool deviceFlowAvailable = IsDeviceFlowAvailable(parsedProvider);
+
         OAuthTokenSnapshot? token = await _tokenStore.GetAsync(parsedProvider, ct);
         if (token is null)
         {
@@ -361,7 +513,8 @@ public sealed class OAuthController : ControllerBase
                     AccountId: null,
                     Scopes: null,
                     ExpiresAt: null,
-                    UpdatedAt: null
+                    UpdatedAt: null,
+                    DeviceFlowAvailable: deviceFlowAvailable
                 )
             );
         }
@@ -373,9 +526,204 @@ public sealed class OAuthController : ControllerBase
                 token.AccountId,
                 token.Scopes,
                 token.ExpiresAt,
-                UpdatedAt: null
+                UpdatedAt: null,
+                DeviceFlowAvailable: deviceFlowAvailable
             )
         );
+    }
+
+    [HttpPost("github/device/start")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    public async Task<ActionResult<GitHubDeviceStartResponse>> StartGithubDeviceFlow(
+        CancellationToken ct
+    )
+    {
+        if (!IsDeviceFlowEnabled())
+            return BadRequest(new { error = "device_flow_disabled" });
+
+        string? clientId = await ResolveGithubDeviceFlowClientIdAsync(ct);
+        if (string.IsNullOrEmpty(clientId))
+            return BadRequest(new { error = "github_client_id_unavailable" });
+
+        try
+        {
+            GitHubDeviceCodeResponse code = await _deviceFlowClient.RequestDeviceCodeAsync(
+                clientId!,
+                GithubDeviceFlowScopes,
+                ct
+            );
+            string flowId = _deviceFlowStore.Issue(
+                new(
+                    code.DeviceCode,
+                    clientId!,
+                    GithubDeviceFlowScopes,
+                    DateTime.UtcNow.AddSeconds(Math.Max(code.ExpiresIn, 60))
+                )
+            );
+            // GitHub Apps return verification_uri_complete with the code pre-filled; OAuth Apps
+            // (which Shield's published default is) return null. The verification page accepts
+            // ?user_code= as a query param regardless, so synthesize one when GitHub didn't.
+            string verificationUriComplete = !string.IsNullOrEmpty(code.VerificationUriComplete)
+                ? code.VerificationUriComplete!
+                : $"{code.VerificationUri}?user_code={Uri.EscapeDataString(code.UserCode)}";
+
+            return Ok(
+                new GitHubDeviceStartResponse(
+                    flowId,
+                    code.UserCode,
+                    code.VerificationUri,
+                    code.ExpiresIn,
+                    code.Interval,
+                    verificationUriComplete
+                )
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "GitHub device-flow start failed");
+            return StatusCode(502, new { error = "github_device_start_failed" });
+        }
+    }
+
+    [HttpPost("github/device/poll")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    public async Task<ActionResult<GitHubDevicePollResponse>> PollGithubDeviceFlow(
+        [FromBody] GitHubDevicePollRequest request,
+        CancellationToken ct
+    )
+    {
+        if (request is null || string.IsNullOrEmpty(request.FlowId))
+            return BadRequest(new { error = "missing_flow_id" });
+
+        GitHubDeviceFlowEntry? entry = _deviceFlowStore.Find(request.FlowId);
+        if (entry is null)
+            return StatusCode(410, new GitHubDevicePollResponse("expired"));
+
+        GitHubDeviceTokenResponse tokenResponse;
+        try
+        {
+            tokenResponse = await _deviceFlowClient.PollAccessTokenAsync(
+                entry.ClientId,
+                entry.DeviceCode,
+                ct
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "GitHub device-flow poll failed");
+            return StatusCode(502, new { error = "github_device_poll_failed" });
+        }
+
+        _logger.LogInformation(
+            "GitHub device-flow poll: flowId={FlowId} clientId={ClientId} githubError={Error} hasAccessToken={HasToken}",
+            request.FlowId,
+            entry.ClientId,
+            tokenResponse.Error ?? "(none)",
+            !string.IsNullOrEmpty(tokenResponse.AccessToken)
+        );
+
+        // GitHub's documented poll responses: authorization_pending, slow_down, expired_token,
+        // access_denied, or a successful access_token payload.
+        if (!string.IsNullOrEmpty(tokenResponse.Error))
+        {
+            switch (tokenResponse.Error)
+            {
+                case "authorization_pending":
+                    return Accepted(new GitHubDevicePollResponse("pending"));
+                case "slow_down":
+                    return Accepted(new GitHubDevicePollResponse("slow_down"));
+                case "expired_token":
+                    _deviceFlowStore.Remove(request.FlowId);
+                    return StatusCode(410, new GitHubDevicePollResponse("expired"));
+                case "access_denied":
+                    _deviceFlowStore.Remove(request.FlowId);
+                    return StatusCode(403, new GitHubDevicePollResponse("denied"));
+                default:
+                    _logger.LogWarning(
+                        "GitHub device-flow unexpected error {Error}: {Description}",
+                        tokenResponse.Error,
+                        tokenResponse.ErrorDescription
+                    );
+                    return BadRequest(new { error = tokenResponse.Error });
+            }
+        }
+
+        if (string.IsNullOrEmpty(tokenResponse.AccessToken))
+            return BadRequest(new { error = "no_access_token" });
+
+        GitHubUserProfile? profile = await _deviceFlowClient.FetchUserProfileAsync(
+            tokenResponse.AccessToken,
+            ct
+        );
+        if (profile is null || string.IsNullOrEmpty(profile.Login))
+        {
+            return StatusCode(502, new { error = "github_user_probe_failed" });
+        }
+
+        // The current Shield user — request is Admin-policy authenticated so this resolves
+        // either to a real Identity user, the API-token-backed actor, or the synthetic
+        // single-user account, all of which expose a Guid id.
+        ShieldUser? currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+            return Unauthorized();
+
+        OAuthTokenSnapshot snapshot = new(
+            OAuthProvider.Github,
+            tokenResponse.AccessToken!,
+            RefreshToken: null,
+            ExpiresAt: null,
+            Scopes: tokenResponse.Scope ?? GithubDeviceFlowScopes,
+            AccountLogin: profile.Login,
+            AccountId: profile.Id,
+            Extra: null
+        );
+        await _tokenStore.SaveAsync(snapshot, currentUser.Id, ct);
+        _deviceFlowStore.Remove(request.FlowId);
+
+        return Ok(
+            new GitHubDevicePollResponse("ok", new(profile.Login, profile.Id, profile.AvatarUrl))
+        );
+    }
+
+    private bool IsDeviceFlowEnabled() =>
+        _configuration.GetValue("Shield:OAuth:GitHub:DeviceFlow:Enabled", true);
+
+    private bool IsDeviceFlowAvailable(OAuthProvider provider)
+    {
+        if (provider != OAuthProvider.Github)
+            return false;
+        if (!IsDeviceFlowEnabled())
+            return false;
+        return !string.IsNullOrEmpty(ResolveGithubDeviceFlowClientIdSync());
+    }
+
+    // Sync sibling for the status endpoint — avoids forcing the cheap "is it possible"
+    // probe through async overhead. Falls back to the per-user override stored in settings
+    // (Current is the cached snapshot AppSettingsService keeps hot for the auth handlers).
+    private string? ResolveGithubDeviceFlowClientIdSync()
+    {
+        string? overrideClientId = _settings.Current.GithubOAuth.ClientId;
+        if (!string.IsNullOrEmpty(overrideClientId))
+            return overrideClientId;
+        string? defaultClientId =
+            _configuration["Shield:OAuth:GitHub:DefaultClientId"]
+            ?? _configuration["Shield:OAuth:Github:DefaultClientId"];
+        return string.IsNullOrEmpty(defaultClientId)
+            ? BakedInGithubDeviceFlowClientId
+            : defaultClientId;
+    }
+
+    private async Task<string?> ResolveGithubDeviceFlowClientIdAsync(CancellationToken ct)
+    {
+        AppSettingsSnapshot snapshot = await _settings.GetAsync(ct);
+        if (!string.IsNullOrEmpty(snapshot.GithubOAuth.ClientId))
+            return snapshot.GithubOAuth.ClientId;
+        string? defaultClientId =
+            _configuration["Shield:OAuth:GitHub:DefaultClientId"]
+            ?? _configuration["Shield:OAuth:Github:DefaultClientId"];
+        return string.IsNullOrEmpty(defaultClientId)
+            ? BakedInGithubDeviceFlowClientId
+            : defaultClientId;
     }
 
     // Slack-specific: list channels the bot can post to. Used by the channel-create dropdown.
@@ -391,7 +739,7 @@ public sealed class OAuthController : ControllerBase
             HttpMethod.Get,
             "https://slack.com/api/conversations.list?exclude_archived=true&types=public_channel,private_channel&limit=200"
         );
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        request.Headers.Authorization = new("Bearer", token.AccessToken);
 
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
@@ -410,7 +758,7 @@ public sealed class OAuthController : ControllerBase
             return BadRequest(new { error = err });
         }
 
-        List<SlackChannelInfo> channels = new();
+        List<SlackChannelInfo> channels = [];
         if (
             root.TryGetProperty("channels", out JsonElement channelsEl)
             && channelsEl.ValueKind == JsonValueKind.Array
@@ -428,7 +776,7 @@ public sealed class OAuthController : ControllerBase
                     channel.TryGetProperty("is_private", out JsonElement privEl)
                     && privEl.GetBoolean();
                 if (!string.IsNullOrEmpty(id))
-                    channels.Add(new SlackChannelInfo(id, name, isPrivate));
+                    channels.Add(new(id, name, isPrivate));
             }
         }
         return Ok(new SlackChannelsResponse(channels));
@@ -437,7 +785,7 @@ public sealed class OAuthController : ControllerBase
     // GitHub-specific: list the connected user's repos for the "Pick from GitHub" Sources picker.
     // Cached 5min per (user, affiliation) so the modal can be reopened cheaply.
     [HttpGet("github/repos")]
-    [Authorize(Roles = ShieldRoles.Admin)]
+    [Authorize(Policy = ShieldPolicies.Admin)]
     public async Task<ActionResult<GitHubRepoListResponse>> GitHubRepos(
         [FromQuery] string? affiliation,
         [FromQuery] int perPage,
@@ -525,7 +873,7 @@ public sealed class OAuthController : ControllerBase
             OAuthProvider.Github => snapshot.GithubOAuth,
             OAuthProvider.Slack => snapshot.SlackOAuth,
             OAuthProvider.Google => snapshot.GoogleOAuth,
-            _ => new OAuthClientSettings(null, null, null),
+            _ => new(null, null, null),
         };
         if (string.IsNullOrEmpty(client.ClientId) || string.IsNullOrEmpty(client.ClientSecret))
         {
@@ -536,7 +884,7 @@ public sealed class OAuthController : ControllerBase
         string redirectBase = (
             snapshot.OAuthRedirectBase ?? $"{Request.Scheme}://{Request.Host.Value}"
         ).TrimEnd('/');
-        config = new OAuthClientConfig(
+        config = new(
             client.ClientId!,
             client.ClientSecret!,
             $"{redirectBase}/api/oauth/{provider.ToString().ToLowerInvariant()}/callback"
@@ -563,7 +911,7 @@ public sealed class OAuthController : ControllerBase
             OAuthProvider.Github => snapshot.GithubOAuth,
             OAuthProvider.Slack => snapshot.SlackOAuth,
             OAuthProvider.Google => snapshot.GoogleOAuth,
-            _ => new OAuthClientSettings(null, null, null),
+            _ => new(null, null, null),
         };
         return string.IsNullOrWhiteSpace(client.Scopes) ? adapter.DefaultScopes : client.Scopes!;
     }

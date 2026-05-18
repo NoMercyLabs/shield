@@ -192,7 +192,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
         using IServiceScope scope = _factory.Services.CreateScope();
         ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
         db.InventorySnapshots.Add(
-            new InventorySnapshot
+            new()
             {
                 Id = snapshotId,
                 SourceId = sourceId,
@@ -204,7 +204,7 @@ public sealed class SnapshotDiffTests : IClassFixture<ShieldWebAppFactory>
         foreach ((Ecosystem ecosystem, string name, string version) in items)
         {
             db.InventoryItems.Add(
-                new InventoryItem
+                new()
                 {
                     SnapshotId = snapshotId,
                     Ecosystem = ecosystem,

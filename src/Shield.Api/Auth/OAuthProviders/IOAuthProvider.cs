@@ -65,5 +65,5 @@ public sealed record OAuthSigninResult(
     string Subject,
     string Login,
     string? Email,
-    Shield.Api.Services.OAuthTokenSnapshot Token
+    OAuthTokenSnapshot Token
 );

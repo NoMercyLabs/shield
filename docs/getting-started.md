@@ -14,13 +14,16 @@ That's it. No external database, no Redis, no message broker.
 
 ```bash
 docker run -d --name shield \
-  -p 8080:8080 \
-  -v shield-data:/data \
+  -p 127.0.0.1:8842:8842 \
+  -v shield-data:/app/data \
   -e Shield__Auth__JwtSigningKey="$(openssl rand -base64 48)" \
+  -e Shield__Auth__DataProtectionMasterKey="$(openssl rand -base64 36)" \
   ghcr.io/nomercylabs/shield:latest
 ```
 
 Open `http://localhost:8842`. Single-user mode is the default — there's no login screen, you land directly on the dashboard.
+
+**Save both env vars somewhere safe.** `Shield__Auth__DataProtectionMasterKey` encrypts the keyring under `/app/data/keys` and must be supplied on every container restart — recreate the container without it and every channel config, OAuth token, and OIDC client secret becomes permanently unreadable.
 
 ### Environment variables
 
@@ -30,9 +33,10 @@ Shield reads configuration from `appsettings.json` and overrides from environmen
 |---|---|---|
 | `Shield__SingleUser` | `true` | Skip login entirely. Every request is treated as Admin. Use for solo installs only. |
 | `Shield__Auth__JwtSigningKey` | (required) | Symmetric key for JWT bearer tokens (API clients). Minimum 32 characters. Generate with `openssl rand -base64 48`. |
-| `Shield__Db__Shield` | `Data Source=data/shield.db` | SQLite connection string for config + state |
-| `Shield__Db__Feeds` | `Data Source=data/feeds.db` | SQLite connection string for cached advisory data |
-| `Shield__OpenApi__Enabled` | `true` | Expose `/swagger` |
+| `Shield__Auth__DataProtectionMasterKey` | (required in Production) | Envelope key that wraps the on-disk DataProtection keyring. Lose it and every encrypted secret (channel configs, OAuth tokens, OIDC client secret, push VAPID keys) becomes unreadable. Generate with `openssl rand -base64 36`. |
+| `Shield__Db__Shield` | `Data Source=/app/data/shield.db` | SQLite connection string for config + state |
+| `Shield__Db__Feeds` | `Data Source=/app/data/feeds.db` | SQLite connection string for cached advisory data |
+| `Shield__OpenApi__Enabled` | `true` (false in Production) | Expose `/swagger` |
 | `Shield__Feeds__Osv__Enabled` | `true` | Run the OSV.dev sync worker |
 | `Shield__Feeds__Osv__Cadence` | `00:15:00` | OSV sync interval (TimeSpan format) |
 | `Shield__Feeds__Ghsa__Enabled` | `true` | Run the GitHub Advisory sync worker |
@@ -47,7 +51,7 @@ The mounted `/data` volume holds both `shield.db` (your config + findings) and `
 
 ### 1. Log in
 
-In single-user mode (the default) there is nothing to do — every request authenticates as Admin. If you've turned off `Shield__SingleUser` you'll need a user seeded in the database before you can sign in (Phase 1 has no registration UI; Phase 2 will).
+In single-user mode (the default) there is nothing to do — every request authenticates as Admin. If you've turned off `Shield__SingleUser`, register the first user via `POST /api/auth/register` OR via the SPA's `/register` page (first user wins → Admin role auto-assigned). After that, invite collaborators from `/access` — either by email or by picking them straight out of your GitHub orgs.
 
 ### 2. Add a Discord webhook channel
 

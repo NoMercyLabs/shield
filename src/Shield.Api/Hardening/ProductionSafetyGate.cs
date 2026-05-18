@@ -31,6 +31,7 @@ public static class ProductionSafetyGate
         bool openApiEnabled = configuration.GetValue("Shield:OpenApi:Enabled", false);
         bool isPublic = configuration.GetValue("Shield:Public", false);
         bool requireHttps = configuration.GetValue("Shield:Auth:RequireHttps", false);
+        string? cookieDomain = configuration["Shield:Auth:CookieDomain"];
 
         string jwtKey =
             configuration["Shield:Auth:JwtSigningKey"]
@@ -38,7 +39,7 @@ public static class ProductionSafetyGate
             ?? string.Empty;
         string masterKey = configuration["Shield:Auth:DataProtectionMasterKey"] ?? string.Empty;
 
-        List<string> failures = new();
+        List<string> failures = [];
 
         if (singleUser && !allowSingleUserInProduction)
             failures.Add(
@@ -66,6 +67,25 @@ public static class ProductionSafetyGate
                     + "issues Secure cookies and a Strict-Transport-Security header."
             );
 
+        if (isPublic && string.IsNullOrWhiteSpace(cookieDomain))
+            failures.Add(
+                "Shield:Public=true requires Shield:Auth:CookieDomain to be set. "
+                    + "Without an explicit cookie domain the auth cookie is host-only, which means a "
+                    + "tunnel/proxy that rewrites the Host header (cloudflared, ngrok, oauth2-proxy "
+                    + "fronts) silently breaks SPA auth. Pin the cookie scope to the tunnel hostname, "
+                    + "e.g. Shield__Auth__CookieDomain=shield.example.com."
+            );
+
+        string apiTokenPepper = configuration["Shield:Auth:ApiTokenPepper"] ?? string.Empty;
+        if (string.IsNullOrEmpty(apiTokenPepper))
+            failures.Add(
+                "Shield:Auth:ApiTokenPepper is required in non-Development environments. "
+                    + "ApiTokenStore hashes the random half of every `shld_` token under this pepper — "
+                    + "missing it means every token validation throws InvalidOperationException at "
+                    + "first auth attempt (visible as HTTP 500, not a clear boot rejection). "
+                    + "Generate one with: openssl rand -base64 48"
+            );
+
         if (jwtKey.Length < MinJwtSigningKeyLength)
             failures.Add(
                 $"Shield:Auth:JwtSigningKey must be at least {MinJwtSigningKeyLength} characters in "
@@ -87,6 +107,19 @@ public static class ProductionSafetyGate
                 "Shield:Auth:DataProtectionMasterKey is the dev default ('dev-master-key-at-least-32-chars-long-xx'). "
                     + "Refusing to start because every Shield install on the internet would share this key. "
                     + "Generate a unique one with: openssl rand -base64 48"
+            );
+
+        string? oauthRedirectBase = configuration["Shield:Auth:OAuthRedirectBase"];
+        if (
+            requireHttps
+            && !string.IsNullOrWhiteSpace(oauthRedirectBase)
+            && oauthRedirectBase.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+        )
+            failures.Add(
+                "Shield:Auth:OAuthRedirectBase starts with 'http://' while Shield:Auth:RequireHttps=true. "
+                    + "OAuth callbacks sent over plain HTTP expose authorization codes to passive eavesdroppers. "
+                    + "Update Shield__Auth__OAuthRedirectBase to use 'https://'. "
+                    + "Example: Shield__Auth__OAuthRedirectBase=https://shield.example.com"
             );
 
         if (failures.Count > 0)
@@ -119,17 +152,26 @@ public static class ProductionSafetyGate
         bool openApiEnabled = configuration.GetValue("Shield:OpenApi:Enabled", false);
         bool isPublic = configuration.GetValue("Shield:Public", false);
         bool requireHttps = configuration.GetValue("Shield:Auth:RequireHttps", false);
+        string cookieDomain = configuration["Shield:Auth:CookieDomain"] ?? "(host-only)";
+        string knownProxies =
+            configuration["Shield:ForwardedHeaders:KnownProxies"] ?? "(loopback only)";
+        string oauthRedirectBase =
+            configuration["Shield:Auth:OAuthRedirectBase"] ?? "(request-derived)";
 
         logger.LogInformation(
             "Shield posture: Environment={Environment} Public={Public} RequireHttps={RequireHttps} "
                 + "SingleUser={SingleUser} AllowSingleUserInProduction={AllowSingleUserInProduction} "
-                + "OpenApi={OpenApi}",
+                + "OpenApi={OpenApi} CookieDomain={CookieDomain} KnownProxies={KnownProxies} "
+                + "OAuthRedirectBase={OAuthRedirectBase}",
             environment.EnvironmentName,
             isPublic,
             requireHttps,
             singleUser,
             allowSingleUserInProduction,
-            openApiEnabled
+            openApiEnabled,
+            cookieDomain,
+            knownProxies,
+            oauthRedirectBase
         );
     }
 }

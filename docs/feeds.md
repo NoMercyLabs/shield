@@ -2,7 +2,7 @@
 
 A **feed** is an upstream source of advisory data that Shield mirrors into `feeds.db`. The matcher worker joins your inventory against the cached advisory rows; alerts fire when a join produces a new finding.
 
-Phase 1 ships three feeds. Phase 2 adds three more (host vuln coverage and supply-chain risk scoring).
+Phase 1 ships five feeds. OSV, GHSA, and npm Registry are **advisory feeds** — they import vulnerability records into `feeds.db`. KEV and EPSS are **enrichment feeds** — they run on their own schedule and annotate existing advisory rows with exploitation/scoring metadata; they do not produce new findings on their own. Phase 2 adds host vuln coverage and supply-chain risk scoring.
 
 ## Phase 1
 
@@ -38,6 +38,24 @@ GHSA often has more detailed `affected.ranges` data than OSV for npm/NuGet/Compo
 | Notes | Used for **maintainer drift detection**, not CVEs. The matcher's `MaintainerDriftDetector` watches for suspicious patterns (a brand-new maintainer publishing immediately after being added, packages going from active to deprecated, tarball hash drift) and emits synthetic advisories tagged `Feed=NpmRegistry`. |
 
 Maintainer drift is the early-warning signal that catches supply-chain attacks (Shai-Hulud, s1ngularity, slop-squat) days before a CVE gets cut. CVE feeds are reactive; maintainer drift is proactive.
+
+### CISA KEV (Known Exploited Vulnerabilities)
+
+| | |
+|---|---|
+| Auth | None |
+| Default cadence | 15 minutes (scheduler-driven, same `FeedSyncWorker` as OSV/GHSA) |
+| Source | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| Notes | Enrichment feed. Fetches the CISA KEV catalog and stamps matching advisory rows with `IsKev=true`, `KevAddedAt`, and `KevDueDate`. Does not create new advisories or new findings. Configured via `Shield:Feeds:Kev:Cadence`. |
+
+### EPSS (Exploit Prediction Scoring System)
+
+| | |
+|---|---|
+| Auth | None |
+| Default cadence | 15 minutes |
+| Source | FIRST.org daily CSV |
+| Notes | Enrichment feed. Downloads the EPSS CSV and stamps matching advisory rows with `EpssScore` and `EpssPercentile`. Does not create new advisories. Configured via `Shield:Feeds:Epss:Cadence`. |
 
 ## Phase 2 (planned, not shipping yet)
 

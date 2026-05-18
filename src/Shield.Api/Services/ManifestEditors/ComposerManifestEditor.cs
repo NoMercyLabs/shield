@@ -7,15 +7,34 @@ public sealed class ComposerManifestEditor : IManifestEditor
 {
     public Ecosystem Ecosystem => Ecosystem.Composer;
 
-    public ManifestEditOutcome Apply(string rootPath, string packageName, string suggestedVersion)
+    public ManifestEditOutcome Apply(string rootPath, InventoryItem item, string suggestedVersion)
     {
-        string manifest = Path.Combine(rootPath, "composer.json");
+        string packageName = item.Name;
+
+        // Composer has no overrides equivalent for transitive deps.
+        if (!item.IsDirect)
+        {
+            return new(
+                ChangedFiles: [],
+                FollowUpCommand: null,
+                UnsupportedReason: "Transitive dependency — no Composer equivalent of npm overrides. Bump manually or add the package as a direct require.",
+                CleanedFiles: [],
+                CleanedDirectories: []
+            );
+        }
+
+        string manifestRelative = !string.IsNullOrWhiteSpace(item.ManifestPath)
+            ? item.ManifestPath.Replace('/', Path.DirectorySeparatorChar)
+            : "composer.json";
+        string manifest = Path.Combine(rootPath, manifestRelative);
         if (!File.Exists(manifest))
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: $"No composer.json at source root ({rootPath})."
+                UnsupportedReason: $"No composer.json at source root ({rootPath}).",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
@@ -26,10 +45,12 @@ public sealed class ComposerManifestEditor : IManifestEditor
         Match match = pattern.Match(source);
         if (!match.Success)
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: $"Package '{packageName}' not found in composer.json."
+                UnsupportedReason: $"Package '{packageName}' not found in composer.json.",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
@@ -38,18 +59,26 @@ public sealed class ComposerManifestEditor : IManifestEditor
 
         if (string.Equals(updated, source, StringComparison.Ordinal))
         {
-            return new ManifestEditOutcome(
-                ChangedFiles: Array.Empty<string>(),
+            return new(
+                ChangedFiles: [],
                 FollowUpCommand: null,
-                UnsupportedReason: "Already at suggested version."
+                UnsupportedReason: "Already at suggested version.",
+                CleanedFiles: [],
+                CleanedDirectories: []
             );
         }
 
+        string packageDir = Path.GetDirectoryName(manifest) ?? rootPath;
+        string composerLock = Path.Combine(packageDir, "composer.lock");
+        string vendorDir = Path.Combine(packageDir, "vendor");
+
         File.WriteAllText(manifest, updated);
-        return new ManifestEditOutcome(
-            ChangedFiles: new[] { manifest },
-            FollowUpCommand: "composer update",
-            UnsupportedReason: null
+        return new(
+            ChangedFiles: [manifest],
+            FollowUpCommand: "composer install",
+            UnsupportedReason: null,
+            CleanedFiles: File.Exists(composerLock) ? [composerLock] : [],
+            CleanedDirectories: Directory.Exists(vendorDir) ? [vendorDir] : []
         );
     }
 }

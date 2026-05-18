@@ -45,7 +45,7 @@ public sealed class SettingsTests
 
         UpdateSettingsRequest seed = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch(
+            Github = new(
                 ClientId: "gh-client-id",
                 ClientSecret: "ghp_supersecret_abcd",
                 Scopes: "read:user repo"
@@ -70,9 +70,9 @@ public sealed class SettingsTests
 
         UpdateSettingsRequest request = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch("gh-id", "ghs_supersecret_wxyz", "read:user"),
-            Slack = new OAuthProviderConfigPatch("slack-id", "xoxa-1234abcd", "chat:write"),
-            Google = new OAuthProviderConfigPatch("g-id", "google-secret-mnop", "openid email"),
+            Github = new("gh-id", "ghs_supersecret_wxyz", "read:user"),
+            Slack = new("slack-id", "xoxa-1234abcd", "chat:write"),
+            Google = new("g-id", "google-secret-mnop", "openid email"),
         };
 
         HttpResponseMessage putResponse = await client.PutAsJsonAsync("/api/settings", request);
@@ -101,14 +101,14 @@ public sealed class SettingsTests
 
         UpdateSettingsRequest seed = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch("gh-id", "original-secret-1234", "read:user"),
+            Github = new("gh-id", "original-secret-1234", "read:user"),
         };
         await client.PutAsJsonAsync("/api/settings", seed);
 
         // Second PUT with null secret — should preserve original.
         UpdateSettingsRequest update = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch("gh-id-updated", null, "read:user repo"),
+            Github = new("gh-id-updated", null, "read:user repo"),
         };
         await client.PutAsJsonAsync("/api/settings", update);
 
@@ -127,13 +127,13 @@ public sealed class SettingsTests
 
         UpdateSettingsRequest seed = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch("gh-id", "original-secret-1234", "read:user"),
+            Github = new("gh-id", "original-secret-1234", "read:user"),
         };
         await client.PutAsJsonAsync("/api/settings", seed);
 
         UpdateSettingsRequest clear = BaselineRequest() with
         {
-            Github = new OAuthProviderConfigPatch("gh-id", "", "read:user"),
+            Github = new("gh-id", "", "read:user"),
         };
         await client.PutAsJsonAsync("/api/settings", clear);
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Check, ChevronRight, File, FolderClosed, GitBranch, HardDrive, Loader2, Package, Search, X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 
 import { useFsBrowse } from '@/queries/sources'
 import type { FsEntry } from '@/types/api'
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   submit: [paths: string[]]
 }>()
 
+const { t } = useI18n()
 const currentPath = ref<string | null>(null)
 const selected = ref<Set<string>>(new Set())
 const filter = ref('')
@@ -110,13 +112,13 @@ watch(
     <div class="flex w-full max-w-5xl flex-col rounded-lg border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl" style="max-height: 80vh">
       <header class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <div>
-          <h2 class="text-lg font-semibold">Pick folder(s)</h2>
-          <p class="text-xs text-slate-400">Walk the server filesystem and pick folders with lockfiles to scan.</p>
+          <h2 class="text-lg font-semibold">{{ t('folder_picker.title') }}</h2>
+          <p class="text-xs text-slate-400">{{ t('folder_picker.subtitle') }}</p>
         </div>
         <button
           type="button"
           class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-          aria-label="Close"
+          :aria-label="t('action.close')"
           @click="onClose"
         >
           <X class="h-5 w-5" />
@@ -129,7 +131,7 @@ watch(
           class="rounded px-2 py-1 font-mono text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-100"
           @click="navigateTo(null)"
         >
-          Roots
+          {{ t('folder_picker.roots_label') }}
         </button>
         <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
           <ChevronRight class="h-3 w-3 flex-shrink-0 text-slate-600" />
@@ -146,7 +148,7 @@ watch(
           <Search class="h-3.5 w-3.5 text-slate-500" />
           <input
             v-model="filter"
-            placeholder="Filter…"
+            :placeholder="t('action.filter_placeholder')"
             class="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -154,7 +156,7 @@ watch(
 
       <div class="flex min-h-0 flex-1">
         <aside class="w-48 flex-shrink-0 overflow-y-auto border-r border-slate-800 bg-slate-900/50 p-2">
-          <p class="px-2 py-1 text-xs uppercase tracking-wider text-slate-500">Roots</p>
+          <p class="px-2 py-1 text-xs uppercase tracking-wider text-slate-500">{{ t('folder_picker.roots_label') }}</p>
           <ul class="space-y-0.5">
             <li v-for="root in data?.roots ?? []" :key="root">
               <button
@@ -173,14 +175,14 @@ watch(
         <main class="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <p v-if="isLoading" class="flex items-center gap-2 p-4 text-sm text-slate-400">
             <Loader2 class="h-4 w-4 animate-spin" />
-            Loading…
+            {{ t('state.loading') }}
           </p>
           <p v-else-if="isError" class="p-4 text-sm text-red-300">
             Failed to browse: {{ error?.message ?? 'unknown error' }}
           </p>
           <p v-else-if="!filteredEntries.length" class="p-4 text-sm text-slate-500">
-            <span v-if="filter">No entries match "{{ filter }}".</span>
-            <span v-else>Empty directory.</span>
+            <span v-if="filter">{{ t('folder_picker.empty_filter', { filter }) }}</span>
+            <span v-else>{{ t('folder_picker.empty_dir') }}</span>
           </p>
           <ul v-else class="divide-y divide-slate-800/60">
             <li
@@ -232,7 +234,7 @@ watch(
 
       <footer class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
         <p class="text-sm text-slate-400">
-          Selected <span class="font-semibold text-slate-100">{{ selectedCount }}</span> folder(s)
+          {{ t('folder_picker.selected_count', { n: selectedCount }) }}
         </p>
         <div class="flex gap-2">
           <button
@@ -240,7 +242,7 @@ watch(
             class="rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
             @click="onClose"
           >
-            Cancel
+            {{ t('action.cancel') }}
           </button>
           <button
             type="button"
@@ -248,7 +250,7 @@ watch(
             :disabled="!selectedCount"
             @click="onSubmit"
           >
-            Add selected
+            {{ t('folder_picker.add_btn') }}
           </button>
         </div>
       </footer>

@@ -10,12 +10,14 @@ public sealed class PythonManifestEditor : IManifestEditor
 
     public ManifestEditOutcome Apply(
         string rootPath,
-        string packageName,
+        InventoryItem item,
         string suggestedVersion
     ) =>
         new(
-            ChangedFiles: Array.Empty<string>(),
+            ChangedFiles: [],
             FollowUpCommand: null,
-            UnsupportedReason: "Python manifest editing is not yet supported in this build."
+            UnsupportedReason: "Python manifest editing is not yet supported in this build.",
+            CleanedFiles: [],
+            CleanedDirectories: []
         );
 }

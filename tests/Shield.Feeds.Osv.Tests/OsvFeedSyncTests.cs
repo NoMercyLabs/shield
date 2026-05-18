@@ -22,12 +22,12 @@ public class OsvFeedSyncTests
 
         OsvFeedSync sync = new(fixture.Client);
         FeedSyncState state = new() { Feed = Feed.Osv };
-        IReadOnlyList<OsvQuery> queries = new[]
-        {
-            new OsvQuery(Ecosystem.Npm, "lodash", "4.17.20"),
-            new OsvQuery(Ecosystem.Nuget, "Some.Nuget.Package", "1.2.0"),
-            new OsvQuery(Ecosystem.Npm, "clean", "1.0.0")
-        };
+        IReadOnlyList<OsvQuery> queries =
+        [
+            new(Ecosystem.Npm, "lodash", "4.17.20"),
+            new(Ecosystem.Nuget, "Some.Nuget.Package", "1.2.0"),
+            new(Ecosystem.Npm, "clean", "1.0.0")
+        ];
 
         (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
 
@@ -55,7 +55,7 @@ public class OsvFeedSyncTests
 
         OsvFeedSync sync = new(fixture.Client);
         FeedSyncState state = new() { Feed = Feed.Osv };
-        OsvQuery[] queries = new[] { new OsvQuery(Ecosystem.Npm, "any", "1.0.0") };
+        OsvQuery[] queries = [new(Ecosystem.Npm, "any", "1.0.0")];
 
         (IReadOnlyList<Advisory> advisories, FeedSyncResult _) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
 
@@ -80,13 +80,13 @@ public class OsvFeedSyncTests
             Feed = Feed.Osv,
             Cursor = initialCursor.ToString("O", CultureInfo.InvariantCulture)
         };
-        OsvQuery[] queries = new[] { new OsvQuery(Ecosystem.Npm, "lodash", "4.17.20") };
+        OsvQuery[] queries = [new(Ecosystem.Npm, "lodash", "4.17.20")];
 
         (IReadOnlyList<Advisory> _, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
 
         result.NextCursor.Should().NotBeNull();
         DateTime parsed = DateTime.Parse(result.NextCursor!, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind).ToUniversalTime();
-        parsed.Should().Be(new DateTime(2026, 5, 1, 8, 30, 0, DateTimeKind.Utc));
+        parsed.Should().Be(new(2026, 5, 1, 8, 30, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class OsvFeedSyncTests
 
         OsvFeedSync sync = new(client);
         FeedSyncState state = new() { Feed = Feed.Osv };
-        OsvQuery[] queries = new[] { new OsvQuery(Ecosystem.Npm, "lodash", "4.17.20") };
+        OsvQuery[] queries = [new(Ecosystem.Npm, "lodash", "4.17.20")];
 
         (IReadOnlyList<Advisory> advisories, FeedSyncResult result) = await sync.QueryBatchAsync(state, queries, CancellationToken.None);
 

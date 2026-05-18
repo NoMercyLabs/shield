@@ -4,6 +4,8 @@ import { toValue } from 'vue'
 
 import { api } from '@/lib/api'
 import type {
+  GithubDevicePollResponse,
+  GithubDeviceStartResponse,
   GitHubRepoListResponse,
   OAuthProviderName,
   OAuthStartResponse,
@@ -50,6 +52,31 @@ export function useSlackChannels(enabled = true) {
     enabled,
     queryFn: async (): Promise<SlackChannelsResponse> => {
       const { data } = await api.get<SlackChannelsResponse>('/oauth/slack/channels')
+      return data
+    },
+  })
+}
+
+export function useGithubDeviceStart() {
+  return useMutation({
+    mutationFn: async (): Promise<GithubDeviceStartResponse> => {
+      const { data } = await api.post<GithubDeviceStartResponse>('/oauth/github/device/start', {})
+      return data
+    },
+  })
+}
+
+// Caller does the polling loop so the interval respects the server-returned `interval` value.
+// Backend returns 202 for pending/slow_down, 410 for expired, 403 for denied, 200 for ok —
+// accept all of those as the mutation result instead of letting axios reject on 4xx.
+export function useGithubDevicePoll() {
+  return useMutation({
+    mutationFn: async (flowId: string): Promise<GithubDevicePollResponse> => {
+      const { data } = await api.post<GithubDevicePollResponse>(
+        '/oauth/github/device/poll',
+        { flowId },
+        { validateStatus: status => status === 200 || status === 202 || status === 403 || status === 410 },
+      )
       return data
     },
   })

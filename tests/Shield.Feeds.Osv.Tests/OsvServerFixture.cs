@@ -13,7 +13,7 @@ public sealed class OsvServerFixture : IDisposable
     public OsvServerFixture()
     {
         Server = WireMockServer.Start();
-        Client = new HttpClient { BaseAddress = new Uri(Server.Urls[0]) };
+        Client = new() { BaseAddress = new(Server.Urls[0]) };
     }
 
     public static string ReadFixture(string filename)

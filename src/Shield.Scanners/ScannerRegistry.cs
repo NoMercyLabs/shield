@@ -5,7 +5,7 @@ namespace Shield.Scanners;
 
 public sealed class ScannerRegistry
 {
-    readonly IReadOnlyDictionary<SourceType, IScanner> _scanners;
+    private readonly IReadOnlyDictionary<SourceType, IScanner> _scanners;
 
     public ScannerRegistry(IEnumerable<IScanner> scanners)
     {

@@ -13,7 +13,7 @@ public sealed record VersionRange(
     {
         ArgumentNullException.ThrowIfNull(eventsJson);
         if (string.IsNullOrWhiteSpace(eventsJson))
-            return Array.Empty<VersionRange>();
+            return [];
 
         using JsonDocument document = JsonDocument.Parse(eventsJson);
         return ParseOsvEvents(document.RootElement);
@@ -22,9 +22,9 @@ public sealed record VersionRange(
     public static IReadOnlyList<VersionRange> ParseOsvEvents(JsonElement events)
     {
         if (events.ValueKind != JsonValueKind.Array)
-            return Array.Empty<VersionRange>();
+            return [];
 
-        List<VersionRange> ranges = new();
+        List<VersionRange> ranges = [];
         string? introduced = null;
         List<string>? exact = null;
 
@@ -44,28 +44,28 @@ public sealed record VersionRange(
             else if (evt.TryGetProperty("fixed", out JsonElement fixedEl))
             {
                 string? fixedVersion = fixedEl.GetString();
-                ranges.Add(new VersionRange(GtOrEq: introduced, Lt: fixedVersion));
+                ranges.Add(new(GtOrEq: introduced, Lt: fixedVersion));
                 introduced = null;
             }
             else if (evt.TryGetProperty("last_affected", out JsonElement lastEl))
             {
                 string? lastAffected = lastEl.GetString();
-                ranges.Add(new VersionRange(GtOrEq: introduced, LtOrEq: lastAffected));
+                ranges.Add(new(GtOrEq: introduced, LtOrEq: lastAffected));
                 introduced = null;
             }
             else if (evt.TryGetProperty("limit", out JsonElement limitEl))
             {
                 string? limit = limitEl.GetString();
-                ranges.Add(new VersionRange(GtOrEq: introduced, Lt: limit));
+                ranges.Add(new(GtOrEq: introduced, Lt: limit));
                 introduced = null;
             }
         }
 
         if (introduced is not null)
-            ranges.Add(new VersionRange(GtOrEq: introduced));
+            ranges.Add(new(GtOrEq: introduced));
 
         if (exact is { Count: > 0 })
-            ranges.Add(new VersionRange(Exact: exact));
+            ranges.Add(new(Exact: exact));
 
         return ranges;
     }

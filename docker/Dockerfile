@@ -2,6 +2,7 @@
 
 # ---------- Stage 1: SPA build ----------
 # Vite writes to ../Shield.Api/wwwroot/, so both projects must be present.
+# Output is baked into the runtime image — SPA changes require a full image rebuild.
 FROM node:22-alpine AS spa-build
 WORKDIR /work
 COPY src/Shield.Web/package.json src/Shield.Web/package-lock.json ./src/Shield.Web/
@@ -14,7 +15,7 @@ WORKDIR /work/src/Shield.Web
 RUN npm run build
 
 # ---------- Stage 2: .NET build + publish ----------
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS dotnet-build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS dotnet-build
 WORKDIR /src
 COPY global.json Directory.Build.props Directory.Packages.props Shield.sln ./
 COPY src/ ./src/
@@ -29,25 +30,38 @@ RUN dotnet publish src/Shield.Api/Shield.Api.csproj \
     /p:UseAppHost=false
 
 # ---------- Stage 3: Runtime ----------
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+# Fixed UID/GID (10001) so bind-mounts have a predictable owner on the host and the user
+# sits well outside the system range. wget is for HEALTHCHECK; icu-libs lets
+# DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false work for the few code paths that need ICU.
 RUN apk add --no-cache wget icu-libs \
- && addgroup -S shield \
- && adduser -S -G shield -h /app -s /sbin/nologin shield \
- && mkdir -p /data /data/keys \
- && chown -R shield:shield /data /app
+ && addgroup -S -g 10001 shield \
+ && adduser -S -u 10001 -G shield -h /app -s /sbin/nologin shield \
+ && mkdir -p /app/data /app/data/keys \
+ && chown -R shield:shield /app
 WORKDIR /app
 COPY --from=dotnet-build --chown=shield:shield /publish/ ./
 USER shield
-VOLUME ["/data", "/data/keys"]
+VOLUME ["/app/data"]
+# Bind to ALL interfaces inside the container — the host port mapping decides whether
+# traffic is reachable from outside the container. localhost-only inside the container
+# would make the published port unreachable.
 ENV ASPNETCORE_URLS=http://+:8842 \
+    ASPNETCORE_ENVIRONMENT=Production \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
-    Shield__Db__Shield="Data Source=/data/shield.db" \
-    Shield__Db__Feeds="Data Source=/data/feeds.db" \
-    Shield__SingleUser=true \
-    Shield__Auth__JwtSigningKey=CHANGE_ME_must_be_set_to_a_real_secret_in_production \
-    Shield__Auth__DataProtectionKeysPath=/data/keys \
-    Shield__Auth__DataProtectionMasterKey=CHANGE_ME_set_a_real_secret_or_secrets_die_on_recreate
+    Shield__Db__Shield="Data Source=/app/data/shield.db" \
+    Shield__Db__Feeds="Data Source=/app/data/feeds.db" \
+    Shield__Auth__DataProtectionKeysPath=/app/data/keys
+# Secrets live in the operator's .env file — see docker/.env.example. The image ships NO
+# JwtSigningKey or DataProtectionMasterKey default so a misconfigured deploy crashes loudly
+# at the ProductionSafetyGate instead of silently running with a shared dev secret.
+#
+# Posture knobs (docs/internet-exposure.md):
+#   Shield__Public=true                            # marks host as internet-exposed
+#   Shield__Auth__RequireHttps=true                # required when Public=true (HSTS + Secure cookies)
+#   Shield__SingleUser=false                       # multi-user prod (default unset = false)
+#   Shield__Auth__AllowSingleUserInProduction=true # escape hatch to keep SingleUser auto-Admin in prod
 EXPOSE 8842
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -qO- http://localhost:8842/healthz || exit 1

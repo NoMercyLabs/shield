@@ -118,7 +118,7 @@ public sealed class SlackChannel : IAlertChannel
             {
                 Content = JsonContent.Create(payload),
             };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new("Bearer", token);
 
             using HttpResponseMessage response = await client.SendAsync(request, ct);
             string body = await response.Content.ReadAsStringAsync(ct);
@@ -236,7 +236,7 @@ public sealed class SlackChannel : IAlertChannel
         int extra = findings.Count - previewCount;
         IEnumerable<string> lines = findings
             .Take(previewCount)
-            .Select(finding => $"• [{finding.Severity}] `{finding.DedupKey}`");
+            .Select(finding => $"• [{finding.Severity}] {finding.Notes ?? $"`{finding.DedupKey}`"}");
         string text = string.Join("\n", lines);
         if (extra > 0)
             text += $"\nand {extra} more";

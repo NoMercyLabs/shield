@@ -41,7 +41,7 @@ public sealed class ChannelsTests
         }
 
         public ChannelType ChannelType { get; }
-        public List<(AlertChannel Channel, IReadOnlyList<Finding> Findings)> Calls { get; } = new();
+        public List<(AlertChannel Channel, IReadOnlyList<Finding> Findings)> Calls { get; } = [];
 
         public ValueTask<AlertResult> SendAsync(
             AlertChannel cfg,
@@ -63,7 +63,7 @@ public sealed class ChannelsTests
         public RecordingFactory(ChannelType swapType)
         {
             _swapType = swapType;
-            Recorder = new RecordingChannel(swapType);
+            Recorder = new(swapType);
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)

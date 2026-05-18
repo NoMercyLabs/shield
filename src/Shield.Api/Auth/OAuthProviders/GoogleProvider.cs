@@ -88,7 +88,7 @@ public sealed class GoogleProvider : IOAuthProvider
         DateTime? expiresAt =
             body.ExpiresIn > 0 ? DateTime.UtcNow.AddSeconds(body.ExpiresIn) : null;
 
-        return new OAuthTokenSnapshot(
+        return new(
             OAuthProvider.Google,
             body.AccessToken,
             body.RefreshToken,
@@ -181,7 +181,7 @@ public sealed class GoogleProvider : IOAuthProvider
     {
         OAuthTokenSnapshot snapshot = await ExchangeCodeAsync(config, code, codeVerifier, ct);
         // ExchangeCodeAsync already probes /userinfo — AccountLogin holds the email, AccountId is the sub.
-        return new OAuthSigninResult(
+        return new(
             Subject: snapshot.AccountId ?? string.Empty,
             Login: snapshot.AccountLogin,
             Email: snapshot.AccountLogin,
@@ -196,10 +196,7 @@ public sealed class GoogleProvider : IOAuthProvider
     )
     {
         using HttpRequestMessage request = new(HttpMethod.Get, UserInfoUrl);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-            "Bearer",
-            accessToken
-        );
+        request.Headers.Authorization = new("Bearer", accessToken);
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
             return ("(unknown)", "");

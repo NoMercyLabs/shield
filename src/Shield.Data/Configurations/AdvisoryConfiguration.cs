@@ -16,8 +16,25 @@ public class AdvisoryConfiguration : IEntityTypeConfiguration<Advisory>
         builder.Property(advisory => advisory.Summary).HasMaxLength(4000);
         builder.Property(advisory => advisory.ReferencesJson).IsRequired();
 
-        builder.HasIndex(advisory => new { advisory.Feed, advisory.ExternalId }).IsUnique();
+        // Unique key spans (Feed, ExternalId, Ecosystem, PackageName) because a single OSV /
+        // GHSA vuln id fans out into one Advisory row per affected (package, ecosystem). The
+        // narrower (Feed, ExternalId) shape rejects every fan-out advisory after the first.
+        builder
+            .HasIndex(advisory => new
+            {
+                advisory.Feed,
+                advisory.ExternalId,
+                advisory.Ecosystem,
+                advisory.PackageName,
+            })
+            .IsUnique();
 
         builder.HasIndex(advisory => new { advisory.Ecosystem, advisory.PackageName });
+
+        builder.Property(advisory => advisory.IsKev).HasDefaultValue(false);
+        builder.Property(advisory => advisory.KevAddedAt);
+        builder.Property(advisory => advisory.KevDueDate);
+        builder.Property(advisory => advisory.EpssScore);
+        builder.Property(advisory => advisory.EpssPercentile);
     }
 }

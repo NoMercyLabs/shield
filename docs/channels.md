@@ -1,11 +1,11 @@
 # Channels
 
-An **alert channel** is a destination Shield ships matched findings to. Phase 1 ships Discord webhooks and an in-app Inbox; ntfy and SMTP are roadmap items.
+An **alert channel** is a destination Shield ships matched findings to.
 
 | Field | Type | Notes |
 |---|---|---|
 | `Name` | string | Display name |
-| `Type` | enum | `Discord`, `Ntfy`, `Smtp`, `Inbox` |
+| `Type` | enum | `Discord`, `Ntfy`, `Smtp`, `Inbox`, `Slack`, `Webhook` |
 | `ConfigJson` | string | Type-specific JSON. **Encrypted at rest** with ASP.NET Data Protection (`shield.channels` purpose). Never returned raw |
 | `MinSeverity` | enum | Findings below this severity are filtered out for this channel |
 | `Enabled` | bool | When false, the dispatcher skips this channel |
@@ -18,11 +18,75 @@ An **alert channel** is a destination Shield ships matched findings to. Phase 1 
 { "webhookUrl": "https://discord.com/api/webhooks/<id>/<token>" }
 ```
 
-The webhook URL is encrypted server-side; reads return a redacted form (`https://discord.com/api/webhooks/****/****`) in the `configMasked` field. Test-send and dispatch decrypt internally before hitting Discord.
+The webhook URL is encrypted server-side; reads return a redacted form (`https://discord.com/api/webhooks/****/****`) in the `configMasked` field.
+
+### Slack
+
+Supports two modes — legacy Incoming Webhook or OAuth (`chat.postMessage`). Exactly one field is required.
+
+```json
+{ "webhookUrl": "https://hooks.slack.com/services/<T>/<B>/<token>" }
+```
+
+Or, when using an OAuth bot token wired through **Settings → Integrations → Slack**:
+
+```json
+{ "channelId": "C0123456789" }
+```
+
+When `channelId` is present, `webhookUrl` is ignored and the stored OAuth access token is used to post.
+
+### Ntfy
+
+```json
+{
+  "url": "https://ntfy.sh/your-topic",
+  "title": "Shield Alert",
+  "priority": 4,
+  "tags": ["shield", "vuln"],
+  "authToken": "tk_..."
+}
+```
+
+`title`, `priority`, `tags`, and `authToken` are optional. `priority` follows ntfy's 1–5 scale (default 3).
+
+### SMTP
+
+```json
+{
+  "host": "smtp.example.com",
+  "port": 587,
+  "useStartTls": true,
+  "username": "alerts@example.com",
+  "password": "...",
+  "from": "alerts@example.com",
+  "to": ["you@example.com"],
+  "fromName": "Shield"
+}
+```
+
+`username`, `password`, and `fromName` are optional. `useOAuth` is a boolean flag for OAuth-backed SMTP (requires the relevant integration token to be stored via **Settings → Integrations**).
+
+### Webhook (generic outbound HTTP)
+
+```json
+{
+  "url": "https://hooks.example.com/shield",
+  "method": "POST",
+  "headers": { "X-Api-Key": "..." },
+  "bodyTemplate": null
+}
+```
+
+`method` defaults to `POST`. `headers` and `bodyTemplate` are optional. When `bodyTemplate` is null, Shield posts a JSON object with the finding details. Shield sends the raw URL; no encryption is applied beyond the `ConfigJson` envelope.
+
+### Inbox
+
+No config. The in-app inbox is always on and persists until the user clears it. Creating an `Inbox` channel with an empty `configJson` (`{}`) is valid; the type is its own configuration.
 
 ## API
 
-All endpoints require authentication.
+All endpoints require authentication. Channels are Admin-only — `[NoApiToken]` applies.
 
 | Verb | Path | Purpose |
 |---|---|---|

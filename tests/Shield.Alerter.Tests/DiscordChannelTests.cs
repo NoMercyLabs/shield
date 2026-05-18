@@ -22,7 +22,7 @@ public class DiscordChannelTests : IDisposable
     public DiscordChannelTests()
     {
         _server = WireMockServer.Start();
-        ServiceCollection services = new();
+        ServiceCollection services = [];
         services.AddHttpClient(DiscordWebhookChannel.HttpClientName);
         _provider = services.BuildServiceProvider();
         _httpClientFactory = _provider.GetRequiredService<IHttpClientFactory>();
@@ -76,7 +76,7 @@ public class DiscordChannelTests : IDisposable
         Finding finding = NewFinding(Severity.Critical);
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { finding },
+            [finding],
             CancellationToken.None
         );
 
@@ -150,7 +150,7 @@ public class DiscordChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             cfg,
-            new[] { NewFinding(Severity.High) },
+            [NewFinding(Severity.High)],
             CancellationToken.None
         );
 
@@ -173,7 +173,7 @@ public class DiscordChannelTests : IDisposable
 
         AlertResult result = await channel.SendAsync(
             NewChannel(),
-            new[] { NewFinding(Severity.Low) },
+            [NewFinding(Severity.Low)],
             CancellationToken.None
         );
 

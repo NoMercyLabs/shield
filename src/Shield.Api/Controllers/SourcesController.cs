@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Shield.Api.Auth;
 using Shield.Api.Contracts;
 using Shield.Api.Services;
+using Shield.Api.Services.BulkFix;
+using Shield.Api.Workers.Queues;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Data;
@@ -26,10 +28,7 @@ public sealed class SourcesController : ControllerBase
     private readonly FeedsDbContext _feedsDb;
     private readonly IAnomalyDetector _anomalyDetector;
     private readonly IAccessResolver _access;
-    private readonly IBulkFixApplier _bulkFixApplier;
-    private readonly IAuditLogger _auditLogger;
-    private readonly INotificationPublisher _notifications;
-    private readonly ISecurityEventLogger _securityLog;
+    private readonly IBulkApplyOrchestrator _bulkApply;
 
     public SourcesController(
         ShieldDbContext db,
@@ -37,10 +36,7 @@ public sealed class SourcesController : ControllerBase
         FeedsDbContext feedsDb,
         IAnomalyDetector anomalyDetector,
         IAccessResolver access,
-        IBulkFixApplier bulkFixApplier,
-        IAuditLogger auditLogger,
-        INotificationPublisher notifications,
-        ISecurityEventLogger securityLog
+        IBulkApplyOrchestrator bulkApply
     )
     {
         _db = db;
@@ -48,10 +44,7 @@ public sealed class SourcesController : ControllerBase
         _feedsDb = feedsDb;
         _anomalyDetector = anomalyDetector;
         _access = access;
-        _bulkFixApplier = bulkFixApplier;
-        _auditLogger = auditLogger;
-        _notifications = notifications;
-        _securityLog = securityLog;
+        _bulkApply = bulkApply;
     }
 
     [HttpGet]
@@ -292,6 +285,12 @@ public sealed class SourcesController : ControllerBase
         source.ConfigJson = configJson;
         source.ScanInterval = request.ScanInterval ?? source.ScanInterval;
         source.Enabled = request.Enabled;
+        if (request.MinPackageAgeHours.HasValue)
+        {
+            // Clamp at [0, 720] (30 days). Zero disables the warning; anything above 30 days is
+            // almost always a misconfiguration that would silence legitimate security fixes.
+            source.MinPackageAgeHours = Math.Clamp(request.MinPackageAgeHours.Value, 0, 720);
+        }
         source.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Ok(SourceResponse.From(source));
@@ -309,6 +308,14 @@ public sealed class SourcesController : ControllerBase
         Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (source is null)
             return NotFound();
+        // Cascade — manual cleanup for tables EF doesn't auto-cascade. PackageUpdates lacks an
+        // FK to Source (kept loose so a re-added repo by name doesn't accidentally rehydrate
+        // history), so wipe by SourceId before removing the source row.
+        List<Core.Domain.PackageUpdate> orphans = await _db
+            .PackageUpdates.Where(update => update.SourceId == id)
+            .ToListAsync(ct);
+        if (orphans.Count > 0)
+            _db.PackageUpdates.RemoveRange(orphans);
         _db.Sources.Remove(source);
         await _db.SaveChangesAsync(ct);
         return NoContent();
@@ -473,111 +480,28 @@ public sealed class SourcesController : ControllerBase
         CancellationToken ct
     )
     {
-        Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
-        if (source is null)
-            return NotFound();
-
-        if (source.Type != SourceType.GithubRepo)
+        BulkApplyDispatchResult result = await _bulkApply.ApplyAsync(id, request, ct);
+        return result.Outcome switch
         {
-            return BadRequest(
+            BulkApplyOutcome.SourceNotFound => NotFound(),
+            BulkApplyOutcome.UnsupportedType => BadRequest(
+                new { error = result.ErrorCode, message = result.ErrorMessage }
+            ),
+            BulkApplyOutcome.ProductionConfirmationRequired => StatusCode(
+                StatusCodes.Status409Conflict,
+                new { error = result.ErrorCode, message = result.ErrorMessage }
+            ),
+            BulkApplyOutcome.Cooldown => StatusCode(
+                StatusCodes.Status429TooManyRequests,
                 new
                 {
-                    error = "apply_unsupported_type",
-                    message = "Bulk apply only supports GithubRepo sources.",
+                    error = result.ErrorCode,
+                    retryAfter = result.RetryAfter?.ToString("o"),
+                    message = result.ErrorMessage,
                 }
-            );
-        }
-
-        // 24-hour cooldown gate. Admin can bypass with force=true.
-        if (!request.DryRun && !request.Force && source.LastBulkApplyAt.HasValue)
-        {
-            TimeSpan elapsed = DateTime.UtcNow - source.LastBulkApplyAt.Value;
-            if (elapsed < TimeSpan.FromHours(24))
-            {
-                DateTime retryAfter = source.LastBulkApplyAt.Value.AddHours(24);
-                return StatusCode(
-                    StatusCodes.Status429TooManyRequests,
-                    new
-                    {
-                        error = "bulk_cooldown",
-                        retryAfter = retryAfter.ToString("o"),
-                        message = $"Bulk apply was run recently. Wait until {retryAfter:u} or pass force=true to bypass.",
-                    }
-                );
-            }
-        }
-
-        // Load all advisories for this source's open findings.
-        List<Finding> openFindings = await _db
-            .Findings.Where(finding => finding.SourceId == id && finding.State == FindingState.Open)
-            .ToListAsync(ct);
-
-        List<Advisory> advisories = [];
-        if (openFindings.Count > 0)
-        {
-            HashSet<Guid> advisoryIds = openFindings
-                .Select(finding => finding.AdvisoryRefId)
-                .ToHashSet();
-            advisories = await _feedsDb
-                .Advisories.Where(advisory => advisoryIds.Contains(advisory.Id))
-                .ToListAsync(ct);
-        }
-
-        BulkApplyResult result = await _bulkFixApplier.ApplyAllPullRequestAsync(
-            source,
-            advisories,
-            request.DryRun,
-            request.MaxPackages,
-            ct
-        );
-
-        if (!request.DryRun && result.PullRequestUrl is not null)
-        {
-            source.LastBulkApplyAt = DateTime.UtcNow;
-            source.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-
-            await _auditLogger.RecordAsync(
-                "source.bulk_apply",
-                "Source",
-                id.ToString(),
-                details: new
-                {
-                    packages = result.Entries.Select(entry => entry.PackageName).ToList(),
-                    prUrl = result.PullRequestUrl,
-                    count = result.Entries.Count,
-                },
-                ct
-            );
-
-            await _notifications.BroadcastAsync(
-                NotificationKind.SystemMessage,
-                Severity.Low,
-                $"Bulk fix PR opened for {source.Name}",
-                $"{result.Entries.Count} packages bumped — {result.PullRequestUrl}",
-                relatedType: "Source",
-                relatedId: id.ToString(),
-                ct
-            );
-
-            await _securityLog.LogAsync(
-                source: "shield.fix",
-                eventType: "fix.bulk_pr_opened",
-                severity: Severity.Low,
-                path: $"/api/sources/{id}/apply-all-fixes",
-                ct: ct
-            );
-        }
-
-        return Ok(
-            new BulkApplyResponse(
-                DryRun: result.DryRun,
-                PullRequestUrl: result.PullRequestUrl,
-                Entries: result.Entries,
-                Errors: result.Errors,
-                ReusedBranch: result.ReusedBranch
-            )
-        );
+            ),
+            _ => Ok(result.Response),
+        };
     }
 
     [HttpPatch("{id:int}/auto-fix-mode")]
@@ -594,6 +518,25 @@ public sealed class SourcesController : ControllerBase
             return NotFound();
 
         source.AutoFixMode = request.AutoFixMode;
+        source.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(SourceResponse.From(source));
+    }
+
+    [HttpPatch("{id:int}/is-production")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    [NoApiToken]
+    public async Task<ActionResult<SourceResponse>> SetIsProduction(
+        int id,
+        [FromBody] SetIsProductionRequest request,
+        CancellationToken ct
+    )
+    {
+        Source? source = await _db.Sources.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (source is null)
+            return NotFound();
+
+        source.IsProduction = request.IsProduction;
         source.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Ok(SourceResponse.From(source));

@@ -33,6 +33,12 @@ namespace Shield.Data.Migrations.Feeds
                     b.Property<int>("Ecosystem")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("EpssPercentile")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("EpssScore")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -42,6 +48,17 @@ namespace Shield.Data.Migrations.Feeds
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsKev")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("KevAddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("KevDueDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("ModifiedAt")
@@ -71,7 +88,7 @@ namespace Shield.Data.Migrations.Feeds
 
                     b.HasIndex("Ecosystem", "PackageName");
 
-                    b.HasIndex("Feed", "ExternalId")
+                    b.HasIndex("Feed", "ExternalId", "Ecosystem", "PackageName")
                         .IsUnique();
 
                     b.ToTable("Advisories", (string)null);
@@ -98,6 +115,9 @@ namespace Shield.Data.Migrations.Feeds
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("NextRunAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("RateLimitResetAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

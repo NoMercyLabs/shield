@@ -36,7 +36,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
         byte[] payload = Encoding.UTF8.GetBytes("{}");
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/github");
         request.Content = new ByteArrayContent(payload);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        request.Content.Headers.ContentType = new("application/json");
         request.Headers.Add("X-Hub-Signature-256", "sha256=" + new string('0', 64));
         request.Headers.Add("X-GitHub-Event", "pull_request");
 
@@ -95,7 +95,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
 
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/github");
         request.Content = new ByteArrayContent(payload);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        request.Content.Headers.ContentType = new("application/json");
         request.Headers.Add("X-Hub-Signature-256", "sha256=" + Sign(payload, GithubSecret));
         request.Headers.Add("X-GitHub-Event", "pull_request");
 
@@ -122,7 +122,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
         byte[] payload = Encoding.UTF8.GetBytes("{}");
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/github");
         request.Content = new ByteArrayContent(payload);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        request.Content.Headers.ContentType = new("application/json");
         request.Headers.Add("X-Hub-Signature-256", "sha256=" + Sign(payload, GithubSecret));
         request.Headers.Add("X-GitHub-Event", "push");
 
@@ -174,7 +174,7 @@ public sealed class WebhooksTests : IClassFixture<WebhooksTests.Factory>
 
         using HttpRequestMessage request = new(HttpMethod.Post, "/api/webhooks/dependabot");
         request.Content = new ByteArrayContent(payload);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        request.Content.Headers.ContentType = new("application/json");
         request.Headers.Add("X-Hub-Signature-256", "sha256=" + Sign(payload, DependabotSecret));
 
         HttpResponseMessage response = await client.SendAsync(request);

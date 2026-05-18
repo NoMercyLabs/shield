@@ -6,9 +6,8 @@ using Shield.Matcher.Versioning;
 
 namespace Shield.Api.Services;
 
-// Resolves the lowest known fix version from an advisory's OSV ranges that is strictly
-// greater than the installed version. Falls back to a permissive semver/NuGet parse so
-// ecosystems without a dedicated matcher comparer (Python/Go/Rust) still yield suggestions.
+// Resolves the highest known fix version across every advisory that matches a given package,
+// so one version bump kills every known vulnerability in a single PR / manifest edit.
 public sealed record FixSuggestion(
     string PackageName,
     string CurrentVersion,
@@ -18,56 +17,163 @@ public sealed record FixSuggestion(
 
 public interface IFixSuggester
 {
-    FixSuggestion? Suggest(Advisory advisory, InventoryItem currentItem);
+    FixSuggestion? SuggestForPackage(
+        Ecosystem ecosystem,
+        string packageName,
+        string currentVersion,
+        IReadOnlyList<Advisory> matchingAdvisories
+    );
 }
 
 public sealed class FixSuggester : IFixSuggester
 {
-    public FixSuggestion? Suggest(Advisory advisory, InventoryItem currentItem)
+    public FixSuggestion? SuggestForPackage(
+        Ecosystem ecosystem,
+        string packageName,
+        string currentVersion,
+        IReadOnlyList<Advisory> matchingAdvisories
+    )
     {
-        ArgumentNullException.ThrowIfNull(advisory);
-        ArgumentNullException.ThrowIfNull(currentItem);
+        ArgumentNullException.ThrowIfNull(matchingAdvisories);
 
-        IReadOnlyList<FixEvent> fixes = ExtractFixEvents(advisory.AffectedRangesJson);
-        if (fixes.Count == 0)
+        if (matchingAdvisories.Count == 0)
             return null;
 
-        Ecosystem ecosystem = currentItem.Ecosystem;
-        List<(string Version, FixEvent Event)> qualifying = new();
-        foreach (FixEvent fix in fixes)
+        // Collect (advisoryExternalId, fixedVersion) pairs from every advisory.
+        // Only keep fix events strictly greater than the currently-installed version.
+        List<(string AdvisoryId, string Version)> qualifying = [];
+        foreach (Advisory advisory in matchingAdvisories)
         {
-            if (string.IsNullOrWhiteSpace(fix.Fixed))
-                continue;
-            if (Compare(ecosystem, fix.Fixed, currentItem.Version) > 0)
-                qualifying.Add((fix.Fixed, fix));
+            IReadOnlyList<FixEvent> fixes = ExtractFixEvents(advisory.AffectedRangesJson);
+            foreach (FixEvent fix in fixes)
+            {
+                if (string.IsNullOrWhiteSpace(fix.Fixed))
+                    continue;
+                if (Compare(ecosystem, fix.Fixed, currentVersion) > 0)
+                    qualifying.Add((advisory.ExternalId, fix.Fixed));
+            }
         }
 
         if (qualifying.Count == 0)
             return null;
 
-        (string Version, FixEvent Event) chosen = qualifying
-            .OrderBy(entry => entry.Version, new EcosystemVersionComparer(ecosystem))
-            .First();
+        // Filter out any candidate version that is itself within a vulnerable range declared
+        // by ANY of the matching advisories. Walk candidates from highest to lowest and pick
+        // the first one that is safe across every advisory.
+        IReadOnlyList<(string AdvisoryId, string Version)> candidatesByDescending = qualifying
+            .OrderByDescending(entry => entry.Version, new EcosystemVersionComparer(ecosystem))
+            .ToList();
 
-        string? notes = BuildNotes(chosen.Event, qualifying.Count);
-        return new FixSuggestion(
-            PackageName: currentItem.Name,
-            CurrentVersion: currentItem.Version,
+        (string AdvisoryId, string Version)? chosenNullable = null;
+        foreach ((string advisoryId, string candidateVersion) in candidatesByDescending)
+        {
+            bool selfVulnerable = false;
+            foreach (Advisory advisory in matchingAdvisories)
+            {
+                if (IsVersionVulnerable(ecosystem, candidateVersion, advisory.AffectedRangesJson))
+                {
+                    selfVulnerable = true;
+                    break;
+                }
+            }
+            if (!selfVulnerable)
+            {
+                chosenNullable = (advisoryId, candidateVersion);
+                break;
+            }
+        }
+
+        if (chosenNullable is null)
+            return null;
+
+        (string AdvisoryId, string Version) chosen = chosenNullable.Value;
+
+        // Collect the distinct advisory IDs covered by bumping to the chosen version.
+        HashSet<string> coveredIds = qualifying
+            .Where(entry =>
+                Compare(ecosystem, chosen.Version, entry.Version) >= 0
+                || string.Equals(entry.Version, chosen.Version, StringComparison.Ordinal)
+            )
+            .Select(entry => entry.AdvisoryId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        string notes = BuildAggregateNotes(coveredIds);
+        return new(
+            PackageName: packageName,
+            CurrentVersion: currentVersion,
             SuggestedVersion: chosen.Version,
             Notes: notes
         );
     }
 
-    private static string? BuildNotes(FixEvent fix, int candidateCount)
+    // Returns true when `version` falls within any vulnerable range described by `affectedRangesJson`.
+    // Parses ranges directly rather than reusing ExtractFixEvents so we can handle open-ended
+    // ranges (introduced with no fixed) which ExtractFixEvents intentionally omits.
+    internal static bool IsVersionVulnerable(
+        Ecosystem ecosystem,
+        string version,
+        string affectedRangesJson
+    )
     {
-        List<string> parts = new();
-        if (!string.IsNullOrWhiteSpace(fix.Introduced))
-            parts.Add($"introduced in {fix.Introduced}");
-        if (!string.IsNullOrWhiteSpace(fix.Limit))
-            parts.Add($"does not apply >= {fix.Limit}");
-        if (candidateCount > 1)
-            parts.Add($"{candidateCount} fix events considered");
-        return parts.Count > 0 ? string.Join("; ", parts) : null;
+        if (string.IsNullOrWhiteSpace(affectedRangesJson))
+            return false;
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(affectedRangesJson);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (JsonElement range in root.EnumerateArray())
+            {
+                if (range.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (
+                    !range.TryGetProperty("events", out JsonElement events)
+                    || events.ValueKind != JsonValueKind.Array
+                )
+                    continue;
+
+                string? introduced = null;
+                string? fixed_ = null;
+
+                foreach (JsonElement evt in events.EnumerateArray())
+                {
+                    if (evt.ValueKind != JsonValueKind.Object)
+                        continue;
+                    if (evt.TryGetProperty("introduced", out JsonElement introducedEl))
+                    {
+                        string? value = introducedEl.GetString();
+                        introduced = value == "0" ? null : value;
+                    }
+                    else if (evt.TryGetProperty("fixed", out JsonElement fixedEl))
+                    {
+                        fixed_ = fixedEl.GetString();
+                    }
+                }
+
+                bool afterIntroduced =
+                    introduced is null || Compare(ecosystem, version, introduced) >= 0;
+                bool beforeFixed =
+                    string.IsNullOrWhiteSpace(fixed_) || Compare(ecosystem, version, fixed_) < 0;
+
+                if (afterIntroduced && beforeFixed)
+                    return true;
+            }
+
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string BuildAggregateNotes(IReadOnlyCollection<string> advisoryIds)
+    {
+        string idList = string.Join(", ", advisoryIds.OrderBy(id => id, StringComparer.Ordinal));
+        return $"covers {advisoryIds.Count} {(advisoryIds.Count == 1 ? "advisory" : "advisories")}: {idList}";
     }
 
     // Returns negative when `left` < `right`, 0 equal, positive when `left` > `right`.
@@ -76,8 +182,8 @@ public sealed class FixSuggester : IFixSuggester
     private static int Compare(Ecosystem ecosystem, string left, string right)
     {
         if (
-            TryParseSemver(left, out SemVersion? leftSem)
-            && TryParseSemver(right, out SemVersion? rightSem)
+            SemVerHelper.TryParse(left, out SemVersion? leftSem)
+            && SemVerHelper.TryParse(right, out SemVersion? rightSem)
         )
             return leftSem!.ComparePrecedenceTo(rightSem);
 
@@ -90,27 +196,19 @@ public sealed class FixSuggester : IFixSuggester
         return string.CompareOrdinal(left, right);
     }
 
-    private static bool TryParseSemver(string raw, out SemVersion parsed)
-    {
-        string trimmed = raw.Trim();
-        if (trimmed.StartsWith('v') || trimmed.StartsWith('V'))
-            trimmed = trimmed[1..];
-        return SemVersion.TryParse(trimmed, SemVersionStyles.Any, out parsed!);
-    }
-
-    private static IReadOnlyList<FixEvent> ExtractFixEvents(string affectedRangesJson)
+    internal static IReadOnlyList<FixEvent> ExtractFixEvents(string affectedRangesJson)
     {
         if (string.IsNullOrWhiteSpace(affectedRangesJson))
-            return Array.Empty<FixEvent>();
+            return [];
 
         try
         {
             using JsonDocument document = JsonDocument.Parse(affectedRangesJson);
             JsonElement root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Array)
-                return Array.Empty<FixEvent>();
+                return [];
 
-            List<FixEvent> result = new();
+            List<FixEvent> result = [];
             foreach (JsonElement range in root.EnumerateArray())
             {
                 if (range.ValueKind != JsonValueKind.Object)
@@ -138,7 +236,7 @@ public sealed class FixSuggester : IFixSuggester
                         if (!string.IsNullOrWhiteSpace(fixedVersion))
                         {
                             string? limit = TryReadLaterLimit(events);
-                            result.Add(new FixEvent(introduced, fixedVersion, limit));
+                            result.Add(new(introduced, fixedVersion, limit));
                         }
                         introduced = null;
                     }
@@ -148,7 +246,7 @@ public sealed class FixSuggester : IFixSuggester
         }
         catch (JsonException)
         {
-            return Array.Empty<FixEvent>();
+            return [];
         }
     }
 
@@ -164,7 +262,7 @@ public sealed class FixSuggester : IFixSuggester
         return null;
     }
 
-    private readonly record struct FixEvent(string? Introduced, string Fixed, string? Limit);
+    internal readonly record struct FixEvent(string? Introduced, string Fixed, string? Limit);
 
     private sealed class EcosystemVersionComparer : IComparer<string>
     {

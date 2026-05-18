@@ -12,7 +12,7 @@
     <PackageReference Include="FluentAssertions" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shield.Parsers.Rust\Shield.Parsers.Rust.csproj" />
+    <ProjectReference Include="..\..\src\Shield.Parsers\Shield.Parsers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures/**/*" CopyToOutputDirectory="PreserveNewest" />

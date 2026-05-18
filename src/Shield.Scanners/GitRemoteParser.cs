@@ -7,7 +7,7 @@ namespace Shield.Scanners;
 public static class GitRemoteParser
 {
     public static IReadOnlyList<string> DefaultActionableHosts { get; } =
-        new[] { "github.com", "gitlab.com", "bitbucket.org" };
+        ["github.com", "gitlab.com", "bitbucket.org"];
 
     // Tries to read `<workingTree>/.git/config`, find `[remote "origin"]`, and parse its `url`.
     // Returns null if no working tree, no .git/config, no origin block, or unparseable URL.
@@ -81,7 +81,7 @@ public static class GitRemoteParser
         return null;
     }
 
-    static DetectedRemote? BuildFromHostAndPath(string host, string pathPart, string originalUrl)
+    private static DetectedRemote? BuildFromHostAndPath(string host, string pathPart, string originalUrl)
     {
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(pathPart))
             return null;
@@ -102,10 +102,10 @@ public static class GitRemoteParser
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
             return null;
 
-        return new DetectedRemote(host.ToLowerInvariant(), owner, repo, originalUrl, Branch: null);
+        return new(host.ToLowerInvariant(), owner, repo, originalUrl, Branch: null);
     }
 
-    static string? FindRemoteUrl(IReadOnlyList<string> lines, string remoteName)
+    private static string? FindRemoteUrl(IReadOnlyList<string> lines, string remoteName)
     {
         string header = $"[remote \"{remoteName}\"]";
         bool inBlock = false;
@@ -135,7 +135,7 @@ public static class GitRemoteParser
         return null;
     }
 
-    static string? FindHeadBranch(string workingTreeRoot)
+    private static string? FindHeadBranch(string workingTreeRoot)
     {
         string headPath = Path.Combine(workingTreeRoot, ".git", "HEAD");
         if (!File.Exists(headPath))

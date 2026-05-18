@@ -200,12 +200,18 @@ export interface Source {
   detectedRemote: DetectedRemote | null
   lastBulkApplyAt: string | null
   autoFixMode: AutoFixMode
+  isProduction: boolean
+  lastManualBulkApplyAt: string | null
+  manualCooldownUntil: string | null
+  minPackageAgeHours: number
 }
 
 export interface BulkApplyRequest {
   dryRun?: boolean
   maxPackages?: number | null
   force?: boolean
+  allowMajorBumps?: boolean
+  confirmProduction?: boolean
 }
 
 export interface BulkApplyEntry {
@@ -221,12 +227,23 @@ export interface BulkApplyError {
   reason: string
 }
 
+export interface BulkApplyWarning {
+  packageName: string
+  message: string
+}
+
 export interface BulkApplyResponse {
   dryRun: boolean
   pullRequestUrl: string | null
   entries: BulkApplyEntry[]
   errors: BulkApplyError[]
   reusedBranch: string | null
+  majorBumps: BulkApplyEntry[] | null
+  warnings: BulkApplyWarning[] | null
+}
+
+export interface SetIsProductionRequest {
+  isProduction: boolean
 }
 
 export interface SourceCreate {
@@ -395,6 +412,7 @@ export interface SourceUpdate {
   configJson: string
   scanInterval: string
   enabled: boolean
+  minPackageAgeHours?: number
 }
 
 export interface FindingDetail {
