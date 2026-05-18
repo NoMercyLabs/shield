@@ -1,5 +1,11 @@
 using System.Net;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
+// Microsoft.AspNetCore.HttpOverrides ships its own legacy IPNetwork that shadows the
+// System.Net one ASP.NET Core's ForwardedHeadersOptions actually uses today (.NET 8+).
+// Alias to keep the rest of the file resolving the right type.
+using IPNetwork = System.Net.IPNetwork;
 
 namespace Shield.Api.Hardening;
 
@@ -9,11 +15,14 @@ namespace Shield.Api.Hardening;
 // authoritative client IP (no chain to parse, can't be padded by an earlier hop) and
 // Cloudflare sets it on every request through their edge.
 //
-// We only honour the header when the immediate peer is from Cloudflare's published IP
-// range — a client connecting directly to the origin and forging the header is otherwise
-// trivial. Ranges default to Cloudflare's public list and are configurable via
-// `Shield:Cloudflare:IpRanges` for the rare case CF announces new prefixes faster than
-// Shield ships a release.
+// "Trusted peer" is the union of three sets:
+//   1. Cloudflare's published IP ranges (the request came straight from a CF edge),
+//   2. Operator-configured KnownProxies / KnownNetworks from ForwardedHeadersOptions
+//      (so an in-network cloudflared daemon or sidecar nginx still gets to forward the
+//      header — this was the bug that left LAN IPs in audit logs),
+//   3. Loopback (so a local dev cloudflared on the same host works too).
+// A client that bypasses the proxy chain entirely still falls outside all three sets
+// and can't forge the header.
 public sealed class CloudflareForwardedIpMiddleware
 {
     public const string ConnectingIpHeader = "CF-Connecting-IP";
@@ -21,20 +30,28 @@ public sealed class CloudflareForwardedIpMiddleware
 
     private readonly RequestDelegate _next;
     private readonly IReadOnlyList<IPNetwork> _cloudflareRanges;
+    private readonly IReadOnlyList<IPAddress> _trustedProxies;
+    private readonly IReadOnlyList<IPNetwork> _trustedNetworks;
 
     public CloudflareForwardedIpMiddleware(
         RequestDelegate next,
-        IOptions<CloudflareForwardedIpOptions> options
+        IOptions<CloudflareForwardedIpOptions> options,
+        IOptions<ForwardedHeadersOptions> forwardedOptions
     )
     {
         _next = next;
         _cloudflareRanges = options.Value.ResolveRanges();
+        // Snapshot at construction time. ForwardedHeadersOptions is configured once at
+        // startup; the lists are read-only during request processing so capturing them
+        // here is safe and avoids a per-request IOptions resolution.
+        _trustedProxies = forwardedOptions.Value.KnownProxies.ToArray();
+        _trustedNetworks = forwardedOptions.Value.KnownIPNetworks.ToArray();
     }
 
     public Task InvokeAsync(HttpContext context)
     {
         IPAddress? peer = context.Connection.RemoteIpAddress;
-        if (peer is not null && IsCloudflarePeer(peer))
+        if (peer is not null && IsTrustedPeer(peer))
         {
             if (
                 context.Request.Headers.TryGetValue(
@@ -70,11 +87,29 @@ public sealed class CloudflareForwardedIpMiddleware
         return _next(context);
     }
 
-    private bool IsCloudflarePeer(IPAddress peer)
+    private bool IsTrustedPeer(IPAddress peer)
     {
+        // Kestrel exposes IPv4 connections as IPv4-mapped IPv6 on dual-stack listeners
+        // ("::ffff:192.168.2.201"). Normalise to plain IPv4 before comparing — otherwise
+        // `peer.Equals(192.168.2.201)` and `network.Contains(...)` both miss.
+        IPAddress normalised = peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer;
+
+        if (IPAddress.IsLoopback(normalised))
+            return true;
+        foreach (IPAddress proxy in _trustedProxies)
+        {
+            IPAddress proxyNormalised = proxy.IsIPv4MappedToIPv6 ? proxy.MapToIPv4() : proxy;
+            if (normalised.Equals(proxyNormalised))
+                return true;
+        }
+        foreach (IPNetwork network in _trustedNetworks)
+        {
+            if (network.Contains(normalised))
+                return true;
+        }
         foreach (IPNetwork network in _cloudflareRanges)
         {
-            if (network.Contains(peer))
+            if (network.Contains(normalised))
                 return true;
         }
         return false;
