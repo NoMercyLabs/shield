@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
 import {
   requestBan,
   updateIpNotes,
@@ -18,6 +20,7 @@ import {
   type IpReputation,
   type SecurityEvent,
   type SecurityEventFilter,
+  type SecurityHost,
 } from '@/types/api'
 
 const { t } = useI18n()
@@ -152,6 +155,37 @@ function timelineItems(): SecurityEvent[] {
 function ipsItems(): IpReputation[] {
   return ipsResponse.value?.items ?? []
 }
+
+// Three independent sort handles — the three tables in this view (timeline, IPs, hosts)
+// are conceptually unrelated, so each carries its own sort state.
+const timelineRowsRef = computed<SecurityEvent[]>(() => timelinePage.value?.items ?? [])
+const timelineSort = useClientSort<SecurityEvent>(timelineRowsRef, [
+  { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
+  { key: 'severity', extract: row => row.severity, defaultDirection: 'desc' },
+  { key: 'source', extract: row => row.source, defaultDirection: 'asc' },
+  { key: 'event', extract: row => row.event, defaultDirection: 'asc' },
+  { key: 'ip', extract: row => row.ipAddress, defaultDirection: 'asc' },
+  { key: 'jailHost', extract: row => `${row.jail ?? ''}/${row.host ?? ''}`, defaultDirection: 'asc' },
+  { key: 'user', extract: row => row.userDisplayName ?? row.userId ?? '', defaultDirection: 'asc' },
+])
+
+const ipsRowsRef = computed<IpReputation[]>(() => ipsResponse.value?.items ?? [])
+const ipsSort = useClientSort<IpReputation>(ipsRowsRef, [
+  { key: 'ip', extract: row => row.ipAddress, defaultDirection: 'asc' },
+  { key: 'country', extract: row => row.country ?? '', defaultDirection: 'asc' },
+  { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
+  { key: 'score', extract: row => row.reputationScore, defaultDirection: 'desc' },
+  { key: 'banned', extract: row => row.bannedUntil, defaultDirection: 'desc' },
+  { key: 'lastJail', extract: row => row.lastJail ?? '', defaultDirection: 'asc' },
+  { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
+])
+
+const hostsRowsRef = computed<SecurityHost[]>(() => hostsResponse.value?.items ?? [])
+const hostsSort = useClientSort<SecurityHost>(hostsRowsRef, [
+  { key: 'host', extract: row => row.host, defaultDirection: 'asc' },
+  { key: 'lastSeen', extract: row => row.lastSeenAt, defaultDirection: 'desc' },
+  { key: 'events', extract: row => row.eventCount, defaultDirection: 'desc' },
+])
 </script>
 
 <template>
@@ -255,17 +289,31 @@ function ipsItems(): IpReputation[] {
         <table class="w-full min-w-[900px] text-left text-sm">
           <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
             <tr>
-              <th class="px-4 py-2">{{ t('security.col_when') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_severity') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_source') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_event') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_ip') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_jail_host') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_user') }}</th>
+              <SortableTh column-key="when" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_when') }}
+              </SortableTh>
+              <SortableTh column-key="severity" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_severity') }}
+              </SortableTh>
+              <SortableTh column-key="source" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_source') }}
+              </SortableTh>
+              <SortableTh column-key="event" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_event') }}
+              </SortableTh>
+              <SortableTh column-key="ip" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_ip') }}
+              </SortableTh>
+              <SortableTh column-key="jailHost" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_jail_host') }}
+              </SortableTh>
+              <SortableTh column-key="user" :active-key="timelineSort.sortKey.value" :active-dir="timelineSort.sortDir.value" @toggle="timelineSort.toggleSort">
+                {{ t('security.col_user') }}
+              </SortableTh>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
-            <tr v-for="event in timelineItems()" :key="event.id" class="hover:bg-slate-800/50">
+            <tr v-for="event in timelineSort.sortedRows.value" :key="event.id" class="hover:bg-slate-800/50">
               <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ formatDate(event.at) }}</td>
               <td class="px-4 py-2">
                 <span
@@ -354,18 +402,32 @@ function ipsItems(): IpReputation[] {
         <table class="w-full min-w-[700px] text-left text-sm">
           <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
             <tr>
-              <th class="px-4 py-2">{{ t('security.col_ip') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_country') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_events') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_score') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_banned') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_last_jail') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_last_seen') }}</th>
+              <SortableTh column-key="ip" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_ip') }}
+              </SortableTh>
+              <SortableTh column-key="country" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_country') }}
+              </SortableTh>
+              <SortableTh column-key="events" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_events') }}
+              </SortableTh>
+              <SortableTh column-key="score" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_score') }}
+              </SortableTh>
+              <SortableTh column-key="banned" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_banned') }}
+              </SortableTh>
+              <SortableTh column-key="lastJail" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_last_jail') }}
+              </SortableTh>
+              <SortableTh column-key="lastSeen" :active-key="ipsSort.sortKey.value" :active-dir="ipsSort.sortDir.value" @toggle="ipsSort.toggleSort">
+                {{ t('security.col_last_seen') }}
+              </SortableTh>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
             <tr
-              v-for="row in ipsItems()"
+              v-for="row in ipsSort.sortedRows.value"
               :key="row.id"
               class="hover:bg-slate-800/50 cursor-pointer"
               @click="selectIp(row.ip)"
@@ -502,13 +564,19 @@ function ipsItems(): IpReputation[] {
         <table class="w-full text-left text-sm">
           <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
             <tr>
-              <th class="px-4 py-2">{{ t('security.tab_hosts') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_last_seen') }}</th>
-              <th class="px-4 py-2">{{ t('security.col_events') }}</th>
+              <SortableTh column-key="host" :active-key="hostsSort.sortKey.value" :active-dir="hostsSort.sortDir.value" @toggle="hostsSort.toggleSort">
+                {{ t('security.tab_hosts') }}
+              </SortableTh>
+              <SortableTh column-key="lastSeen" :active-key="hostsSort.sortKey.value" :active-dir="hostsSort.sortDir.value" @toggle="hostsSort.toggleSort">
+                {{ t('security.col_last_seen') }}
+              </SortableTh>
+              <SortableTh column-key="events" :active-key="hostsSort.sortKey.value" :active-dir="hostsSort.sortDir.value" @toggle="hostsSort.toggleSort">
+                {{ t('security.col_events') }}
+              </SortableTh>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
-            <tr v-for="host in hostsResponse.items" :key="host.host" class="hover:bg-slate-800/50">
+            <tr v-for="host in hostsSort.sortedRows.value" :key="host.host" class="hover:bg-slate-800/50">
               <td class="px-4 py-2 text-slate-200">{{ host.host }}</td>
               <td class="px-4 py-2 text-slate-400">{{ formatDate(host.lastSeenAt) }}</td>
               <td class="px-4 py-2 text-slate-300">{{ host.eventCount }}</td>

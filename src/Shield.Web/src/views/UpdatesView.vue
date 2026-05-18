@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowUpCircle, Loader2, RefreshCw, Rocket } from 'lucide-vue-next'
 
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
 import { getFindingsConnection } from '@/lib/signalr'
 import {
   type SourceApplyOutcome,
@@ -36,10 +38,21 @@ interface SourceGroup {
   rows: UpdateRow[]
 }
 
+// Sort state is global across all source groups so clicking a column reorders every
+// group's rows the same way. Source-group ORDER itself is fixed (alphabetical by source
+// name) — the per-source headers are the grouping anchor, not part of the sort.
+const allRows = computed<UpdateRow[]>(() => data.value ?? [])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<UpdateRow>(allRows, [
+  { key: 'package', extract: row => row.name, defaultDirection: 'asc' },
+  { key: 'ecosystem', extract: row => row.ecosystemLabel, defaultDirection: 'asc' },
+  { key: 'current', extract: row => row.currentVersion, defaultDirection: 'asc' },
+  { key: 'latest', extract: row => row.latestVersion, defaultDirection: 'asc' },
+  { key: 'published', extract: row => row.publishedAt, defaultDirection: 'desc' },
+])
+
 const grouped = computed<SourceGroup[]>(() => {
-  const rows = data.value ?? []
   const bySource = new Map<number, SourceGroup>()
-  for (const row of rows) {
+  for (const row of sortedRows.value) {
     let bucket = bySource.get(row.sourceId)
     if (!bucket) {
       bucket = { sourceId: row.sourceId, sourceName: row.sourceName, rows: [] }
@@ -264,11 +277,21 @@ onBeforeUnmount(() => {
       <table class="w-full text-sm">
         <thead class="text-left text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('updates_view.col_package') }}</th>
-            <th class="px-4 py-2">{{ t('updates_view.col_ecosystem') }}</th>
-            <th class="px-4 py-2">{{ t('updates_view.col_current') }}</th>
-            <th class="px-4 py-2">{{ t('updates_view.col_latest') }}</th>
-            <th class="px-4 py-2">{{ t('updates_view.col_published') }}</th>
+            <SortableTh column-key="package" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('updates_view.col_package') }}
+            </SortableTh>
+            <SortableTh column-key="ecosystem" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('updates_view.col_ecosystem') }}
+            </SortableTh>
+            <SortableTh column-key="current" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('updates_view.col_current') }}
+            </SortableTh>
+            <SortableTh column-key="latest" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('updates_view.col_latest') }}
+            </SortableTh>
+            <SortableTh column-key="published" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('updates_view.col_published') }}
+            </SortableTh>
             <th class="px-4 py-2">{{ t('updates_view.col_flags') }}</th>
           </tr>
         </thead>

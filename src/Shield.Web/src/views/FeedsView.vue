@@ -1,17 +1,32 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
 import { useFeedsQuery, useRefreshFeedMutation } from '@/queries/feeds'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
 import { FeedNames } from '@/types/api'
-import type { Feed } from '@/types/api'
+import type { Feed, FeedStatus } from '@/types/api'
 
 const { t } = useI18n()
 const { data, isLoading, isError } = useFeedsQuery()
 const refresh = useRefreshFeedMutation()
 const { push } = useToasts()
+
+const rows = computed<FeedStatus[]>(() => data.value ?? [])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<FeedStatus>(rows, [
+  { key: 'feed', extract: row => FeedNames[row.feed], defaultDirection: 'asc' },
+  { key: 'lastSuccess', extract: row => row.lastSuccessAt, defaultDirection: 'desc' },
+  { key: 'nextRun', extract: row => row.nextRunAt, defaultDirection: 'asc' },
+  {
+    key: 'status',
+    extract: row => (row.lastError ? 'error' : row.registered ? 'ok' : 'not-registered'),
+    defaultDirection: 'asc',
+  },
+])
 
 async function onRefresh(feed: Feed): Promise<void> {
   try {
@@ -35,15 +50,23 @@ async function onRefresh(feed: Feed): Promise<void> {
       <table class="w-full min-w-[640px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('feeds.col_feed') }}</th>
-            <th class="px-4 py-2">{{ t('feeds.col_last_success') }}</th>
-            <th class="px-4 py-2">{{ t('feeds.col_next_run') }}</th>
-            <th class="px-4 py-2">{{ t('feeds.col_status') }}</th>
+            <SortableTh column-key="feed" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('feeds.col_feed') }}
+            </SortableTh>
+            <SortableTh column-key="lastSuccess" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('feeds.col_last_success') }}
+            </SortableTh>
+            <SortableTh column-key="nextRun" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('feeds.col_next_run') }}
+            </SortableTh>
+            <SortableTh column-key="status" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('feeds.col_status') }}
+            </SortableTh>
             <th class="px-4 py-2 text-right">{{ t('feeds.col_actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <tr v-for="status in data" :key="status.feed" class="hover:bg-slate-800/50">
+          <tr v-for="status in sortedRows" :key="status.feed" class="hover:bg-slate-800/50">
             <td class="px-4 py-2 font-medium">{{ FeedNames[status.feed] }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.lastSuccessAt) }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.nextRunAt) }}</td>

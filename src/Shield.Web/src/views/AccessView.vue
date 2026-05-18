@@ -23,12 +23,32 @@ import {
 import { useStartImpersonationMutation } from '@/queries/impersonation'
 import { useAuth } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
-import type { AccessRoleName, GithubUserSummary } from '@/types/api'
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
+import type { AccessRoleName, AccessUser, GithubUserSummary, PendingInvite } from '@/types/api'
 import { SourceAccessLevel, SourceAccessLevelNames } from '@/types/api'
 
 const users = useAccessUsersQuery()
 const groups = useAccessGroupsQuery()
 const invites = usePendingInvitesQuery()
+
+// Two independent sort handles — invites + users tables sort separately.
+const invitesRowsRef = computed<PendingInvite[]>(() => invites.data.value ?? [])
+const invitesSort = useClientSort<PendingInvite>(invitesRowsRef, [
+  { key: 'email', extract: row => row.email, defaultDirection: 'asc' },
+  { key: 'role', extract: row => row.role, defaultDirection: 'asc' },
+  { key: 'groups', extract: row => row.sourceGroupNames.join(','), defaultDirection: 'asc' },
+  { key: 'invitedBy', extract: row => row.inviterLogin ?? '', defaultDirection: 'asc' },
+  { key: 'expires', extract: row => row.expiresAt, defaultDirection: 'asc' },
+])
+
+const usersRowsRef = computed<AccessUser[]>(() => users.data.value ?? [])
+const usersSort = useClientSort<AccessUser>(usersRowsRef, [
+  { key: 'username', extract: row => row.username, defaultDirection: 'asc' },
+  { key: 'email', extract: row => row.email ?? '', defaultDirection: 'asc' },
+  { key: 'roles', extract: row => row.roles.join(','), defaultDirection: 'asc' },
+  { key: 'created', extract: row => row.createdAt, defaultDirection: 'desc' },
+])
 const createGroup = useCreateGroupMutation()
 const deleteGroup = useDeleteGroupMutation()
 const addMember = useAddGroupMemberMutation()
@@ -679,16 +699,26 @@ function fmtDate(iso: string): string {
       <table v-else-if="invites.data.value && invites.data.value.length" class="w-full min-w-[720px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('access_view.col_email') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_role') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_groups') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_invited_by') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_expires') }}</th>
+            <SortableTh column-key="email" :active-key="invitesSort.sortKey.value" :active-dir="invitesSort.sortDir.value" @toggle="invitesSort.toggleSort">
+              {{ t('access_view.col_email') }}
+            </SortableTh>
+            <SortableTh column-key="role" :active-key="invitesSort.sortKey.value" :active-dir="invitesSort.sortDir.value" @toggle="invitesSort.toggleSort">
+              {{ t('access_view.col_role') }}
+            </SortableTh>
+            <SortableTh column-key="groups" :active-key="invitesSort.sortKey.value" :active-dir="invitesSort.sortDir.value" @toggle="invitesSort.toggleSort">
+              {{ t('access_view.col_groups') }}
+            </SortableTh>
+            <SortableTh column-key="invitedBy" :active-key="invitesSort.sortKey.value" :active-dir="invitesSort.sortDir.value" @toggle="invitesSort.toggleSort">
+              {{ t('access_view.col_invited_by') }}
+            </SortableTh>
+            <SortableTh column-key="expires" :active-key="invitesSort.sortKey.value" :active-dir="invitesSort.sortDir.value" @toggle="invitesSort.toggleSort">
+              {{ t('access_view.col_expires') }}
+            </SortableTh>
             <th class="px-4 py-2"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <tr v-for="row in invites.data.value" :key="row.id" class="hover:bg-slate-800/50">
+          <tr v-for="row in invitesSort.sortedRows.value" :key="row.id" class="hover:bg-slate-800/50">
             <td class="px-4 py-2 text-slate-200">
               <div class="flex items-center gap-2">
                 <span>{{ row.email }}</span>
@@ -756,15 +786,23 @@ function fmtDate(iso: string): string {
       <table v-else-if="users.data.value && users.data.value.length" class="w-full min-w-[720px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('access_view.col_username') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_email_addr') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_roles') }}</th>
-            <th class="px-4 py-2">{{ t('access_view.col_created') }}</th>
+            <SortableTh column-key="username" :active-key="usersSort.sortKey.value" :active-dir="usersSort.sortDir.value" @toggle="usersSort.toggleSort">
+              {{ t('access_view.col_username') }}
+            </SortableTh>
+            <SortableTh column-key="email" :active-key="usersSort.sortKey.value" :active-dir="usersSort.sortDir.value" @toggle="usersSort.toggleSort">
+              {{ t('access_view.col_email_addr') }}
+            </SortableTh>
+            <SortableTh column-key="roles" :active-key="usersSort.sortKey.value" :active-dir="usersSort.sortDir.value" @toggle="usersSort.toggleSort">
+              {{ t('access_view.col_roles') }}
+            </SortableTh>
+            <SortableTh column-key="created" :active-key="usersSort.sortKey.value" :active-dir="usersSort.sortDir.value" @toggle="usersSort.toggleSort">
+              {{ t('access_view.col_created') }}
+            </SortableTh>
             <th class="px-4 py-2"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <tr v-for="user in users.data.value" :key="user.id" class="hover:bg-slate-800/50">
+          <tr v-for="user in usersSort.sortedRows.value" :key="user.id" class="hover:bg-slate-800/50">
             <td class="px-4 py-2 text-slate-200">{{ user.username }}</td>
             <td class="px-4 py-2 text-slate-400">{{ user.email ?? '—' }}</td>
             <td class="px-4 py-2 text-slate-400">{{ user.roles.join(', ') }}</td>

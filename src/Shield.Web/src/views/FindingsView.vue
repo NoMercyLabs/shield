@@ -557,6 +557,20 @@ function applySortOption(opt: SortOption): void {
   sortDirFilter.value = opt.sortDir
 }
 
+// Column-header click handler. Mirrors the conventional spreadsheet behaviour: clicking
+// the active column toggles direction, clicking a different column switches to it with
+// the default sensible direction for that field.
+function toggleSort(by: SortBy): void {
+  if (sortByFilter.value === by) {
+    sortDirFilter.value = sortDirFilter.value === SortDir.Asc ? SortDir.Desc : SortDir.Asc
+    return
+  }
+  sortByFilter.value = by
+  // Names default ASC (a→z), severity/date default DESC (most important / newest first).
+  sortDirFilter.value
+    = by === SortBy.PackageName || by === SortBy.SourceName ? SortDir.Asc : SortDir.Desc
+}
+
 const sortDropdownOpen = ref(false)
 
 const allSeverities: Severity[] = [Severity.Critical, Severity.High, Severity.Medium, Severity.Low]
@@ -918,11 +932,55 @@ watch([allOnPageSelected, someOnPageSelected], () => {
                 @change="toggleAllOnPage"
               >
             </th>
-            <th class="px-4 py-2">{{ $t('findings.col_severity') }}</th>
-            <th class="px-4 py-2">{{ $t('findings.col_package') }}</th>
+            <th class="px-4 py-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 uppercase hover:text-slate-200"
+                @click="toggleSort(SortBy.Severity)"
+              >
+                {{ $t('findings.col_severity') }}
+                <span v-if="sortByFilter === SortBy.Severity" class="text-blue-300">
+                  {{ sortDirFilter === SortDir.Asc ? '▲' : '▼' }}
+                </span>
+              </button>
+            </th>
+            <th class="px-4 py-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 uppercase hover:text-slate-200"
+                @click="toggleSort(SortBy.PackageName)"
+              >
+                {{ $t('findings.col_package') }}
+                <span v-if="sortByFilter === SortBy.PackageName" class="text-blue-300">
+                  {{ sortDirFilter === SortDir.Asc ? '▲' : '▼' }}
+                </span>
+              </button>
+            </th>
             <th class="px-4 py-2">{{ $t('findings.col_advisory') }}</th>
-            <th class="px-4 py-2">{{ $t('findings.col_source') }}</th>
-            <th class="px-4 py-2">{{ $t('findings.col_last_seen') }}</th>
+            <th class="px-4 py-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 uppercase hover:text-slate-200"
+                @click="toggleSort(SortBy.SourceName)"
+              >
+                {{ $t('findings.col_source') }}
+                <span v-if="sortByFilter === SortBy.SourceName" class="text-blue-300">
+                  {{ sortDirFilter === SortDir.Asc ? '▲' : '▼' }}
+                </span>
+              </button>
+            </th>
+            <th class="px-4 py-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 uppercase hover:text-slate-200"
+                @click="toggleSort(SortBy.DiscoveredAt)"
+              >
+                {{ $t('findings.col_last_seen') }}
+                <span v-if="sortByFilter === SortBy.DiscoveredAt" class="text-blue-300">
+                  {{ sortDirFilter === SortDir.Asc ? '▲' : '▼' }}
+                </span>
+              </button>
+            </th>
             <th class="px-4 py-2">{{ $t('findings.col_state') }}</th>
           </tr>
         </thead>

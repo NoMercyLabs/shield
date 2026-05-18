@@ -6,13 +6,15 @@ import { useI18n } from 'vue-i18n'
 
 import FolderPickerDialog from '@/components/FolderPickerDialog.vue'
 import RepoPickerDialog from '@/components/RepoPickerDialog.vue'
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
 import { useRefreshGithubAccessMutation } from '@/queries/access'
 import { useOAuthStatus } from '@/queries/oauth'
 import { useBulkFromGithubMutation, useBulkLocalFoldersMutation, useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useAuth } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
-import type { BulkSelection } from '@/types/api'
+import type { BulkSelection, Source } from '@/types/api'
 import { AutoFixMode, SourceType, SourceTypeNames } from '@/types/api'
 
 const { t } = useI18n()
@@ -31,6 +33,19 @@ const { push } = useToasts()
 const canRefreshGithubAccess = computed(() =>
   isAdmin.value || (user.value?.roles.includes('Maintainer') ?? false),
 )
+
+const sortableRows = computed<Source[]>(() => data.value ?? [])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<Source>(sortableRows, [
+  { key: 'name', extract: row => row.name, defaultDirection: 'asc' },
+  { key: 'type', extract: row => SourceTypeNames[row.type], defaultDirection: 'asc' },
+  { key: 'lastScanned', extract: row => row.lastScannedAt, defaultDirection: 'desc' },
+  {
+    key: 'status',
+    extract: row =>
+      row.lastError ? 'error' : row.enabled ? (row.lastScannedAt ? 'ok' : 'pending') : 'disabled',
+    defaultDirection: 'asc',
+  },
+])
 
 async function onRefreshGithubAccess(): Promise<void> {
   try {
@@ -226,14 +241,22 @@ async function onSubmit(): Promise<void> {
       <table class="w-full min-w-[640px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('sources.col_name') }}</th>
-            <th class="px-4 py-2">{{ t('sources.col_type') }}</th>
-            <th class="px-4 py-2">{{ t('sources.col_last_scanned') }}</th>
-            <th class="px-4 py-2">{{ t('sources.col_status') }}</th>
+            <SortableTh column-key="name" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('sources.col_name') }}
+            </SortableTh>
+            <SortableTh column-key="type" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('sources.col_type') }}
+            </SortableTh>
+            <SortableTh column-key="lastScanned" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('sources.col_last_scanned') }}
+            </SortableTh>
+            <SortableTh column-key="status" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('sources.col_status') }}
+            </SortableTh>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <tr v-for="source in data" :key="source.id" class="hover:bg-slate-800/50">
+          <tr v-for="source in sortedRows" :key="source.id" class="hover:bg-slate-800/50">
             <td class="px-4 py-2">
               <RouterLink :to="`/sources/${source.id}`" class="text-blue-400 hover:underline">
                 {{ source.name }}

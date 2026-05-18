@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import SortableTh from '@/components/SortableTh.vue'
+import { useClientSort } from '@/composables/useClientSort'
 import { useAuditQuery } from '@/queries/audit'
 import { formatDate } from '@/lib/format'
 import type { AuditEntry, AuditFilter } from '@/types/api'
@@ -44,6 +46,18 @@ const filter = computed<AuditFilter>(() => ({
 }))
 
 const { data, isLoading, isError } = useAuditQuery(filter)
+
+// Client-side sort over the current page. The audit endpoint paginates server-side, so
+// this only reorders what's currently visible — but it's still better than no sort, and
+// the page is bounded by pageSize (default 50) so the reshuffle stays cheap.
+const auditRows = computed<AuditEntry[]>(() => data.value?.items ?? [])
+const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<AuditEntry>(auditRows, [
+  { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
+  { key: 'actor', extract: row => row.actorDisplayName ?? row.actorUserId ?? '', defaultDirection: 'asc' },
+  { key: 'action', extract: row => row.action, defaultDirection: 'asc' },
+  { key: 'target', extract: row => `${row.targetType ?? ''}/${row.targetId ?? ''}`, defaultDirection: 'asc' },
+  { key: 'ip', extract: row => row.ipAddress, defaultDirection: 'asc' },
+])
 
 const totalPages = computed(() => {
   if (!data.value)
@@ -134,15 +148,25 @@ function prettyDetails(json: string | null): string {
       <table class="w-full min-w-[800px] text-left text-sm">
         <thead class="border-b border-slate-800 text-xs uppercase text-slate-500">
           <tr>
-            <th class="px-4 py-2">{{ t('audit.col_when') }}</th>
-            <th class="px-4 py-2">{{ t('audit.col_actor') }}</th>
-            <th class="px-4 py-2">{{ t('audit.col_action') }}</th>
-            <th class="px-4 py-2">{{ t('audit.col_target') }}</th>
-            <th class="px-4 py-2">{{ t('audit.col_ip') }}</th>
+            <SortableTh column-key="when" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('audit.col_when') }}
+            </SortableTh>
+            <SortableTh column-key="actor" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('audit.col_actor') }}
+            </SortableTh>
+            <SortableTh column-key="action" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('audit.col_action') }}
+            </SortableTh>
+            <SortableTh column-key="target" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('audit.col_target') }}
+            </SortableTh>
+            <SortableTh column-key="ip" :active-key="sortKey" :active-dir="sortDir" @toggle="toggleSort">
+              {{ t('audit.col_ip') }}
+            </SortableTh>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-800">
-          <template v-for="entry in data.items" :key="entry.id">
+          <template v-for="entry in sortedRows" :key="entry.id">
             <tr class="hover:bg-slate-800/50">
               <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ formatDate(entry.at) }}</td>
               <td class="px-4 py-2 text-slate-200">
