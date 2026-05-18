@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ExternalLink, FolderOpen, Github, GitBranch, Plus, RefreshCw } from 'lucide-vue-next'
+import { ExternalLink, FolderOpen, Github, GitBranch, Loader2, Plus, RefreshCw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
 import FolderPickerDialog from '@/components/FolderPickerDialog.vue'
@@ -13,10 +13,10 @@ import { useRefreshGithubAccessMutation } from '@/queries/access'
 import { useOAuthStatus } from '@/queries/oauth'
 import { useBulkFromGithubMutation, useBulkLocalFoldersMutation, useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useAuth } from '@/stores/auth'
-import { enumLabel } from '@/stores/enums'
+import { enumLabel, enumLabelByName } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
-import type { BulkSelection, Source } from '@/types/api'
+import type { BulkSelection, OAuthProviderName, Source } from '@/types/api'
 import { AutoFixMode, SourceType } from '@/types/api'
 
 const { t } = useI18n()
@@ -25,13 +25,15 @@ const create = useCreateSourceMutation()
 const bulkLocalFolders = useBulkLocalFoldersMutation()
 const bulkFromGithub = useBulkFromGithubMutation()
 const githubStatus = useOAuthStatus('Github')
+const gitlabStatus = useOAuthStatus('Gitlab')
+const bitbucketStatus = useOAuthStatus('Bitbucket')
+const forgejoStatus = useOAuthStatus('Forgejo')
+const giteaStatus = useOAuthStatus('Gitea')
+const codebergStatus = useOAuthStatus('Codeberg')
 const refreshGithubAccess = useRefreshGithubAccessMutation()
 const { user, isAdmin } = useAuth()
 const { push } = useToasts()
 
-// Maintainers + Admins can re-pull their own GitHub org map; covers the case where the
-// user joined a new org on GitHub and wants Shield to surface its repos without waiting
-// for the 15-min cache to lapse.
 const canRefreshGithubAccess = computed(() =>
   isAdmin.value || (user.value?.roles.includes('Maintainer') ?? false),
 )
@@ -74,12 +76,72 @@ async function onRefreshGithubAccess(): Promise<void> {
 const showForm = ref(false)
 const showFolderPicker = ref(false)
 const showRepoPicker = ref(false)
+const repoPickerProvider = ref<OAuthProviderName>('Github')
+
 const name = ref('')
 const type = ref<SourceType>(SourceType.GithubRepo)
-const configJson = ref('{}')
 const scanInterval = ref('01:00:00')
+const linuxHostname = ref('')
 
 const githubConnected = computed(() => githubStatus.data.value?.connected ?? false)
+const gitlabConnected = computed(() => gitlabStatus.data.value?.connected ?? false)
+const bitbucketConnected = computed(() => bitbucketStatus.data.value?.connected ?? false)
+const forgejoConnected = computed(() => forgejoStatus.data.value?.connected ?? false)
+const giteaConnected = computed(() => giteaStatus.data.value?.connected ?? false)
+const codebergConnected = computed(() => codebergStatus.data.value?.connected ?? false)
+
+const REPO_SOURCE_TYPES: SourceType[] = [
+  SourceType.GithubRepo,
+  SourceType.GitlabRepo,
+  SourceType.BitbucketRepo,
+  SourceType.ForgejoRepo,
+  SourceType.GiteaRepo,
+  SourceType.CodebergRepo,
+]
+
+const isRepoType = computed(() => REPO_SOURCE_TYPES.includes(type.value))
+
+const isLinuxHostType = computed(() => type.value === SourceType.LinuxHost)
+const isLocalFolderType = computed(() => type.value === SourceType.LocalFolder)
+
+const repoTypeProviderMap: Record<number, OAuthProviderName> = {
+  [SourceType.GithubRepo]: 'Github',
+  [SourceType.GitlabRepo]: 'Gitlab',
+  [SourceType.BitbucketRepo]: 'Bitbucket',
+  [SourceType.ForgejoRepo]: 'Forgejo',
+  [SourceType.GiteaRepo]: 'Gitea',
+  [SourceType.CodebergRepo]: 'Codeberg',
+}
+
+const providerConnectedMap = computed<Record<OAuthProviderName, boolean>>(() => ({
+  Github: githubConnected.value,
+  Gitlab: gitlabConnected.value,
+  Bitbucket: bitbucketConnected.value,
+  Forgejo: forgejoConnected.value,
+  Gitea: giteaConnected.value,
+  Codeberg: codebergConnected.value,
+  Slack: false,
+  Google: false,
+}))
+
+const currentRepoProvider = computed<OAuthProviderName>(() =>
+  repoTypeProviderMap[type.value] ?? 'Github',
+)
+
+const currentProviderConnected = computed(() =>
+  providerConnectedMap.value[currentRepoProvider.value] ?? false,
+)
+
+interface PickResultRow {
+  owner: string
+  name: string
+  branch: string | null | undefined
+  status: 'pending' | 'ok' | 'error'
+  error?: string
+}
+
+const pickResults = ref<PickResultRow[]>([])
+const isSubmittingPick = ref(false)
 
 async function onFolderPickerSubmit(paths: string[]): Promise<void> {
   try {
@@ -93,29 +155,79 @@ async function onFolderPickerSubmit(paths: string[]): Promise<void> {
 }
 
 async function onRepoPickerSubmit(selections: BulkSelection[]): Promise<void> {
-  try {
-    const result = await bulkFromGithub.mutateAsync({ selections })
-    push('success', t('sources.bulk_github_ok', { created: result.created, skipped: result.skippedExisting }))
-    showRepoPicker.value = false
+  if (repoPickerProvider.value === 'Github') {
+    try {
+      const result = await bulkFromGithub.mutateAsync({ selections })
+      push('success', t('sources.bulk_github_ok', { created: result.created, skipped: result.skippedExisting }))
+      showRepoPicker.value = false
+    }
+    catch {
+      push('error', t('sources.bulk_github_error'))
+    }
+    return
   }
-  catch {
-    push('error', t('sources.bulk_github_error'))
+
+  isSubmittingPick.value = true
+  pickResults.value = selections.map(sel => ({
+    owner: sel.owner,
+    name: sel.name,
+    branch: sel.branch,
+    status: 'pending' as const,
+  }))
+
+  for (let index = 0; index < selections.length; index++) {
+    const sel = selections[index]
+    try {
+      await create.mutateAsync({
+        name: sel.name,
+        type: type.value,
+        configJson: JSON.stringify({ owner: sel.owner, repo: sel.name, branch: sel.branch ?? null }),
+        scanInterval: '01:00:00',
+        enabled: true,
+      })
+      pickResults.value[index] = { ...pickResults.value[index], status: 'ok' }
+    }
+    catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      pickResults.value[index] = { ...pickResults.value[index], status: 'error', error: message }
+    }
+  }
+  isSubmittingPick.value = false
+
+  const succeeded = pickResults.value.filter(row => row.status === 'ok').length
+  const failed = pickResults.value.filter(row => row.status === 'error').length
+  if (failed === 0) {
+    push('success', t('sources.bulk_provider_ok', { created: succeeded, provider: enumLabelByName('OAuthProvider', repoPickerProvider.value) }))
+    showRepoPicker.value = false
+    pickResults.value = []
   }
 }
 
+function openRepoPicker(provider: OAuthProviderName): void {
+  repoPickerProvider.value = provider
+  pickResults.value = []
+  showRepoPicker.value = true
+}
+
 async function onSubmit(): Promise<void> {
+  let configJson = '{}'
+
+  if (isLinuxHostType.value) {
+    configJson = JSON.stringify({ hostname: linuxHostname.value })
+  }
+
   try {
     await create.mutateAsync({
       name: name.value,
       type: type.value,
-      configJson: configJson.value,
+      configJson,
       scanInterval: scanInterval.value,
       enabled: true,
     })
     push('success', t('sources.added_toast', { name: name.value }))
     showForm.value = false
     name.value = ''
-    configJson.value = '{}'
+    linuxHostname.value = ''
     scanInterval.value = '01:00:00'
   }
   catch {
@@ -152,7 +264,8 @@ async function onSubmit(): Promise<void> {
             type="button"
             class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="!githubConnected"
-            @click="showRepoPicker = true"
+            :title="githubConnected ? t('sources.github_connect_tooltip') : t('sources.github_connect_required_tooltip')"
+            @click="openRepoPicker('Github')"
           >
             <Github class="h-4 w-4" />
             {{ t('sources.pick_github_btn') }}
@@ -177,8 +290,8 @@ async function onSubmit(): Promise<void> {
 
     <RepoPickerDialog
       :open="showRepoPicker"
-      provider="github"
-      @close="showRepoPicker = false"
+      :provider="repoPickerProvider"
+      @close="showRepoPicker = false; pickResults = []"
       @submit="onRepoPickerSubmit"
     />
 
@@ -202,10 +315,58 @@ async function onSubmit(): Promise<void> {
           class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         >
           <option :value="SourceType.GithubRepo">{{ t('sources.type_github') }}</option>
+          <option :value="SourceType.GitlabRepo">{{ enumLabel('SourceType', SourceType.GitlabRepo) }}</option>
+          <option :value="SourceType.BitbucketRepo">{{ enumLabel('SourceType', SourceType.BitbucketRepo) }}</option>
+          <option :value="SourceType.ForgejoRepo">{{ enumLabel('SourceType', SourceType.ForgejoRepo) }}</option>
+          <option :value="SourceType.GiteaRepo">{{ enumLabel('SourceType', SourceType.GiteaRepo) }}</option>
+          <option :value="SourceType.CodebergRepo">{{ enumLabel('SourceType', SourceType.CodebergRepo) }}</option>
           <option :value="SourceType.LocalFolder">{{ t('sources.type_folder') }}</option>
           <option :value="SourceType.LinuxHost">{{ t('sources.type_host') }}</option>
         </select>
       </label>
+
+      <template v-if="isRepoType">
+        <div class="rounded border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-xs text-slate-400">
+          {{ t('sources.repo_picker_hint') }}
+        </div>
+        <button
+          type="button"
+          :disabled="!currentProviderConnected"
+          :title="currentProviderConnected ? '' : t('sources.provider_not_connected_hint', { provider: enumLabelByName('OAuthProvider', currentRepoProvider) })"
+          class="flex items-center gap-1.5 rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          @click.prevent="openRepoPicker(currentRepoProvider)"
+        >
+          <Plus class="h-4 w-4" />
+          {{ t('sources.pick_provider_btn', { provider: enumLabelByName('OAuthProvider', currentRepoProvider) }) }}
+        </button>
+      </template>
+
+      <template v-else-if="isLinuxHostType">
+        <label class="block">
+          <span class="text-sm text-slate-300">{{ t('sources.host_label') }}</span>
+          <input
+            v-model="linuxHostname"
+            required
+            :placeholder="t('sources.host_placeholder')"
+            class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          />
+        </label>
+      </template>
+
+      <template v-else-if="isLocalFolderType">
+        <div class="rounded border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-xs text-slate-400">
+          {{ t('sources.folder_picker_hint') }}
+        </div>
+        <button
+          type="button"
+          class="flex items-center gap-1.5 rounded border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
+          @click.prevent="showFolderPicker = true"
+        >
+          <FolderOpen class="h-4 w-4" />
+          {{ t('sources.pick_folder_btn') }}
+        </button>
+      </template>
+
       <label class="block">
         <span class="text-sm text-slate-300">{{ t('sources.form_scan_interval') }}</span>
         <input
@@ -216,15 +377,9 @@ async function onSubmit(): Promise<void> {
           class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
         />
       </label>
-      <label class="block">
-        <span class="text-sm text-slate-300">{{ t('sources.form_config_json') }}</span>
-        <textarea
-          v-model="configJson"
-          rows="4"
-          class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
-        />
-      </label>
+
       <button
+        v-if="!isRepoType && !isLocalFolderType"
         type="submit"
         :disabled="create.isPending.value"
         class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:bg-blue-900"
@@ -232,6 +387,32 @@ async function onSubmit(): Promise<void> {
         {{ create.isPending.value ? t('sources.saving') : t('sources.save_btn') }}
       </button>
     </form>
+
+    <div
+      v-if="pickResults.length"
+      class="space-y-1 rounded border border-slate-800 bg-slate-900 p-3"
+    >
+      <p class="mb-2 text-xs font-medium text-slate-400">{{ t('sources.pick_results_title') }}</p>
+      <div
+        v-for="row in pickResults"
+        :key="`${row.owner}/${row.name}`"
+        class="flex items-center gap-2 text-xs"
+      >
+        <Loader2 v-if="row.status === 'pending'" class="h-3.5 w-3.5 animate-spin text-slate-400" />
+        <span v-else-if="row.status === 'ok'" class="text-emerald-400">✓</span>
+        <span v-else class="text-red-400">✗</span>
+        <span class="font-mono text-slate-300">{{ row.owner }}/{{ row.name }}</span>
+        <span v-if="row.status === 'error'" class="text-red-400">{{ row.error }}</span>
+      </div>
+      <button
+        v-if="!isSubmittingPick"
+        type="button"
+        class="mt-2 text-xs text-slate-500 hover:text-slate-200 hover:underline"
+        @click="pickResults = []"
+      >
+        {{ t('action.dismiss') }}
+      </button>
+    </div>
 
     <p
       v-if="!isAdmin && data && data.length"
@@ -346,7 +527,7 @@ async function onSubmit(): Promise<void> {
           type="button"
           class="inline-flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="!githubConnected"
-          @click="showRepoPicker = true"
+          @click="openRepoPicker('Github')"
         >
           <Github class="h-3.5 w-3.5" />
           {{ t('sources.pick_github_btn') }}

@@ -102,4 +102,14 @@ export function enumLabelEntries(
   }))
 }
 
+// Translate directly from the C# enum name (string) rather than the numeric wire value.
+// Use this when you already have the name and don't want a catalog round-trip.
+export function enumLabelByName(enumType: string, name: string): string {
+  if (!name) return ''
+  const key = `enum.${enumType}.${name}`
+  const t = i18n.global.t as (key: string) => string
+  const translated = t(key)
+  return translated === key ? name : translated
+}
+
 export const enumsLoaded = loaded

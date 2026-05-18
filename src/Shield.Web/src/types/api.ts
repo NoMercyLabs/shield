@@ -611,6 +611,23 @@ export interface GitHubRepoListResponse {
   total: number
 }
 
+export interface RepositorySummary {
+  owner: string
+  name: string
+  fullName: string
+  description: string | null
+  defaultBranch: string | null
+  isPrivate: boolean
+  archived: boolean
+  fork: boolean
+  language: string | null
+}
+
+export interface RepositoryListResponse {
+  repos: RepositorySummary[]
+  total: number
+}
+
 export interface BulkSelection {
   owner: string
   name: string
@@ -635,6 +652,7 @@ export interface OAuthProviderConfig {
   clientSecretMasked: string | null
   scopes: string | null
   configured: boolean
+  host?: string | null
 }
 
 // ClientSecret semantics: null = preserve existing, "" = clear, non-empty = overwrite.
@@ -642,6 +660,7 @@ export interface OAuthProviderConfigPatch {
   clientId: string | null
   clientSecret: string | null
   scopes: string | null
+  host?: string | null
 }
 
 export interface Settings {
@@ -656,6 +675,11 @@ export interface Settings {
   github: OAuthProviderConfig
   slack: OAuthProviderConfig
   google: OAuthProviderConfig
+  gitlab?: OAuthProviderConfig | null
+  bitbucket?: OAuthProviderConfig | null
+  forgejo?: OAuthProviderConfig | null
+  gitea?: OAuthProviderConfig | null
+  codeberg?: OAuthProviderConfig | null
 }
 
 export interface SettingsUpdate {
@@ -670,6 +694,11 @@ export interface SettingsUpdate {
   github?: OAuthProviderConfigPatch | null
   slack?: OAuthProviderConfigPatch | null
   google?: OAuthProviderConfigPatch | null
+  gitlab?: OAuthProviderConfigPatch | null
+  bitbucket?: OAuthProviderConfigPatch | null
+  forgejo?: OAuthProviderConfigPatch | null
+  gitea?: OAuthProviderConfigPatch | null
+  codeberg?: OAuthProviderConfigPatch | null
 }
 
 export interface SettingsUpdateResponse {

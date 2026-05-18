@@ -208,7 +208,7 @@ async function onFolderSubmit(paths: string[]): Promise<void> {
     <RepoPickerDialog
       v-if="repoPickerOpen"
       :open="repoPickerOpen"
-      provider="github"
+      provider="Github"
       @close="repoPickerOpen = false"
       @submit="onRepoSubmit"
     />

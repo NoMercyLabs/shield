@@ -6,6 +6,7 @@ import { ExternalLink, Save, Send } from 'lucide-vue-next'
 
 import GithubOauthSetupCard from '@/components/GithubOauthSetupCard.vue'
 import IntegrationCard from '@/components/IntegrationCard.vue'
+import OAuthProviderSettingsCard from '@/components/OAuthProviderSettingsCard.vue'
 import PushNotificationsCard from '@/components/PushNotificationsCard.vue'
 import {
   useRuntimeInfo,
@@ -51,6 +52,7 @@ interface ProviderForm {
   clientId: string
   clientSecret: string
   scopes: string
+  host: string
   clearSecret: boolean
 }
 
@@ -58,15 +60,31 @@ const DEFAULT_SCOPES = {
   Github: 'read:user user:email repo read:org',
   Slack: 'openid email profile chat:write channels:read users.identity',
   Google: 'openid email profile https://mail.google.com/',
+  Gitlab: 'read_api read_user read_repository',
+  Bitbucket: 'account email repository',
+  Forgejo: 'read:user read:repository',
+  Gitea: 'read:user read:repository',
+  Codeberg: 'read:user read:repository',
 } as const
 
 function emptyProviderForm(scopes = ''): ProviderForm {
-  return { clientId: '', clientSecret: '', scopes, clearSecret: false }
+  return {
+    clientId: '',
+    clientSecret: '',
+    scopes,
+    host: '',
+    clearSecret: false,
+  }
 }
 
 const githubForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Github))
 const slackForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Slack))
 const googleForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Google))
+const gitlabForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Gitlab))
+const bitbucketForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Bitbucket))
+const forgejoForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Forgejo))
+const giteaForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Gitea))
+const codebergForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Codeberg))
 
 const callbackBase = computed(() => `${window.location.origin}/api/oauth`)
 const autoFixModeOptions = computed(() => enumEntries('AutoFixMode'))
@@ -76,6 +94,18 @@ const googleConfigured = computed(() => data.value?.google?.configured ?? false)
 
 const slackSecretMasked = computed(() => data.value?.slack?.clientSecretMasked ?? null)
 const googleSecretMasked = computed(() => data.value?.google?.clientSecretMasked ?? null)
+
+const gitlabSecretMasked = computed(() => data.value?.gitlab?.clientSecretMasked ?? null)
+const bitbucketSecretMasked = computed(() => data.value?.bitbucket?.clientSecretMasked ?? null)
+const forgejoSecretMasked = computed(() => data.value?.forgejo?.clientSecretMasked ?? null)
+const giteaSecretMasked = computed(() => data.value?.gitea?.clientSecretMasked ?? null)
+const codebergSecretMasked = computed(() => data.value?.codeberg?.clientSecretMasked ?? null)
+
+const gitlabConfigured = computed(() => data.value?.gitlab?.configured ?? false)
+const bitbucketConfigured = computed(() => data.value?.bitbucket?.configured ?? false)
+const forgejoConfigured = computed(() => data.value?.forgejo?.configured ?? false)
+const giteaConfigured = computed(() => data.value?.gitea?.configured ?? false)
+const codebergConfigured = computed(() => data.value?.codeberg?.configured ?? false)
 
 watch(data, (next) => {
   if (!next)
@@ -93,17 +123,50 @@ watch(data, (next) => {
   githubForm.clientId = next.github?.clientId ?? ''
   githubForm.scopes = next.github?.scopes ?? DEFAULT_SCOPES.Github
   githubForm.clientSecret = ''
+  githubForm.host = ''
   githubForm.clearSecret = false
 
   slackForm.clientId = next.slack?.clientId ?? ''
   slackForm.scopes = next.slack?.scopes ?? DEFAULT_SCOPES.Slack
   slackForm.clientSecret = ''
+  slackForm.host = ''
   slackForm.clearSecret = false
 
   googleForm.clientId = next.google?.clientId ?? ''
   googleForm.scopes = next.google?.scopes ?? DEFAULT_SCOPES.Google
   googleForm.clientSecret = ''
+  googleForm.host = ''
   googleForm.clearSecret = false
+
+  gitlabForm.clientId = next.gitlab?.clientId ?? ''
+  gitlabForm.scopes = next.gitlab?.scopes ?? DEFAULT_SCOPES.Gitlab
+  gitlabForm.clientSecret = ''
+  gitlabForm.host = ''
+  gitlabForm.clearSecret = false
+
+  bitbucketForm.clientId = next.bitbucket?.clientId ?? ''
+  bitbucketForm.scopes = next.bitbucket?.scopes ?? DEFAULT_SCOPES.Bitbucket
+  bitbucketForm.clientSecret = ''
+  bitbucketForm.host = ''
+  bitbucketForm.clearSecret = false
+
+  forgejoForm.clientId = next.forgejo?.clientId ?? ''
+  forgejoForm.scopes = next.forgejo?.scopes ?? DEFAULT_SCOPES.Forgejo
+  forgejoForm.clientSecret = ''
+  forgejoForm.host = next.forgejo?.host ?? ''
+  forgejoForm.clearSecret = false
+
+  giteaForm.clientId = next.gitea?.clientId ?? ''
+  giteaForm.scopes = next.gitea?.scopes ?? DEFAULT_SCOPES.Gitea
+  giteaForm.clientSecret = ''
+  giteaForm.host = next.gitea?.host ?? ''
+  giteaForm.clearSecret = false
+
+  codebergForm.clientId = next.codeberg?.clientId ?? ''
+  codebergForm.scopes = next.codeberg?.scopes ?? DEFAULT_SCOPES.Codeberg
+  codebergForm.clientSecret = ''
+  codebergForm.host = ''
+  codebergForm.clearSecret = false
 
   snapshot.value = {
     singleUserMode: next.singleUserMode,
@@ -138,7 +201,28 @@ const oauthDirty = computed(() =>
   || slackForm.scopes !== (data.value?.slack?.scopes ?? DEFAULT_SCOPES.Slack)
   || slackForm.clientSecret.length > 0
   || slackForm.clearSecret
-  || false,
+  || gitlabForm.clientId !== (data.value?.gitlab?.clientId ?? '')
+  || gitlabForm.scopes !== (data.value?.gitlab?.scopes ?? DEFAULT_SCOPES.Gitlab)
+  || gitlabForm.clientSecret.length > 0
+  || gitlabForm.clearSecret
+  || bitbucketForm.clientId !== (data.value?.bitbucket?.clientId ?? '')
+  || bitbucketForm.scopes !== (data.value?.bitbucket?.scopes ?? DEFAULT_SCOPES.Bitbucket)
+  || bitbucketForm.clientSecret.length > 0
+  || bitbucketForm.clearSecret
+  || forgejoForm.clientId !== (data.value?.forgejo?.clientId ?? '')
+  || forgejoForm.scopes !== (data.value?.forgejo?.scopes ?? DEFAULT_SCOPES.Forgejo)
+  || forgejoForm.clientSecret.length > 0
+  || forgejoForm.clearSecret
+  || forgejoForm.host !== (data.value?.forgejo?.host ?? '')
+  || giteaForm.clientId !== (data.value?.gitea?.clientId ?? '')
+  || giteaForm.scopes !== (data.value?.gitea?.scopes ?? DEFAULT_SCOPES.Gitea)
+  || giteaForm.clientSecret.length > 0
+  || giteaForm.clearSecret
+  || giteaForm.host !== (data.value?.gitea?.host ?? '')
+  || codebergForm.clientId !== (data.value?.codeberg?.clientId ?? '')
+  || codebergForm.scopes !== (data.value?.codeberg?.scopes ?? DEFAULT_SCOPES.Codeberg)
+  || codebergForm.clientSecret.length > 0
+  || codebergForm.clearSecret,
 )
 // google* refs stay declared (still hydrated by the response watcher) in case the v1.x
 // re-enable lands quickly — they're not surfaced in the UI right now.
@@ -195,11 +279,12 @@ watch(() => settingsRoute.query.tab, (next) => {
     activeTab.value = next
 })
 
-function providerPatch(form: ProviderForm) {
+function providerPatch(form: ProviderForm, includeHost = false) {
   return {
     clientId: form.clientId || null,
     clientSecret: form.clearSecret ? '' : (form.clientSecret || null),
     scopes: form.scopes || null,
+    ...(includeHost ? { host: form.host || null } : {}),
   }
 }
 
@@ -216,8 +301,12 @@ async function onSave(): Promise<void> {
       retentionDays: retentionDays.value,
       github: providerPatch(githubForm),
       slack: providerPatch(slackForm),
-      // Google patch intentionally null — UI was removed in favour of copy/share invite delivery.
       google: null,
+      gitlab: providerPatch(gitlabForm),
+      bitbucket: providerPatch(bitbucketForm),
+      forgejo: providerPatch(forgejoForm, true),
+      gitea: providerPatch(giteaForm, true),
+      codeberg: providerPatch(codebergForm),
     })
     oidcClientSecret.value = ''
     githubForm.clientSecret = ''
@@ -226,6 +315,16 @@ async function onSave(): Promise<void> {
     slackForm.clearSecret = false
     googleForm.clientSecret = ''
     googleForm.clearSecret = false
+    gitlabForm.clientSecret = ''
+    gitlabForm.clearSecret = false
+    bitbucketForm.clientSecret = ''
+    bitbucketForm.clearSecret = false
+    forgejoForm.clientSecret = ''
+    forgejoForm.clearSecret = false
+    giteaForm.clientSecret = ''
+    giteaForm.clearSecret = false
+    codebergForm.clientSecret = ''
+    codebergForm.clearSecret = false
     push('success', t('screen.settings.saved_toast'))
   }
   catch {
@@ -503,6 +602,100 @@ async function onTestOidc(): Promise<void> {
               <!-- Google OAuth intentionally hidden — invitation delivery uses copy/share, not
                    email. The backend adapter stays registered for a future re-enable; the form
                    just isn't exposed in v1. -->
+
+              <h3 class="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                {{ t('settings_view.other_providers_heading') }}
+              </h3>
+
+              <article class="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <header class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-slate-100">{{ t('settings_view.gitlab_card_title') }}</h4>
+                  <span
+                    v-if="gitlabConfigured"
+                    class="inline-flex items-center rounded border border-emerald-700/60 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300"
+                  >{{ t('settings_view.provider_configured') }}</span>
+                </header>
+                <OAuthProviderSettingsCard
+                  v-model="gitlabForm"
+                  provider="Gitlab"
+                  :show-host="false"
+                  :secret-masked="gitlabSecretMasked"
+                  :configured="gitlabConfigured"
+                  :callback-base="callbackBase"
+                />
+              </article>
+
+              <article class="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <header class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-slate-100">{{ t('settings_view.bitbucket_card_title') }}</h4>
+                  <span
+                    v-if="bitbucketConfigured"
+                    class="inline-flex items-center rounded border border-emerald-700/60 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300"
+                  >{{ t('settings_view.provider_configured') }}</span>
+                </header>
+                <OAuthProviderSettingsCard
+                  v-model="bitbucketForm"
+                  provider="Bitbucket"
+                  :show-host="false"
+                  :secret-masked="bitbucketSecretMasked"
+                  :configured="bitbucketConfigured"
+                  :callback-base="callbackBase"
+                />
+              </article>
+
+              <article class="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <header class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-slate-100">{{ t('settings_view.forgejo_card_title') }}</h4>
+                  <span
+                    v-if="forgejoConfigured"
+                    class="inline-flex items-center rounded border border-emerald-700/60 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300"
+                  >{{ t('settings_view.provider_configured') }}</span>
+                </header>
+                <OAuthProviderSettingsCard
+                  v-model="forgejoForm"
+                  provider="Forgejo"
+                  :show-host="true"
+                  :secret-masked="forgejoSecretMasked"
+                  :configured="forgejoConfigured"
+                  :callback-base="callbackBase"
+                />
+              </article>
+
+              <article class="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <header class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-slate-100">{{ t('settings_view.gitea_card_title') }}</h4>
+                  <span
+                    v-if="giteaConfigured"
+                    class="inline-flex items-center rounded border border-emerald-700/60 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300"
+                  >{{ t('settings_view.provider_configured') }}</span>
+                </header>
+                <OAuthProviderSettingsCard
+                  v-model="giteaForm"
+                  provider="Gitea"
+                  :show-host="true"
+                  :secret-masked="giteaSecretMasked"
+                  :configured="giteaConfigured"
+                  :callback-base="callbackBase"
+                />
+              </article>
+
+              <article class="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <header class="flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-slate-100">{{ t('settings_view.codeberg_card_title') }}</h4>
+                  <span
+                    v-if="codebergConfigured"
+                    class="inline-flex items-center rounded border border-emerald-700/60 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300"
+                  >{{ t('settings_view.provider_configured') }}</span>
+                </header>
+                <OAuthProviderSettingsCard
+                  v-model="codebergForm"
+                  provider="Codeberg"
+                  :show-host="false"
+                  :secret-masked="codebergSecretMasked"
+                  :configured="codebergConfigured"
+                  :callback-base="callbackBase"
+                />
+              </article>
             </div>
           </section>
 

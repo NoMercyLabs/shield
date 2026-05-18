@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import type { MaybeRefOrGetter } from 'vue'
-import { toValue } from 'vue'
+import type { MaybeRef, MaybeRefOrGetter } from 'vue'
+import { toValue, unref } from 'vue'
 
 import { api } from '@/lib/api'
 import type {
@@ -10,6 +10,7 @@ import type {
   OAuthProviderName,
   OAuthStartResponse,
   OAuthStatus,
+  RepositoryListResponse,
   SlackChannelsResponse,
 } from '@/types/api'
 
@@ -90,6 +91,22 @@ export function useGitHubReposQuery(enabled: MaybeRefOrGetter<boolean> = false) 
     enabled: () => toValue(enabled),
     queryFn: async (): Promise<GitHubRepoListResponse> => {
       const { data } = await api.get<GitHubRepoListResponse>('/oauth/github/repos')
+      return data
+    },
+  })
+}
+
+export function useProviderReposQuery(
+  provider: MaybeRef<OAuthProviderName>,
+  enabled: MaybeRefOrGetter<boolean> = false,
+) {
+  return useQuery({
+    queryKey: ['oauth-repos', provider],
+    enabled: () => toValue(enabled),
+    queryFn: async (): Promise<RepositoryListResponse> => {
+      const { data } = await api.get<RepositoryListResponse>('/oauth/repos', {
+        params: { provider: unref(provider) },
+      })
       return data
     },
   })
