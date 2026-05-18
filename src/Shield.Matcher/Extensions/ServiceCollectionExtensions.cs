@@ -22,8 +22,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVersionComparer, PythonVersionComparer>();
         services.AddSingleton<IVersionComparer, GemVersionComparer>();
         services.AddSingleton<IVersionComparer, GoModVersionComparer>();
-        // TODO: Rust (Cargo), Vcpkg (port-version) still need dedicated comparers. Until added,
-        // their advisories silently DO NOT match — see the warning in AdvisoryMatcher.Match.
+        // Cargo (Rust) is SemVer 2.0 exactly for version COMPARISON — its deviations are in
+        // dependency RESOLUTION syntax (^1.2, ~1.2, wildcards in Cargo.toml) which only matters
+        // for manifest parsing, not advisory range matching.
+        services.AddSingleton<IVersionComparer>(_ => new SemverVersionComparer(Ecosystem.Rust));
+        // TODO: Vcpkg (port-version) still needs a dedicated comparer.
 
         services.AddSingleton<AdvisoryMatcher>();
         services.AddSingleton<MaintainerDriftDetector>();
