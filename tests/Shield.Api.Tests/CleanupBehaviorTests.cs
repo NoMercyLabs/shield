@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using NSubstitute;
+using Shield.Api.Services.Ecosystems;
 using Shield.Api.Services.FixApply;
 using Shield.Api.Services.ManifestEditors;
 using Shield.Core.Abstractions;
@@ -371,22 +372,6 @@ public sealed class CleanupBehaviorTests
         return await applier.ApplyLocalAsync(source, item, suggestion, CancellationToken.None);
     }
 
-    private static IFixApplier BuildApplier()
-    {
-        IOAuthTokenAccessor tokenAccessor = Substitute.For<IOAuthTokenAccessor>();
-        IManifestEditor[] editors =
-        [
-            new NpmManifestEditor(),
-            new ComposerManifestEditor(),
-            new NugetManifestEditor(),
-            new PythonManifestEditor(),
-            new GoManifestEditor(),
-            new RustManifestEditor(),
-            new GradleManifestEditor(),
-        ];
-        return new FixApplier(editors, tokenAccessor);
-    }
-
     private static IManifestEditor BuildEditor(Ecosystem ecosystem) =>
         ecosystem switch
         {
@@ -397,4 +382,71 @@ public sealed class CleanupBehaviorTests
             Ecosystem.Gradle => new GradleManifestEditor(),
             _ => throw new ArgumentOutOfRangeException(nameof(ecosystem)),
         };
+
+    private static IFixApplier BuildApplier()
+    {
+        IOAuthTokenAccessor tokenAccessor = Substitute.For<IOAuthTokenAccessor>();
+        IEcosystem[] ecosystems =
+        [
+            new ManifestOnlyEcosystem(Ecosystem.Npm, "package.json", new NpmManifestEditor()),
+            new ManifestOnlyEcosystem(
+                Ecosystem.Composer,
+                "composer.json",
+                new ComposerManifestEditor()
+            ),
+            new ManifestOnlyEcosystem(
+                Ecosystem.Nuget,
+                "packages.config",
+                new NugetManifestEditor()
+            ),
+            new ManifestOnlyEcosystem(
+                Ecosystem.Python,
+                "requirements.txt",
+                new PythonManifestEditor()
+            ),
+            new ManifestOnlyEcosystem(Ecosystem.Go, "go.mod", new GoManifestEditor()),
+            new ManifestOnlyEcosystem(Ecosystem.Rust, "Cargo.toml", new RustManifestEditor()),
+            new ManifestOnlyEcosystem(Ecosystem.Gradle, "build.gradle", new GradleManifestEditor()),
+        ];
+        EcosystemRegistry registry = new(ecosystems);
+        return new FixApplier(registry, tokenAccessor);
+    }
+
+    // Test-only IEcosystem stub that delegates manifest editing to the supplied editor and
+    // throws on the network-bound probe methods (these tests never call them). Keeps the
+    // CleanupBehavior tests free of HttpClient / registry-probe wiring.
+    private sealed class ManifestOnlyEcosystem : IEcosystem
+    {
+        private readonly IManifestEditor _editor;
+
+        public ManifestOnlyEcosystem(
+            Ecosystem ecosystem,
+            string defaultManifestPath,
+            IManifestEditor editor
+        )
+        {
+            Ecosystem = ecosystem;
+            DefaultManifestPath = defaultManifestPath;
+            _editor = editor;
+        }
+
+        public Ecosystem Ecosystem { get; }
+        public string DefaultManifestPath { get; }
+        public bool SupportsAutomaticPullRequests => true;
+
+        public string PackageUrl(string packageName) => packageName;
+
+        public string ChangelogUrl(string packageName, string version) => packageName;
+
+        public Task<LatestPackageInfo?> GetLatestStableAsync(
+            string packageName,
+            CancellationToken ct
+        ) => Task.FromResult<LatestPackageInfo?>(null);
+
+        public ManifestEditOutcome Apply(
+            string rootPath,
+            InventoryItem item,
+            string suggestedVersion
+        ) => _editor.Apply(rootPath, item, suggestedVersion);
+    }
 }
