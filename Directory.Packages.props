@@ -44,6 +44,9 @@
     <!-- Imaging — used by OgImageRenderer for dynamic Open Graph PNGs. -->
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
+    <!-- Transitive pins (security) -->
+    <!-- Pinned to patch GHSA-4cv2-4hjh-77rx (<1.6.0 vulnerable). Pulled in transitively by WireMock.Net. -->
+    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.2" />
     <!-- Test -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
