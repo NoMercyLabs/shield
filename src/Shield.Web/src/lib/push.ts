@@ -76,14 +76,20 @@ export async function requestPermissionAndSubscribe(): Promise<{ ok: true } | { 
   if (!registration)
     return { ok: false, reason: 'no_service_worker' }
 
-  let subscription = await registration.pushManager.getSubscription()
-  if (!subscription) {
-    const publicKey = await fetchVapidPublicKey()
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    })
+  // Drop any stale subscription before requesting a new one. A subscription created under
+  // a previously-denied permission, or under an old VAPID key, will still be returned by
+  // getSubscription() — reusing it gives a confidently-broken pipeline.
+  const stale = await registration.pushManager.getSubscription()
+  if (stale) {
+    try { await stale.unsubscribe() }
+    catch { /* best-effort; subscribe() below will overwrite either way */ }
   }
+
+  const publicKey = await fetchVapidPublicKey()
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  })
 
   const json = subscription.toJSON() as {
     endpoint?: string
@@ -102,6 +108,27 @@ export async function requestPermissionAndSubscribe(): Promise<{ ok: true } | { 
     userAgent: navigator.userAgent,
   })
   return { ok: true }
+}
+
+// Browsers keep returning a `PushSubscription` object from getSubscription() even after the
+// user revokes notification permission via site settings. Deliveries silently drop on the
+// browser side but the server keeps thinking everything's fine (it sent, FCM ack'd). This
+// detects the mismatch and clears both ends so the UI returns to the "Enable" state.
+export async function cleanupStaleSubscriptionIfNeeded(): Promise<boolean> {
+  if (!pushSupported())
+    return false
+  if (notificationPermission() === 'granted')
+    return false
+  const subscription = await getCurrentSubscription()
+  if (!subscription)
+    return false
+
+  const endpoint = subscription.endpoint
+  try { await subscription.unsubscribe() }
+  catch { /* best-effort */ }
+  try { await api.delete('/push/unsubscribe', { data: { endpoint } }) }
+  catch { /* stale row will 410 on next push anyway */ }
+  return true
 }
 
 export async function unsubscribeCurrentDevice(): Promise<boolean> {

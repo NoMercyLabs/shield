@@ -7,9 +7,11 @@ import { BellRing, X } from 'lucide-vue-next'
 import SeverityBadge from '@/components/SeverityBadge.vue'
 import { formatDate } from '@/lib/format'
 import {
+  cleanupStaleSubscriptionIfNeeded,
   getCurrentSubscription,
   hashEndpoint,
   listSubscriptions,
+  notificationPermission,
   pushSupported,
   requestPermissionAndSubscribe,
 } from '@/lib/push'
@@ -37,6 +39,13 @@ async function refreshPushStatus(): Promise<void> {
     return
   }
   try {
+    // Drop stale local subscription if permission was revoked since last visit so the
+    // banner accurately reflects "you cannot receive pushes right now".
+    await cleanupStaleSubscriptionIfNeeded()
+    if (notificationPermission() !== 'granted') {
+      hasCurrentDevicePush.value = false
+      return
+    }
     const [rows, localSub] = await Promise.all([listSubscriptions(), getCurrentSubscription()])
     if (!localSub) {
       hasCurrentDevicePush.value = false

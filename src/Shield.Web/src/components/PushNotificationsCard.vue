@@ -5,6 +5,7 @@ import { BellRing, RefreshCw, Send, Trash2 } from 'lucide-vue-next'
 
 import {
   type PushSubscriptionRow,
+  cleanupStaleSubscriptionIfNeeded,
   deleteSubscriptionById,
   getCurrentSubscription,
   hashEndpoint,
@@ -30,19 +31,27 @@ const enabling = ref(false)
 // requestPermission() calls forever. The recovery requires flipping the per-site setting
 // in browser preferences, then returning to the tab. visibilitychange + focus catch
 // that moment so the SPA refreshes its view of Notification.permission without a reload.
+// They also catch the inverse case: permission was previously granted, then revoked from
+// site settings — we self-heal by dropping the stale subscription so the Enable button
+// resurfaces instead of the UI claiming healthy state.
 function refreshPermission(): void {
   permission.value = notificationPermission()
 }
+async function reconcile(): Promise<void> {
+  refreshPermission()
+  if (await cleanupStaleSubscriptionIfNeeded())
+    await refresh()
+}
 function onVisibilityChange(): void {
-  if (document.visibilityState === 'visible') refreshPermission()
+  if (document.visibilityState === 'visible') void reconcile()
 }
 onMounted(() => {
   document.addEventListener('visibilitychange', onVisibilityChange)
-  window.addEventListener('focus', refreshPermission)
+  window.addEventListener('focus', reconcile)
 })
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)
-  window.removeEventListener('focus', refreshPermission)
+  window.removeEventListener('focus', reconcile)
 })
 
 // Platform-specific deep links so the user lands on the exact settings page rather than
@@ -89,7 +98,10 @@ async function refresh(): Promise<void> {
 }
 
 async function resolveCurrentDevice(): Promise<void> {
-  if (subscriptions.value.length === 0) {
+  // A device is only "current" if the local subscription matches a server row AND the
+  // browser still has notification permission. Otherwise the row is stale — pushes will
+  // dispatch successfully upstream but the browser silently drops them.
+  if (subscriptions.value.length === 0 || permission.value !== 'granted') {
     hasCurrentDevice.value = false
     return
   }
@@ -107,9 +119,12 @@ async function resolveCurrentDevice(): Promise<void> {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   refreshPermission()
-  void refresh()
+  // Drop the stale local subscription (if any) before painting so the UI never shows a
+  // device that can no longer receive deliveries.
+  await cleanupStaleSubscriptionIfNeeded()
+  await refresh()
 })
 
 async function onEnable(): Promise<void> {
