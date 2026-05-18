@@ -149,17 +149,15 @@ public sealed class FeedSyncWorker : BackgroundService
         if (result.IsRateLimited && result.RateLimitResetAt.HasValue)
         {
             // Rate-limited is not a failure — quota exhaustion is expected behaviour for
-            // unauthenticated feeds. Push NextRunAt out to the reset time and don't touch
-            // the failure counter.
-            _log.LogInformation(
-                "GHSA rate-limited; next sync at {RetryAt:u}. "
-                    + "To raise the quota from 60/hr to 5000/hr, set Shield:Feeds:Ghsa:Pat "
-                    + "to a GitHub personal access token (read:packages scope is sufficient).",
-                result.RateLimitResetAt.Value
-            );
+            // unauthenticated feeds. Push NextRunAt out to the reset time. Write a
+            // human-readable reason to LastError so the Feeds page in the SPA tells the
+            // operator how to lift the limit (e.g. configure a PAT for GHSA).
+            string reason = BuildRateLimitReason(feed, result.RateLimitResetAt.Value);
+            _log.LogInformation("{Reason}", reason);
             state.NextRunAt = result.RateLimitResetAt.Value.UtcDateTime;
             state.Cursor = result.NextCursor ?? state.Cursor;
             state.RateLimitResetAt = result.RateLimitResetAt;
+            state.LastError = reason;
 
             if (isNew && await db.FeedSyncStates.FindAsync([state.Id], ct) is null)
                 db.FeedSyncStates.Add(state);
@@ -214,5 +212,28 @@ public sealed class FeedSyncWorker : BackgroundService
             relatedId: feed.ToString(),
             ct
         );
+    }
+
+    // Human-readable rate-limit reason rendered on the Feeds page. Mentions HOW to lift
+    // the limit per feed — GHSA wants a PAT, public feeds wait for the quota window to
+    // reset. The wall-clock format matches the SPA's date display so the operator sees a
+    // concrete "available at" timestamp instead of an opaque cooldown.
+    private static string BuildRateLimitReason(Feed feed, DateTimeOffset resetAt)
+    {
+        string when = resetAt.UtcDateTime.ToString(
+            "u",
+            System.Globalization.CultureInfo.InvariantCulture
+        );
+        return feed switch
+        {
+            Feed.Ghsa =>
+                $"Rate-limited until {when}. Set Shield:Feeds:Ghsa:Pat to a GitHub personal "
+                    + "access token (read:packages scope) to raise the quota from 60/hr to 5000/hr.",
+            Feed.NpmRegistry =>
+                $"Rate-limited until {when}. npm registry throttles unauthenticated bursts; "
+                    + "the syncer will resume automatically.",
+            _ => $"Rate-limited until {when}. The syncer will resume automatically when the "
+                + "feed's quota window resets.",
+        };
     }
 }
