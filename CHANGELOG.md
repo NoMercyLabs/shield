@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Multi-signal supply-chain anomaly detection** — typosquat scoring now reads from
+  `PackageMeta` data (weekly downloads + publish age + maintainer churn) instead of a
+  curated allowlist. A name-similar candidate fires only when its own download count is
+  below the popularity floor and it's brand-new / single-maintainer. The previous
+  hardcoded list false-positived on legitimate top-tier packages that happened to be 2
+  edits from a popular name (`y18n` vs `yarn`); the new scoring would not.
+- **Registry feed sync for 7 ecosystems** — npm / NuGet / crates.io / PyPI / RubyGems /
+  Packagist / Hex. Each pulls package metadata + weekly download counts into
+  `FeedsDb.PackageMetas`. EF-backed sinks replace the in-memory placeholders that
+  silently dropped every sync. `EfPackageNameSource<TTag>` filters inventory to one
+  ecosystem per feed via a generic marker tag (`EcosystemTag.Npm`, …).
+- **Multi-host source types** — `SourceType` enum extended with `GitlabRepo`,
+  `BitbucketRepo`, `ForgejoRepo`, `GiteaRepo`, `CodebergRepo` alongside the existing
+  `GithubRepo`. SPA renders correct repo URLs (per-host tree/branch path conventions)
+  and surfaces an "Open repo" button on source detail.
+- **Cloudflare `CF-Connecting-IP` extraction** — middleware walks
+  `CF-Connecting-IPv6` → `CF-Connecting-IP` → `True-Client-IP` → `X-Real-IP` →
+  `X-Client-IP` → `X-Forwarded-For` → `Forwarded-For` → `Forwarded` and picks the first
+  public IP. Audit logs, security events, IP reputation, push subscriptions, and rate
+  limiting all see the real client IP instead of the proxy peer. `CF-Visitor` is honoured
+  for scheme upgrade.
+- **Sortable table headers** — `useClientSort` composable + `<SortableTh>` component
+  give every Shield table click-to-sort headers with `aria-sort` wiring and ▲/▼
+  indicators. Sort preference persists per-table via `localStorage`. Default
+  directions: names ascending, dates/counts/scores descending.
+- **Periodic synthetic-advisory prune** — `SyntheticAdvisoryPruneWorker` runs every 6
+  hours and deletes synthetic anomaly advisories whose package no longer appears in any
+  source's inventory. Closes the cross-DB orphan loop the source-delete cascade can't
+  reach.
 - **Security command center** — `/security` page aggregates fail2ban log events via an
   observer pattern. Shield reads and surfaces events; fail2ban remains the enforcer.
   Suspicious login attempts, lockouts, and revoked-session replays are logged as
@@ -37,6 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Session-replay security event split** — `session.replay` separated into
+  `session.revoked_cookie_replay` (High, real session-theft signal) and
+  `session.stale_cookie_presented` (Low, cookie outlived its row after admin wipe or
+  pruning — operator action, not an attack). Each `eventType` now resolves to a
+  human-readable title + body via `security.event_label.*` and `security.event_body.*`
+  i18n keys; the Security view renders the friendly label with the technical slug as a
+  tooltip.
 - **Runtime upgraded to .NET 10** (was .NET 9). Minimum SDK: 10.0.100 (see `global.json`).
 - `SingleUserAuthHandler` now stamps a `shield.auth.single-user` marker claim so
   `SessionTrackingMiddleware` can distinguish it from a real cookie-auth principal, fixing a
@@ -46,10 +82,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SettingsController` no longer falls back to `new HttpClient()` — all HTTP clients go
   through the named-client factory with the canonical User-Agent applied.
 
+### Fixed
+
+- **Push subscription self-heal** — when notification permission is revoked after a
+  subscribe, the SPA detects the mismatch (server row + dead local subscription) on
+  mount / visibility / focus and clears both sides so the Enable button reappears.
+  Subscribe flow unsubscribes any stale local subscription before re-registering so
+  the new VAPID handshake is clean.
+- **Findings deep-link filter reset** — clicking a notification into `/findings?…`
+  now clears persisted `localStorage` filters; a stale "Critical only" pin no longer
+  hides the High-severity finding the link is pointing at.
+- **`@{user}` and email-address placeholders in i18n** — vue-i18n's message compiler
+  treats bare `@` as a linked-reference (`@:key` / `@.modifier:key`). Catalog now
+  escapes with `{'@'}` for impersonation messages and email placeholders; a
+  `lint:locales` script in the build catches future drift.
+
 ### Security
 
 - Pinned `System.Security.Cryptography.Xml` to 10.0.6 to address GHSA-37gx-xxp4-5rgx and
   GHSA-w3x6-4m5h-cxqf.
+- Pinned `System.Linq.Dynamic.Core` to 1.7.2 to address GHSA-4cv2-4hjh-77rx (transitive
+  via `WireMock.Net`).
+- CI gates: `dotnet list package --vulnerable --include-transitive` after restore +
+  `npm audit --audit-level=high` before SPA build so future transitive advisories fail
+  loudly instead of being buried in build warnings.
 
 ## [0.1.0-alpha.1] - 2026-05-16
 

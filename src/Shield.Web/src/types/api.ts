@@ -60,6 +60,11 @@ export const SourceType = {
   GithubRepo: 0,
   LocalFolder: 1,
   LinuxHost: 2,
+  GitlabRepo: 3,
+  BitbucketRepo: 4,
+  ForgejoRepo: 5,
+  GiteaRepo: 6,
+  CodebergRepo: 7,
 } as const
 export type SourceType = (typeof SourceType)[keyof typeof SourceType]
 export type SourceTypeName = keyof typeof SourceType
@@ -67,6 +72,11 @@ export const SourceTypeNames: Record<SourceType, SourceTypeName> = {
   0: 'GithubRepo',
   1: 'LocalFolder',
   2: 'LinuxHost',
+  3: 'GitlabRepo',
+  4: 'BitbucketRepo',
+  5: 'ForgejoRepo',
+  6: 'GiteaRepo',
+  7: 'CodebergRepo',
 }
 
 export const AutoFixMode = {

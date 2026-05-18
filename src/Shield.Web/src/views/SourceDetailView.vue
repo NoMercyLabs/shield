@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/stores/auth'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
+import { repoUrl } from '@/lib/repo-url'
 import { AnomalyFlags, EcosystemNames, SourceType, SourceTypeNames } from '@/types/api'
 import type { BulkApplyResponse, InventoryDiffEntry } from '@/types/api'
 
@@ -396,7 +397,7 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
           <p v-if="source.detectedRemote" class="mt-1 flex items-center gap-2 text-xs text-slate-400">
             <GitBranch class="h-3.5 w-3.5" />
             <a
-              :href="`https://${source.detectedRemote.host}/${source.detectedRemote.owner}/${source.detectedRemote.repo}`"
+              :href="repoUrl(source.detectedRemote) ?? '#'"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center gap-1 hover:text-blue-300 hover:underline"
@@ -417,6 +418,16 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
           </p>
         </div>
         <div class="flex items-center gap-2">
+          <a
+            v-if="repoUrl(source.detectedRemote)"
+            :href="repoUrl(source.detectedRemote)!"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+          >
+            <ExternalLink class="h-4 w-4" />
+            {{ t('source_detail.open_repo_btn') }}
+          </a>
           <button
             type="button"
             class="flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"

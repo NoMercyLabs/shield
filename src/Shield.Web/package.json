@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "npm run lint:locales && vue-tsc -b && vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
+    "lint:locales": "node check-locales.mjs",
     "audit": "npm audit --audit-level=high",
     "types:gen": "openapi-typescript http://localhost:5099/swagger/v1/swagger.json -o src/types/api.ts"
   },

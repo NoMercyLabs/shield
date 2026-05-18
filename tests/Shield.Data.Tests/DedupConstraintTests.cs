@@ -35,6 +35,7 @@ public class DedupConstraintTests : IAsyncLifetime
     [Fact]
     public async Task DuplicateDedupKeyThrows()
     {
+        await SeedParentSourceAsync();
         Finding first = NewFinding("dedup-key-1");
         _db!.Findings.Add(first);
         await _db.SaveChangesAsync();
@@ -49,12 +50,34 @@ public class DedupConstraintTests : IAsyncLifetime
     [Fact]
     public async Task DistinctDedupKeysPersist()
     {
+        await SeedParentSourceAsync();
         _db!.Findings.Add(NewFinding("dedup-a"));
         _db.Findings.Add(NewFinding("dedup-b"));
         await _db.SaveChangesAsync();
 
         int count = await _db.Findings.CountAsync();
         count.Should().Be(2);
+    }
+
+    // Finding.SourceId now has a cascade FK to Sources after the orphan-cleanup migration;
+    // tests need a parent Source row to satisfy the constraint. Pin Id=1 so NewFinding()
+    // can reference it without reading back.
+    private async Task SeedParentSourceAsync()
+    {
+        _db!.Sources.Add(
+            new()
+            {
+                Id = 1,
+                Type = SourceType.LocalFolder,
+                Name = "test-parent",
+                ConfigJson = "{}",
+                ScanInterval = TimeSpan.FromHours(1),
+                Enabled = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            }
+        );
+        await _db.SaveChangesAsync();
     }
 
     private static Finding NewFinding(string dedupKey)

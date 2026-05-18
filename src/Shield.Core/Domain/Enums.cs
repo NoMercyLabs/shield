@@ -5,6 +5,11 @@ public enum SourceType
     GithubRepo = 0,
     LocalFolder = 1,
     LinuxHost = 2,
+    GitlabRepo = 3,
+    BitbucketRepo = 4,
+    ForgejoRepo = 5,
+    GiteaRepo = 6,
+    CodebergRepo = 7,
 }
 
 public enum Ecosystem

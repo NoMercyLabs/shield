@@ -23,7 +23,20 @@ import {
   type SecurityHost,
 } from '@/types/api'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+// EventType → friendly label resolver. Locale catalog uses underscores in place of dots
+// because vue-i18n parses dots as path separators (`security.event_label.session.foo`
+// would nest, not match). Falls back to the raw eventType for slugs the catalog doesn't
+// know yet — better than empty cells.
+function eventLabel(eventType: string): string {
+  const key = `security.event_label.${eventType.replace(/\./g, '_')}`
+  return te(key) ? t(key) : eventType
+}
+function eventBody(eventType: string): string | null {
+  const key = `security.event_body.${eventType.replace(/\./g, '_')}`
+  return te(key) ? t(key) : null
+}
 
 type Tab = 'timeline' | 'ips' | 'hosts'
 
@@ -328,7 +341,10 @@ const hostsSort = useClientSort<SecurityHost>(
                 </span>
               </td>
               <td class="px-4 py-2 text-slate-300">{{ event.source }}</td>
-              <td class="px-4 py-2 font-mono text-xs text-blue-200">{{ event.eventType }}</td>
+              <td class="px-4 py-2">
+                <div class="text-sm text-slate-100">{{ eventLabel(event.eventType) }}</div>
+                <div class="text-[10px] font-mono text-slate-500" :title="eventBody(event.eventType) ?? ''">{{ event.eventType }}</div>
+              </td>
               <td class="px-4 py-2 text-slate-300">
                 <button
                   v-if="event.remoteIp"
@@ -546,7 +562,7 @@ const hostsSort = useClientSort<SecurityHost>(
               >
                 {{ severityLabel(event.severity) }}
               </span>
-              <span class="font-mono text-blue-200">{{ event.eventType }}</span>
+              <span class="text-slate-200" :title="event.eventType">{{ eventLabel(event.eventType) }}</span>
               <span class="text-slate-500">{{ event.jail ?? event.host ?? event.source }}</span>
             </div>
           </div>

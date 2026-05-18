@@ -54,10 +54,14 @@ public sealed class SessionTrackingMiddleware : IMiddleware
 
         if (session is null || session.RevokedAt is not null)
         {
-            // Revoked-cookie replay attempts are the most interesting session-layer signal:
-            // a cookie that USED to be valid being replayed after revoke means a session
-            // token leaked or the user lost a device. High severity — operators may want
-            // a fail2ban jail on this if it sustains.
+            // Two failure modes, very different signal:
+            //   - Session row EXISTS but is revoked → a cookie that USED to be valid is
+            //     being replayed after revoke. Real session-theft signal. High severity,
+            //     fail2ban-jail-worthy if it sustains.
+            //   - Session row is MISSING → the cookie outlived its row. Happens after an
+            //     admin wipe / session-table prune / long-expired cookie. Operator action,
+            //     not an attack. Log it Low so the Security view doesn't fill with noise.
+            bool isRevokedReplay = session is not null && session.RevokedAt is not null;
             ISecurityEventLogger? securityLog =
                 context.RequestServices.GetService<ISecurityEventLogger>();
             if (securityLog is not null)
@@ -66,8 +70,10 @@ public sealed class SessionTrackingMiddleware : IMiddleware
                 {
                     await securityLog.LogAsync(
                         source: "shield.auth",
-                        eventType: "session.replay",
-                        severity: Severity.High,
+                        eventType: isRevokedReplay
+                            ? "session.revoked_cookie_replay"
+                            : "session.stale_cookie_presented",
+                        severity: isRevokedReplay ? Severity.High : Severity.Low,
                         remoteIp: context.Connection.RemoteIpAddress?.ToString(),
                         userAgent: context.Request.Headers.UserAgent.ToString()
                             is { Length: > 0 } ua

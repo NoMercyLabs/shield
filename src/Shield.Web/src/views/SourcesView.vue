@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { FolderOpen, Github, GitBranch, Plus, RefreshCw } from 'lucide-vue-next'
+import { ExternalLink, FolderOpen, Github, GitBranch, Plus, RefreshCw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
 import FolderPickerDialog from '@/components/FolderPickerDialog.vue'
 import RepoPickerDialog from '@/components/RepoPickerDialog.vue'
 import SortableTh from '@/components/SortableTh.vue'
 import { useClientSort } from '@/composables/useClientSort'
+import { repoUrl } from '@/lib/repo-url'
 import { useRefreshGithubAccessMutation } from '@/queries/access'
 import { useOAuthStatus } from '@/queries/oauth'
 import { useBulkFromGithubMutation, useBulkLocalFoldersMutation, useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
@@ -262,9 +263,22 @@ async function onSubmit(): Promise<void> {
         <tbody class="divide-y divide-slate-800">
           <tr v-for="source in sortedRows" :key="source.id" class="hover:bg-slate-800/50">
             <td class="px-4 py-2">
-              <RouterLink :to="`/sources/${source.id}`" class="text-blue-400 hover:underline">
-                {{ source.name }}
-              </RouterLink>
+              <div class="flex items-center gap-2">
+                <RouterLink :to="`/sources/${source.id}`" class="text-blue-400 hover:underline">
+                  {{ source.name }}
+                </RouterLink>
+                <a
+                  v-if="repoUrl(source.detectedRemote)"
+                  :href="repoUrl(source.detectedRemote)!"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center text-slate-500 hover:text-blue-300"
+                  :title="t('sources.open_repo_external')"
+                  @click.stop
+                >
+                  <ExternalLink class="h-3.5 w-3.5" />
+                </a>
+              </div>
             </td>
             <td class="px-4 py-2 text-slate-400">
               <span class="inline-flex items-center gap-1">

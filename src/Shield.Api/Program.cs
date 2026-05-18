@@ -151,6 +151,7 @@ builder.Services.AddHostedService<ScanQueueWorker>();
 builder.Services.AddHostedService<FeedSyncWorker>();
 builder.Services.AddHostedService<MatcherWorker>();
 builder.Services.AddHostedService<AlertDispatchWorker>();
+builder.Services.AddHostedService<SyntheticAdvisoryPruneWorker>();
 
 builder.Services.AddShieldUpdates();
 
