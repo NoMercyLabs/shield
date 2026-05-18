@@ -1049,6 +1049,49 @@ app.MapControllers();
 app.MapHub<FindingsHub>("/hubs/findings");
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 
+// Debug surface for diagnosing forwarded-IP issues — returns the IP-related headers as
+// Shield sees them, plus the post-middleware RemoteIpAddress so an operator can curl this
+// and answer "is CF-Connecting-IP arriving?" / "what's my real proxy chain?" in one shot.
+// Anonymous on purpose — no PII is exposed beyond the caller's own request headers.
+app.MapGet(
+    "/api/debug/ip",
+    (HttpContext ctx) =>
+    {
+        string[] headerNames =
+        [
+            "CF-Connecting-IP",
+            "CF-Connecting-IPv6",
+            "CF-Visitor",
+            "CF-IPCountry",
+            "CF-Ray",
+            "True-Client-IP",
+            "X-Real-IP",
+            "X-Client-IP",
+            "X-Forwarded-For",
+            "X-Forwarded-Proto",
+            "X-Forwarded-Host",
+            "Forwarded",
+            "Host",
+            "User-Agent",
+        ];
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string name in headerNames)
+        {
+            headers[name] = ctx.Request.Headers.TryGetValue(name, out var values)
+                ? string.Join(", ", values.ToArray())
+                : null;
+        }
+        return Results.Ok(
+            new
+            {
+                remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
+                scheme = ctx.Request.Scheme,
+                headers,
+            }
+        );
+    }
+);
+
 // SPA fallback — serve index.html for non-API GETs.
 app.MapFallback(context =>
 {
