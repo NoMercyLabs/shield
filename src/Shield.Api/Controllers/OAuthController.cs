@@ -771,59 +771,74 @@ public sealed class OAuthController : ControllerBase
         return Ok(new SlackChannelsResponse(channels));
     }
 
-    // GitHub-specific: list the connected user's repos for the "Pick from GitHub" Sources picker.
-    // Cached 5min per (user, affiliation) so the modal can be reopened cheaply.
-    [HttpGet("github/repos")]
+    // Polymorphic repo listing — any registered IOAuthProvider that implements
+    // ListRepositoriesAsync exposes a normalised RepositorySummary list through this one
+    // endpoint. Cached 5 min per (user, provider, affiliation) so reopening the picker
+    // modal is cheap. Replaces the previous github-specific /github/repos endpoint;
+    // legacy alias kept below for back-compat with older SPA bundles.
+    [HttpGet("repos")]
     [Authorize(Policy = ShieldPolicies.Admin)]
-    public async Task<ActionResult<GitHubRepoListResponse>> GitHubRepos(
+    public async Task<IActionResult> ListRepositories(
+        [FromQuery] string provider,
         [FromQuery] string? affiliation,
         [FromQuery] int perPage,
         CancellationToken ct
     )
     {
-        OAuthTokenSnapshot? token = await _tokenStore.GetAsync(OAuthProvider.Github, ct);
-        if (token is null)
-            return BadRequest(new { error = "github_not_connected" });
-
         if (
-            !_registry.TryResolve(OAuthProvider.Github, out IOAuthProvider adapter)
-            || adapter is not GitHubProvider githubAdapter
+            string.IsNullOrWhiteSpace(provider)
+            || !TryParseProvider(provider, out OAuthProvider parsedProvider)
         )
-        {
-            return StatusCode(500, new { error = "github_adapter_unavailable" });
-        }
+            return BadRequest(new { error = "unknown_provider" });
+        if (!_registry.TryResolve(parsedProvider, out IOAuthProvider adapter))
+            return BadRequest(new { error = "provider_not_registered" });
 
-        string normalisedAffiliation = string.IsNullOrWhiteSpace(affiliation)
-            ? "owner,collaborator,organization_member"
-            : affiliation!;
+        OAuthTokenSnapshot? token = await _tokenStore.GetAsync(parsedProvider, ct);
+        if (token is null)
+            return BadRequest(new { error = "provider_not_connected" });
+
         string userKey = User?.Identity?.Name ?? "anon";
-        string cacheKey = $"github-repos::{userKey}::{normalisedAffiliation}";
-
+        string cacheKey = $"repos::{userKey}::{parsedProvider}::{affiliation ?? ""}";
         if (
-            _memoryCache.TryGetValue(cacheKey, out GitHubRepoListResponse? cached)
+            _memoryCache.TryGetValue(cacheKey, out RepositoryListResponse? cached)
             && cached is not null
         )
             return Ok(cached);
 
+        RepositoryListOptions options = new(
+            Affiliation: affiliation,
+            PerPage: perPage <= 0 ? 100 : Math.Min(perPage, 100),
+            MaxRepositories: 1000
+        );
         try
         {
-            IReadOnlyList<GitHubRepoEntry> repos = await githubAdapter.ListReposAsync(
+            IReadOnlyList<RepositorySummary>? repos = await adapter.ListRepositoriesAsync(
                 token.AccessToken,
-                normalisedAffiliation,
-                perPage <= 0 ? 100 : Math.Min(perPage, 100),
-                maxRepos: 1000,
+                options,
                 ct
             );
-            GitHubRepoListResponse response = new(repos, repos.Count);
+            if (repos is null)
+                return BadRequest(new { error = "provider_lacks_repo_listing" });
+
+            RepositoryListResponse response = new(repos, repos.Count);
             _memoryCache.Set(cacheKey, response, GithubReposCacheTtl);
             return Ok(response);
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "GitHub repo list failed");
-            return StatusCode(502, new { error = "github_api_failed" });
+            _logger.LogWarning(ex, "Repo list failed for {Provider}", parsedProvider);
+            return StatusCode(502, new { error = "provider_api_failed" });
         }
     }
+
+    // Legacy alias for older SPA bundles — drops once the rebuilt wwwroot is everywhere.
+    [HttpGet("github/repos")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    public Task<IActionResult> GitHubRepos(
+        [FromQuery] string? affiliation,
+        [FromQuery] int perPage,
+        CancellationToken ct
+    ) => ListRepositories("github", affiliation, perPage, ct);
 
     private static bool TryParseProvider(string raw, out OAuthProvider provider)
     {

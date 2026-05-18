@@ -58,3 +58,11 @@ public sealed record GitHubRepoEntry(
 );
 
 public sealed record GitHubRepoListResponse(IReadOnlyList<GitHubRepoEntry> Repos, int Total);
+
+// Cross-provider repo listing — `/api/oauth/repos?provider=X` returns this shape regardless
+// of upstream (GitHub, GitLab, Bitbucket, Forgejo, …). Each provider's adapter normalises
+// its native response into `RepositorySummary`.
+public sealed record RepositoryListResponse(
+    IReadOnlyList<Shield.Api.Auth.OAuthProviders.RepositorySummary> Repos,
+    int Total
+);

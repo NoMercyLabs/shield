@@ -52,9 +52,36 @@ public interface IOAuthProvider
         string codeVerifier,
         CancellationToken ct
     );
+
+    // Optional capability — providers that can enumerate the connected user's repos
+    // override this so the SPA's "Pick repos" modal works without a provider-specific
+    // endpoint. The default returns null so non-repo-hosting providers (Slack, Google,
+    // SMTP) don't have to implement a method they have nothing to offer for.
+    Task<IReadOnlyList<RepositorySummary>?> ListRepositoriesAsync(
+        string accessToken,
+        RepositoryListOptions options,
+        CancellationToken ct
+    ) => Task.FromResult<IReadOnlyList<RepositorySummary>?>(null);
 }
 
 public sealed record OAuthClientConfig(string ClientId, string ClientSecret, string RedirectUri);
+
+// Normalized cross-provider shape used by the repo-picker modal. Each provider maps
+// its native response (GitHubRepoEntry, GitlabProjectEntry, BitbucketRepository …) into
+// this so the controller, contracts, and SPA all stay provider-agnostic.
+public sealed record RepositorySummary(
+    string Owner,
+    string Name,
+    string FullName,
+    string? Description,
+    string? DefaultBranch,
+    bool IsPrivate,
+    bool Archived,
+    bool Fork,
+    string? Language
+);
+
+public sealed record RepositoryListOptions(string? Affiliation, int PerPage, int MaxRepositories);
 
 // Signin returns the provider's stable subject + claims used to find-or-create a local user,
 // plus the same token snapshot we'd persist in the connect flow.

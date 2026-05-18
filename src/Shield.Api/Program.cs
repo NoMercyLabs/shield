@@ -744,6 +744,11 @@ builder.Services.AddHttpClient("oidc-test");
 builder.Services.AddSingleton<IOAuthProvider, GitHubProvider>();
 builder.Services.AddSingleton<IOAuthProvider, SlackProvider>();
 builder.Services.AddSingleton<IOAuthProvider, GoogleProvider>();
+builder.Services.AddSingleton<IOAuthProvider, GitlabProvider>();
+builder.Services.AddSingleton<IOAuthProvider, BitbucketProvider>();
+builder.Services.AddSingleton<IOAuthProvider, ForgejoProvider>();
+builder.Services.AddSingleton<IOAuthProvider, GiteaProvider>();
+builder.Services.AddSingleton<IOAuthProvider, CodebergProvider>();
 builder.Services.AddSingleton<IOAuthProviderRegistry, OAuthProviderRegistry>();
 builder.Services.AddSingleton<IOAuthTokenAccessor, OAuthTokenAccessor>();
 

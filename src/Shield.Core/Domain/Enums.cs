@@ -87,6 +87,11 @@ public enum OAuthProvider
     Github = 0,
     Slack = 1,
     Google = 2,
+    Gitlab = 3,
+    Bitbucket = 4,
+    Forgejo = 5,
+    Gitea = 6,
+    Codeberg = 7,
 }
 
 public enum SourceAccessLevel

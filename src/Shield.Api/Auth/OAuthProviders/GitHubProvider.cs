@@ -212,6 +212,42 @@ public sealed class GitHubProvider : IOAuthProvider
         string scopes
     ) => BuildAuthorizationUrl(config, state, codeChallenge, scopes);
 
+    public async Task<IReadOnlyList<RepositorySummary>?> ListRepositoriesAsync(
+        string accessToken,
+        RepositoryListOptions options,
+        CancellationToken ct
+    )
+    {
+        string affiliation = string.IsNullOrWhiteSpace(options.Affiliation)
+            ? "owner,collaborator,organization_member"
+            : options.Affiliation!;
+        IReadOnlyList<GitHubRepoEntry> entries = await ListReposAsync(
+            accessToken,
+            affiliation,
+            options.PerPage,
+            options.MaxRepositories,
+            ct
+        );
+        List<RepositorySummary> normalised = new(entries.Count);
+        foreach (GitHubRepoEntry entry in entries)
+        {
+            normalised.Add(
+                new(
+                    entry.Owner,
+                    entry.Name,
+                    entry.FullName,
+                    entry.Description,
+                    entry.DefaultBranch,
+                    entry.Private,
+                    entry.Archived,
+                    entry.Fork,
+                    entry.Language
+                )
+            );
+        }
+        return normalised;
+    }
+
     // Pages through /user/repos following the RFC 5988 Link header. Caps at MaxRepos to
     // protect against runaway accounts; perPage is the upstream page size (max 100 per GitHub docs).
     public async Task<IReadOnlyList<GitHubRepoEntry>> ListReposAsync(
