@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
-using Shield.Api.Services;
 
 namespace Shield.Api.Middleware;
 

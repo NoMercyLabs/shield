@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Shield.Api.Middleware;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

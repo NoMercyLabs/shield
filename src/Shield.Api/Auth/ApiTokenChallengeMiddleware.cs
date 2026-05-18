@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication;
-using Shield.Api.Services;
 
 namespace Shield.Api.Auth;
 

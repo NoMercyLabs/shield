@@ -3,7 +3,7 @@ using NuGet.Versioning;
 using Semver;
 using Shield.Matcher.Versioning;
 
-namespace Shield.Api.Services;
+namespace Shield.Api.Services.FixApply;
 
 // Resolves the highest known fix version across every advisory that matches a given package,
 // so one version bump kills every known vulnerability in a single PR / manifest edit.

@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using Shield.Api.Services;
 using Shield.Core.Options;
 
 namespace Shield.Api.Middleware;

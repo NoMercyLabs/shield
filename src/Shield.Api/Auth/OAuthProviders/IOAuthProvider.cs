@@ -1,5 +1,3 @@
-using Shield.Api.Services;
-
 namespace Shield.Api.Auth.OAuthProviders;
 
 // One adapter per provider. Implementations encapsulate endpoint URLs, the

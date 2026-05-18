@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Shield.Api.Services;
 using Shield.Api.Workers.Queues;
 using Shield.Core.Results;
 using Shield.Feeds.Osv;

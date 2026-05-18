@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.DataProtection;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

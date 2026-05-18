@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.RateLimiting;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

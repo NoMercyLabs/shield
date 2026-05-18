@@ -1,4 +1,3 @@
-using Shield.Api.Services;
 using Shield.Api.Workers.Queues;
 
 namespace Shield.Api.Workers;

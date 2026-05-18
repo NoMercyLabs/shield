@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using Shield.Api.Services;
 using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
 

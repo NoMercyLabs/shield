@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.RateLimiting;
-using Shield.Api.Services;
 using Shield.Api.Services.BulkFix;
 using Shield.Api.Workers.Queues;
 

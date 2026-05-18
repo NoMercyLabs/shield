@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

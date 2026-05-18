@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Shield.Api.Auth.OAuthProviders;
 using Shield.Api.Middleware;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

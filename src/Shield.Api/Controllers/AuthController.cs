@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Shield.Api.Middleware;
-using Shield.Api.Services;
 using Shield.Core.Options;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 

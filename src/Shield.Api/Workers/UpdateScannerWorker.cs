@@ -1,4 +1,3 @@
-using Shield.Api.Services;
 using Shield.Api.Services.Ecosystems;
 
 namespace Shield.Api.Workers;

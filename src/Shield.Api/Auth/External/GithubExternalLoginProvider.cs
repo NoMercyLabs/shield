@@ -1,5 +1,3 @@
-using Shield.Api.Services;
-
 namespace Shield.Api.Auth.External;
 
 // GitHub adapter for the signin-flow.

@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;
 

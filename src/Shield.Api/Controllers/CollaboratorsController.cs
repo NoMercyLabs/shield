@@ -1,5 +1,3 @@
-using Shield.Api.Services;
-
 namespace Shield.Api.Controllers;
 
 // Read-only proxy over GitHub's orgs/members/search endpoints, used by AccessView's
