@@ -9,7 +9,14 @@ namespace Shield.Feeds.Epss;
 public sealed class EpssFeedSync : IFeedSync
 {
     public const string HttpClientName = "epss";
-    public const string CsvUrl = "https://epss.cyentia.com/epss_scores-current.csv.gz";
+
+    // Cyentia rebranded to Empirical Security in 2026. The legacy host still serves a
+    // 301 redirect but .NET's HttpClientFactory pipeline hangs on the gzip-decompression
+    // handler chain when chasing the redirect, leaving every EPSS sync stalled with zero
+    // log signal. Pointing directly at the new origin avoids the dance entirely. Update
+    // this constant if Empirical ever moves again.
+    public const string CsvUrl =
+        "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz";
     public const int BatchSize = 500;
 
     private readonly HttpClient _http;
