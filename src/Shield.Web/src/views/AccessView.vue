@@ -781,7 +781,7 @@ function fmtDate(iso: string): string {
               <span v-else class="text-slate-600">{{ t('access_view.no_groups_cell') }}</span>
             </td>
             <td class="px-4 py-2 text-slate-400">{{ row.inviterLogin ?? '—' }}</td>
-            <td class="px-4 py-2 text-slate-400">{{ fmtDate(row.expiresAt) }}</td>
+            <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ fmtDate(row.expiresAt) }}</td>
             <td class="px-4 py-2">
               <div class="flex items-center justify-end gap-1">
                 <button
@@ -863,7 +863,7 @@ function fmtDate(iso: string): string {
               </select>
               <span v-else class="text-slate-400">{{ user.roles.join(', ') }}</span>
             </td>
-            <td class="px-4 py-2 text-slate-400">{{ user.createdAt }}</td>
+            <td class="whitespace-nowrap px-4 py-2 text-slate-400">{{ user.createdAt }}</td>
             <td class="px-4 py-2 text-right">
               <button
                 v-if="auth.isAdmin.value && user.id !== auth.user.value?.userId && !user.roles.includes('Admin')"
