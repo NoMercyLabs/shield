@@ -7,7 +7,7 @@ namespace Shield.Scanners;
 public static class GitRemoteParser
 {
     public static IReadOnlyList<string> DefaultActionableHosts { get; } =
-        ["github.com", "gitlab.com", "bitbucket.org"];
+    ["github.com", "gitlab.com", "bitbucket.org"];
 
     // Tries to read `<workingTree>/.git/config`, find `[remote "origin"]`, and parse its `url`.
     // Returns null if no working tree, no .git/config, no origin block, or unparseable URL.
@@ -81,7 +81,11 @@ public static class GitRemoteParser
         return null;
     }
 
-    private static DetectedRemote? BuildFromHostAndPath(string host, string pathPart, string originalUrl)
+    private static DetectedRemote? BuildFromHostAndPath(
+        string host,
+        string pathPart,
+        string originalUrl
+    )
     {
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(pathPart))
             return null;

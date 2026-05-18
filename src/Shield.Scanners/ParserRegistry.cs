@@ -18,33 +18,47 @@ namespace Shield.Scanners;
 
 public sealed class ParserRegistry
 {
-    private static readonly IReadOnlyDictionary<string, Ecosystem> FilenameToEcosystem =
-        new Dictionary<string, Ecosystem>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["package-lock.json"] = Ecosystem.Npm,
-            ["npm-shrinkwrap.json"] = Ecosystem.Npm,
-            ["yarn.lock"] = Ecosystem.Npm,
-            ["pnpm-lock.yaml"] = Ecosystem.Npm,
-            ["packages.lock.json"] = Ecosystem.Nuget,
-            ["Directory.Packages.props"] = Ecosystem.Nuget,
-            ["composer.lock"] = Ecosystem.Composer,
-            ["gradle.lockfile"] = Ecosystem.Gradle,
-            ["poetry.lock"] = Ecosystem.Python,
-            ["pdm.lock"] = Ecosystem.Python,
-            ["uv.lock"] = Ecosystem.Python,
-            ["Pipfile.lock"] = Ecosystem.Python,
-            ["requirements.txt"] = Ecosystem.Python,
-            ["go.sum"] = Ecosystem.Go,
-            ["go.mod"] = Ecosystem.Go,
-            ["Cargo.lock"] = Ecosystem.Rust,
-            ["Cargo.toml"] = Ecosystem.Rust,
-            ["Gemfile.lock"] = Ecosystem.RubyGems,
-            ["Package.resolved"] = Ecosystem.SwiftPM,
-            ["pubspec.lock"] = Ecosystem.Pub,
-            ["pom.xml"] = Ecosystem.Maven,
-            ["mix.lock"] = Ecosystem.Hex,
-            ["vcpkg.json"] = Ecosystem.Vcpkg,
-        };
+    // Lockfile = pinned, resolved set produced by a package manager. Manifest = declared
+    // dependency list authored by the developer. Some ecosystems make us parse both —
+    // requirements.txt and go.mod aren't true lockfiles but carry pinned/version data we use
+    // as fallbacks when no lock is present.
+    public enum FilenameRole
+    {
+        Lockfile,
+        Manifest,
+    }
+
+    private static readonly IReadOnlyDictionary<
+        string,
+        (Ecosystem Ecosystem, FilenameRole Role)
+    > FilenameToEntry = new Dictionary<string, (Ecosystem, FilenameRole)>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["package-lock.json"] = (Ecosystem.Npm, FilenameRole.Lockfile),
+        ["npm-shrinkwrap.json"] = (Ecosystem.Npm, FilenameRole.Lockfile),
+        ["yarn.lock"] = (Ecosystem.Npm, FilenameRole.Lockfile),
+        ["pnpm-lock.yaml"] = (Ecosystem.Npm, FilenameRole.Lockfile),
+        ["packages.lock.json"] = (Ecosystem.Nuget, FilenameRole.Lockfile),
+        ["Directory.Packages.props"] = (Ecosystem.Nuget, FilenameRole.Manifest),
+        ["composer.lock"] = (Ecosystem.Composer, FilenameRole.Lockfile),
+        ["gradle.lockfile"] = (Ecosystem.Gradle, FilenameRole.Lockfile),
+        ["poetry.lock"] = (Ecosystem.Python, FilenameRole.Lockfile),
+        ["pdm.lock"] = (Ecosystem.Python, FilenameRole.Lockfile),
+        ["uv.lock"] = (Ecosystem.Python, FilenameRole.Lockfile),
+        ["Pipfile.lock"] = (Ecosystem.Python, FilenameRole.Lockfile),
+        ["requirements.txt"] = (Ecosystem.Python, FilenameRole.Manifest),
+        ["go.sum"] = (Ecosystem.Go, FilenameRole.Lockfile),
+        ["go.mod"] = (Ecosystem.Go, FilenameRole.Manifest),
+        ["Cargo.lock"] = (Ecosystem.Rust, FilenameRole.Lockfile),
+        ["Cargo.toml"] = (Ecosystem.Rust, FilenameRole.Manifest),
+        ["Gemfile.lock"] = (Ecosystem.RubyGems, FilenameRole.Lockfile),
+        ["Package.resolved"] = (Ecosystem.SwiftPM, FilenameRole.Lockfile),
+        ["pubspec.lock"] = (Ecosystem.Pub, FilenameRole.Lockfile),
+        ["pom.xml"] = (Ecosystem.Maven, FilenameRole.Manifest),
+        ["mix.lock"] = (Ecosystem.Hex, FilenameRole.Lockfile),
+        ["vcpkg.json"] = (Ecosystem.Vcpkg, FilenameRole.Manifest),
+    };
 
     private readonly NpmLockParser _npm;
     private readonly NugetLockParser _nuget;
@@ -92,16 +106,31 @@ public sealed class ParserRegistry
     }
 
     public static bool IsRecognized(string filename) =>
-        FilenameToEcosystem.ContainsKey(Path.GetFileName(filename))
+        FilenameToEntry.ContainsKey(Path.GetFileName(filename))
         || IsCentralPackagesProps(Path.GetFileName(filename));
 
     public static IReadOnlyCollection<string> RecognizedFilenames =>
-        (IReadOnlyCollection<string>)FilenameToEcosystem.Keys;
+        (IReadOnlyCollection<string>)FilenameToEntry.Keys;
+
+    public static IReadOnlyCollection<string> LockfileFilenames { get; } =
+        FilenameToEntry
+            .Where(kvp => kvp.Value.Role == FilenameRole.Lockfile)
+            .Select(kvp => kvp.Key)
+            .ToArray();
+
+    public static IReadOnlyCollection<string> ManifestFilenames { get; } =
+        FilenameToEntry
+            .Where(kvp => kvp.Value.Role == FilenameRole.Manifest)
+            .Select(kvp => kvp.Key)
+            .ToArray();
+
+    public static FilenameRole? RoleFor(string filename) =>
+        FilenameToEntry.TryGetValue(Path.GetFileName(filename), out var entry) ? entry.Role : null;
 
     public IParser? FindFor(string filename)
     {
         string name = Path.GetFileName(filename);
-        if (!FilenameToEcosystem.TryGetValue(name, out Ecosystem ecosystem))
+        if (!FilenameToEntry.TryGetValue(name, out var entry))
         {
             // Env-variant props files like Directory.Packages.Production.props are not in the
             // static dict (too many combinations). Route them by pattern instead.
@@ -110,7 +139,7 @@ public sealed class ParserRegistry
             return null;
         }
 
-        return ecosystem switch
+        return entry.Ecosystem switch
         {
             Ecosystem.Npm => _npm,
             Ecosystem.Nuget => _nuget,

@@ -120,7 +120,7 @@ public sealed class FsBrowseController : ControllerBase
         foreach (string file in files)
         {
             string name = SafeName(file);
-            if (!LockfileNames.IsLockfile(name) && !LockfileNames.IsContextManifest(name))
+            if (!ParserFilenames.IsLockfile(name) && !ParserFilenames.IsManifest(name))
                 continue;
             if (!showHidden && name.StartsWith('.'))
                 continue;
@@ -135,7 +135,7 @@ public sealed class FsBrowseController : ControllerBase
                 // best-effort, ignore.
             }
 
-            if (LockfileNames.IsLockfile(name))
+            if (ParserFilenames.IsLockfile(name))
                 dirHasLockfilesDirectly = true;
 
             entries.Add(
@@ -177,7 +177,7 @@ public sealed class FsBrowseController : ControllerBase
             {
                 if (++scanned > MaxImmediateChildrenScanned)
                     return (count > 0, count);
-                if (LockfileNames.IsLockfile(Path.GetFileName(file)))
+                if (ParserFilenames.IsLockfile(Path.GetFileName(file)))
                     count++;
             }
             return (count > 0, count);
