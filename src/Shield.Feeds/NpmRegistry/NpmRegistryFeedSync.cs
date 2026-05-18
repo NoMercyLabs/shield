@@ -57,7 +57,31 @@ public sealed class NpmRegistryFeedSync : IFeedSync, IDisposable
                     continue;
                 }
 
-                List<PackageMeta> packages = NpmPackageMapping.Expand(document, fetchedAt).ToList();
+                // Downloads are a separate, cheaper API. Best-effort: any failure leaves the
+                // value null and the typosquat detector falls back to age/maintainer signals
+                // for popularity gating on that package.
+                await _limiter.AcquireAsync(ct);
+                long? weeklyDownloads = null;
+                try
+                {
+                    weeklyDownloads = await _client.GetWeeklyDownloadsAsync(packageName, ct);
+                }
+                catch (NpmRegistryRateLimitedException)
+                {
+                    throw;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger?.LogDebug(
+                        ex,
+                        "npm downloads probe failed for {Package}; continuing without it",
+                        packageName
+                    );
+                }
+
+                List<PackageMeta> packages = NpmPackageMapping
+                    .Expand(document, fetchedAt, weeklyDownloads)
+                    .ToList();
                 if (packages.Count > 0)
                 {
                     await _sink.UpsertAsync(packages, ct);

@@ -7,7 +7,8 @@ public static class NpmPackageMapping
 {
     public static IEnumerable<PackageMeta> Expand(
         NpmPackageDocument document,
-        DateTime fetchedAtUtc
+        DateTime fetchedAtUtc,
+        long? weeklyDownloads = null
     )
     {
         string maintainersJson = JsonSerializer.Serialize(
@@ -35,6 +36,10 @@ public static class NpmPackageMapping
                 MaintainersJson = maintainersJson,
                 TarballSha = versionNode.Dist?.Shasum,
                 Deprecated = !string.IsNullOrEmpty(versionNode.Deprecated),
+                // Downloads are a package-level signal, not per-version. Copying onto every
+                // version row keeps the anomaly detector's per-version meta lookup self-
+                // contained (no extra join), at the cost of a few redundant longs.
+                WeeklyDownloads = weeklyDownloads,
                 FetchedAt = fetchedAtUtc,
             };
         }

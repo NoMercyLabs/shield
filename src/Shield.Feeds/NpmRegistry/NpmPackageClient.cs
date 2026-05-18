@@ -37,6 +37,31 @@ public sealed class NpmPackageClient
         );
     }
 
+    // npm's downloads API lives on api.npmjs.org, not registry.npmjs.org. The HttpClient
+    // configured for this client has BaseAddress = registry; passing an absolute URI
+    // overrides it. Single-package calls only — scoped packages (e.g. @nestjs/core) can't
+    // use the batched endpoint, and mixing breaks the response shape, so we keep it simple.
+    public async ValueTask<long?> GetWeeklyDownloadsAsync(string packageName, CancellationToken ct)
+    {
+        string encoded = EncodePackageName(packageName);
+        Uri url = new($"https://api.npmjs.org/downloads/point/last-week/{encoded}");
+
+        HttpResponseMessage response = await _http.GetAsync(url, ct);
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            throw new NpmRegistryRateLimitedException(ParseRetryAfter(response));
+
+        // 404 = npm has no stats for this package (very new, unpublished, or scoped+private).
+        // 4xx body usually `{"error":"..."}`; treat any non-2xx as "unknown" rather than fatal.
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        NpmDownloadsPoint? body = await response.Content.ReadFromJsonAsync<NpmDownloadsPoint>(
+            options: JsonOptions,
+            cancellationToken: ct
+        );
+        return body?.Downloads;
+    }
+
     private static DateTimeOffset ParseRetryAfter(HttpResponseMessage response)
     {
         if (response.Headers.RetryAfter is { } header)
@@ -110,4 +135,13 @@ public sealed class NpmDist
 
     [JsonPropertyName("tarball")]
     public string? Tarball { get; set; }
+}
+
+public sealed class NpmDownloadsPoint
+{
+    [JsonPropertyName("downloads")]
+    public long Downloads { get; set; }
+
+    [JsonPropertyName("package")]
+    public string? Package { get; set; }
 }
