@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 
 namespace Shield.Api.Middleware;

@@ -1,6 +1,4 @@
-using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Shield.Core.Options;

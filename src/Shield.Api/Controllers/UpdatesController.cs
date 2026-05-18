@@ -134,7 +134,7 @@ public sealed class UpdatesController : ControllerBase
         if (request.DryRun)
         {
             UpdateApplyResult preview = await _applier.ApplyAsync(
-                new UpdateApplyRequest(
+                new(
                     Scope: request.Scope,
                     SourceIds: request.SourceIds,
                     DryRun: true,
@@ -154,7 +154,7 @@ public sealed class UpdatesController : ControllerBase
             requestedBy = parsed;
 
         await _applyQueue.EnqueueAsync(
-            new UpdateApplyJob(
+            new(
                 JobId: jobId,
                 Scope: request.Scope,
                 SourceIds: request.SourceIds,

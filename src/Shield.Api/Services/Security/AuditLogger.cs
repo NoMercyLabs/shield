@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 
 namespace Shield.Api.Services.Security;
 

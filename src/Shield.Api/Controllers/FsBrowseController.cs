@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Configuration;
 using Shield.Scanners;
 
 namespace Shield.Api.Controllers;

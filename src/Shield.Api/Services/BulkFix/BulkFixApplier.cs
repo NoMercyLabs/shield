@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Shield.Api.Services.BulkFix;
 using Shield.Api.Services.Ecosystems;
 using Shield.Api.Services.ManifestEditors;
 using Shield.Api.Services.PullRequests;
@@ -410,7 +409,7 @@ public sealed class BulkFixApplier : IBulkFixApplier
             RepoPullRequestResult prResult = await _prOpener.OpenAsync(
                 source,
                 edits,
-                new RepoPullRequestSpec(
+                new(
                     BranchPrefix: "shield/auto-fix",
                     CommitMessage: BuildCommitMessage(entries),
                     PrTitle: BuildPrTitle(entries),

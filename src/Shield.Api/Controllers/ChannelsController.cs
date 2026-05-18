@@ -1,5 +1,4 @@
 using Shield.Alerter;
-using Shield.Core.Results;
 
 namespace Shield.Api.Controllers;
 

@@ -1,5 +1,3 @@
-using Shield.Api.Services.Ecosystems;
-
 namespace Shield.Api.Services.Findings;
 
 public sealed class PopularPackageRegistry : IPopularPackageRegistry

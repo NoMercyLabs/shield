@@ -1,5 +1,3 @@
-using Shield.Api.Workers.Queues;
-
 namespace Shield.Api.Services.Scanning;
 
 // Persistent enqueue for "scan this source now". One row per request; the ScanQueueWorker

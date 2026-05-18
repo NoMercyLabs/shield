@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using Shield.Api.Middleware;
 
 namespace Shield.Api.Auth;

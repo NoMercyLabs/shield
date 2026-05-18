@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Hosting;
 
 namespace Shield.Api.Auth;
 

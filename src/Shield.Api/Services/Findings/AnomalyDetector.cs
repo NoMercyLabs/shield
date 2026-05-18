@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
 
 namespace Shield.Api.Services.Findings;

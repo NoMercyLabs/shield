@@ -162,7 +162,7 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
         foreach (Guid adminId in adminIds)
         {
             await _notifications.PublishAsync(
-                new Notification
+                new()
                 {
                     Id = Guid.NewGuid(),
                     UserId = adminId,

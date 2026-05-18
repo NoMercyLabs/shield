@@ -219,7 +219,7 @@ public sealed class MatcherWorker : BackgroundService
         foreach ((Finding resolvedFinding, FindingState previousState) in autoResolved)
         {
             shieldDb.AuditEntries.Add(
-                new AuditEntry
+                new()
                 {
                     Id = Guid.NewGuid(),
                     At = now,

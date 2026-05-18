@@ -3,8 +3,6 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 
 namespace Shield.Api.Controllers;
 

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Shield.Api.Auth.AcceptanceTickets;
 using Shield.Api.Auth.External;
-using Shield.Api.Middleware;
 
 namespace Shield.Api.Controllers;
 

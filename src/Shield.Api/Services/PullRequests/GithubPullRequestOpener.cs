@@ -165,7 +165,7 @@ public sealed class GithubPullRequestOpener : IRepoPullRequestOpener
                 PullRequest existingPr = await client.PullRequest.Update(
                     repo.Id,
                     existing[0].Number,
-                    new PullRequestUpdate { Body = spec.PrBody, Title = spec.PrTitle }
+                    new() { Body = spec.PrBody, Title = spec.PrTitle }
                 );
                 pullRequestUrl = existingPr.HtmlUrl;
             }

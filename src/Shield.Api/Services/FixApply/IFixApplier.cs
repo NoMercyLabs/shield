@@ -1,5 +1,3 @@
-using Shield.Scanners;
-
 namespace Shield.Api.Services.FixApply;
 
 public interface IFixApplier

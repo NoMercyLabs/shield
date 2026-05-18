@@ -1,5 +1,3 @@
-using Shield.Api.Workers.Queues;
-
 namespace Shield.Api.Workers;
 
 // Scheduler: discovers due sources by interval and enqueues persistent ScanQueueEntries

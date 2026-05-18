@@ -28,7 +28,7 @@ public sealed class JwtIssuer : IJwtIssuer
             configuration["Shield:Auth:JwtSigningKey"]
             ?? configuration["Shield:Auth:Jwt:Secret"]
             ?? throw new InvalidOperationException("Shield:Auth:JwtSigningKey is required.");
-        _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(raw));
+        _signingKey = new(Encoding.UTF8.GetBytes(raw));
         _userManager = userManager;
     }
 

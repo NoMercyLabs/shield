@@ -1,5 +1,3 @@
-using Shield.Api.Services.ManifestEditors;
-
 namespace Shield.Api.Controllers;
 
 [ApiController]

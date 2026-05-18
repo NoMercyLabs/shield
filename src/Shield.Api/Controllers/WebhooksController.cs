@@ -1,6 +1,4 @@
-using System.Text;
 using System.Text.Json;
-using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
 
 namespace Shield.Api.Controllers;

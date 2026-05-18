@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Core.Results;
 
 public sealed record FeedSyncResult(

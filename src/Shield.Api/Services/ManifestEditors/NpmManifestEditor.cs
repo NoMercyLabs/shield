@@ -260,7 +260,7 @@ public sealed class NpmManifestEditor : IManifestEditor
             else
                 break;
         }
-        return spaces > 0 ? new string(' ', spaces) : "  ";
+        return spaces > 0 ? new(' ', spaces) : "  ";
     }
 
     // Detects the root-level indentation (used for top-level keys like "dependencies").

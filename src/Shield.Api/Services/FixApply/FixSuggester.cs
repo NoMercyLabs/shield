@@ -1,7 +1,6 @@
 using System.Text.Json;
 using NuGet.Versioning;
 using Semver;
-using Shield.Matcher.Versioning;
 
 namespace Shield.Api.Services.FixApply;
 
