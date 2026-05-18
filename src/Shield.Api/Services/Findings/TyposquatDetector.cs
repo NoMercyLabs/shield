@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Findings;
 
 public sealed class TyposquatDetector : ITyposquatDetector

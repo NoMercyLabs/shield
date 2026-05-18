@@ -1,5 +1,3 @@
-using Shield.Api.Contracts;
-
 namespace Shield.Api.Services.Access;
 
 // Read-side facade over the GitHub orgs/members/search endpoints. The connect-flow OAuth

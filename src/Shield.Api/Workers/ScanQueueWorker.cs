@@ -1,11 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services;
 using Shield.Api.Services.BulkFix;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 using Shield.Scanners;
 
 // IBulkFixApplier is Scoped; workers create their own scope before resolving.

@@ -1,7 +1,4 @@
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.Auth;
 

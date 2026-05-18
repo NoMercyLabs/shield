@@ -1,7 +1,5 @@
 using System.Text.Json;
 using Octokit;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 using Shield.Scanners;
 
 namespace Shield.Api.Services.SourceFs;

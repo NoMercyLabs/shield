@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Shield.Core.Domain;
 using Shield.Core.Options;
-using Shield.Data;
 
 namespace Shield.Api.Services.AppSettings;
 

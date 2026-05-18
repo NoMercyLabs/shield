@@ -1,6 +1,4 @@
 using Shield.Api.Auth.OAuthProviders;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Auth;
 

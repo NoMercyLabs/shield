@@ -2,9 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
-using Shield.Core.Domain;
 using Shield.Core.Http;
 
 namespace Shield.Api.Auth.OAuthProviders;

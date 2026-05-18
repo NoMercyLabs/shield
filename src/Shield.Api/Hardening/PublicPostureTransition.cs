@@ -1,9 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Shield.Core.Domain;
-using Shield.Data;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Hardening;
 

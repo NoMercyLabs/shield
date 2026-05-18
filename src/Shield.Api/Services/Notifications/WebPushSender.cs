@@ -1,9 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Auth;
-using Shield.Data;
-using Shield.Data.Identity;
 using WebPush;
 // Two PushSubscription types collide here — Shield's domain row and WebPush's wire-level
 // request DTO. Use aliases (instead of importing both namespaces) so every reference is

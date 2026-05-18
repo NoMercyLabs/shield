@@ -1,7 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using Shield.Api.Auth;
-using Shield.Core.Abstractions;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Services.Access;
 

@@ -3,8 +3,6 @@ using Octokit;
 using Shield.Api.Services.Ecosystems;
 using Shield.Api.Services.FixApply;
 using Shield.Api.Services.ManifestEditors;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 using Shield.Scanners;
 
 namespace Shield.Api.Services.FixApply;

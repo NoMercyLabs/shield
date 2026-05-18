@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using Shield.Alerter;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Workers;
 

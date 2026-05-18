@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
-using Shield.Api.Contracts;
-using Shield.Core.Domain;
 using Shield.Core.Http;
 
 namespace Shield.Api.Services.Access;

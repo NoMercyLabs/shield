@@ -6,8 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shield.Api.Services;
-using Shield.Core.Domain;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Auth;
 

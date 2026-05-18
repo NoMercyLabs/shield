@@ -1,13 +1,6 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Controllers;
 

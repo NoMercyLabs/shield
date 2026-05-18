@@ -1,6 +1,3 @@
-using Shield.Api.Contracts;
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Findings;
 
 public interface IAnomalyDetector

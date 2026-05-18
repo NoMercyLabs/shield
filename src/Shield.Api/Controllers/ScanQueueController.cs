@@ -1,10 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Contracts;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Controllers;
 

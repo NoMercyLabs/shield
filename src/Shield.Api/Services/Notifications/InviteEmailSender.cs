@@ -2,10 +2,7 @@ using System.Net.Mail;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using Shield.Channels.Smtp;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.Notifications;
 

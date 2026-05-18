@@ -3,10 +3,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using Shield.Api.Auth;
 using Shield.Api.Services;
 using Shield.Core.Options;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Middleware;
 

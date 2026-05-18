@@ -1,13 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
 using Shield.Api.Services.FixApply;
 using Shield.Api.Services.ManifestEditors;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Controllers;
 

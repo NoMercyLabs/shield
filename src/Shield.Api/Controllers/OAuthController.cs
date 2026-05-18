@@ -2,20 +2,12 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Shield.Api.Auth;
 using Shield.Api.Auth.OAuthProviders;
-using Shield.Api.Contracts;
 using Shield.Api.Middleware;
 using Shield.Api.Services;
-using Shield.Core.Domain;
-using Shield.Data;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Controllers;
 

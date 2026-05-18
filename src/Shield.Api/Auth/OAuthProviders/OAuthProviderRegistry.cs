@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Auth.OAuthProviders;
 
 public interface IOAuthProviderRegistry

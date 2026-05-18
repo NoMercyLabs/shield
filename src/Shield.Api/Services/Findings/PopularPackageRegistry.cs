@@ -1,5 +1,4 @@
 using Shield.Api.Services.Ecosystems;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Findings;
 

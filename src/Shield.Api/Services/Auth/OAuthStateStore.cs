@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Auth;
 

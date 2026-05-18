@@ -1,12 +1,8 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using Octokit;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 using Shield.Scanners;
 
 namespace Shield.Api.Services.Notifications;

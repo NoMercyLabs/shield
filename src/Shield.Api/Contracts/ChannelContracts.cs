@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Contracts;
 

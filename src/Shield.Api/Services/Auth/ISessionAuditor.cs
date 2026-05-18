@@ -1,6 +1,3 @@
-using Shield.Core.Domain;
-using Shield.Data.Identity;
-
 namespace Shield.Api.Services.Auth;
 
 public enum SigninMethod

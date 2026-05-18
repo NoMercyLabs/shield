@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Contracts;
 
 public sealed record OpenCounts(int Low, int Medium, int High, int Critical);

@@ -1,5 +1,4 @@
 using Shield.Api.Services.ManifestEditors;
-using Shield.Core.Domain;
 using Shield.Feeds.NpmRegistry;
 
 namespace Shield.Api.Services.Ecosystems;

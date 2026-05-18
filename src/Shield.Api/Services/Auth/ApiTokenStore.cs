@@ -1,10 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.Auth;
 

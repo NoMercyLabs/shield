@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.SourceFs;
 
 // Read-only filesystem abstraction over a Source's content. GithubRepo sources fetch via the

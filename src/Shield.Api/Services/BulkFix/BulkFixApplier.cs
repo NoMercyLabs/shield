@@ -1,13 +1,10 @@
 using System.Text;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services.BulkFix;
 using Shield.Api.Services.Ecosystems;
 using Shield.Api.Services.ManifestEditors;
 using Shield.Api.Services.PullRequests;
 using Shield.Api.Services.SourceFs;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.BulkFix;
 

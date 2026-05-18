@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Shield.Api.Services;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Auth.OAuthProviders;
 

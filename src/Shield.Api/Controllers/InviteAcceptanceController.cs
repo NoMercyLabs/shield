@@ -1,17 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Auth;
 using Shield.Api.Auth.AcceptanceTickets;
-using Shield.Api.Contracts;
 using Shield.Api.Middleware;
 using Shield.Api.Services;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Controllers;
 

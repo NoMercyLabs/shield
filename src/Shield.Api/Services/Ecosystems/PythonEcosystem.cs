@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using Shield.Api.Services.ManifestEditors;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Ecosystems;
 

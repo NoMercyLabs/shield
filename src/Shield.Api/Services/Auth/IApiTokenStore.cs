@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Auth;
 
 // Wraps ApiToken CRUD + plaintext lookup. The plaintext token is only returned once,

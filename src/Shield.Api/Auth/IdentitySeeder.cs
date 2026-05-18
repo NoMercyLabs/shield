@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Shield.Core.Options;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Auth;
 

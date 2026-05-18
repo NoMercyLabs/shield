@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Findings;
 
 // Per-ecosystem curated lists of well-known package names. Used by the typosquat

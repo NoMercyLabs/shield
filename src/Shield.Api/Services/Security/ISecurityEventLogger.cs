@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Security;
 
 // Single entry point for writing SecurityEvent rows. Implementations write the row,

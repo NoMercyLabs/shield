@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.ManifestEditors;
 
 // Cargo.toml supports many version forms (string, table, workspace inherit). Phase 1

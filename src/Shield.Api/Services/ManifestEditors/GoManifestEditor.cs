@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.ManifestEditors;
 
 // go.mod edits need to preserve module-graph invariants; safer to surface as not-yet-supported

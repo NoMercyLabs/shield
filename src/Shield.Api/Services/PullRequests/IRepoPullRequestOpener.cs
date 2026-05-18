@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.PullRequests;
 
 // Opens (or updates) a pull request on a GithubRepo source given a pre-built list of file

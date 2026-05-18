@@ -1,10 +1,7 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 using Shield.Feeds.Osv;
 using Shield.Feeds.Osv.Models;
 using Shield.Matcher;

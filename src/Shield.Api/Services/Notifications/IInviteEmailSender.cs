@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Notifications;
 
 // Resolves an enabled SMTP AlertChannel and sends an invite email through its configuration.

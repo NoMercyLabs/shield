@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Findings;
 
 // Hand-curated allowlists of "names a typosquat would mimic".

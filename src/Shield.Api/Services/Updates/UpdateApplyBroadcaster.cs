@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
 using Shield.Api.Hubs;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Services.Updates;
 

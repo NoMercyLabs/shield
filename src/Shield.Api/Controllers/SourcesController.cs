@@ -1,16 +1,8 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
 using Shield.Api.Services.BulkFix;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Controllers;
 

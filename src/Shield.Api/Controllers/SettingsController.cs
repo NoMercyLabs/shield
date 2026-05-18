@@ -1,17 +1,10 @@
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Controllers;
 

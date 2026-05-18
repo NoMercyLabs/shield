@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Updates;
 
 // Opens a PR per source bumping every selected outdated dependency. Two scopes:

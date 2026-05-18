@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.ManifestEditors;
 
 // Per-ecosystem manifest patcher. Implementations enumerate candidate manifest files in

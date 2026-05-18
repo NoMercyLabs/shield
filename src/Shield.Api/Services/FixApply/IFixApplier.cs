@@ -1,4 +1,3 @@
-using Shield.Core.Domain;
 using Shield.Scanners;
 
 namespace Shield.Api.Services.FixApply;

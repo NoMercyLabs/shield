@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.ManifestEditors;
 
 // Python manifests live in many shapes (requirements.txt, pyproject.toml [tool.poetry],

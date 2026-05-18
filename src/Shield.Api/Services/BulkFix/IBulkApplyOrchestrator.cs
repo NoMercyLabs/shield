@@ -1,6 +1,3 @@
-using Shield.Api.Contracts;
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.BulkFix;
 
 // Orchestrates the advisory-driven bulk-apply path. Owns the validation gates (source type,

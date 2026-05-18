@@ -2,10 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Shield.Api.Auth;
 using Shield.Api.Services;
-using Shield.Core.Domain;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Middleware;
 

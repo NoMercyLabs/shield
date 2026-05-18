@@ -1,12 +1,5 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Shield.Alerter;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
-using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 
 namespace Shield.Api.Controllers;
 

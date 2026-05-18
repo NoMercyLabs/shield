@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Shield.Channels.Inbox;
 
 namespace Shield.Api.Persistence;

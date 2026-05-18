@@ -1,13 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Controllers;
 

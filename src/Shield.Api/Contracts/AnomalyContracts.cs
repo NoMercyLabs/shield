@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Contracts;
 
 // Anomaly signals flagged by the supply-chain detector on snapshot-to-snapshot diffs.

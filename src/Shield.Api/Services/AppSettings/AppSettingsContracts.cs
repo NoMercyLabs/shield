@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.AppSettings;
 
 // Runtime-mutable settings cache. Singleton; Current is refreshed on first read and

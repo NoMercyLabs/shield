@@ -1,7 +1,3 @@
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data.Identity;
-
 namespace Shield.Api.Services.Auth;
 
 // Centralises post-signin plumbing: audit record + sign-in notification + security event.

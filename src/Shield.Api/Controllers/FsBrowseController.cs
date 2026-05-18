@@ -1,9 +1,5 @@
 using System.Runtime.InteropServices;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Scanners;
 
 namespace Shield.Api.Controllers;

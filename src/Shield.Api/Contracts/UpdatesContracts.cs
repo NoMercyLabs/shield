@@ -1,5 +1,4 @@
 using Shield.Api.Services.Updates;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Contracts;
 

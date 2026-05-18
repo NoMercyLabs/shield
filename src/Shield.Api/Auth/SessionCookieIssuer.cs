@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Shield.Api.Middleware;
 using Shield.Api.Services;
-using Shield.Core.Domain;
 
 namespace Shield.Api.Auth;
 

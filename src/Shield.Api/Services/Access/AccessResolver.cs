@@ -1,9 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Auth;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.Access;
 

@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Auth;
 
 // Encapsulates the opaque session-token lifecycle so login/logout/middleware don't have to

@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Shield.Api.Auth;
 using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
 

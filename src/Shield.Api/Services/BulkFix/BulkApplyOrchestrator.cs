@@ -1,9 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Contracts;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data;
-
 namespace Shield.Api.Services.BulkFix;
 
 public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator

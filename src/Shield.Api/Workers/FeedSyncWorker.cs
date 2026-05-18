@@ -1,10 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
 using Shield.Core.Results;
-using Shield.Data;
 
 namespace Shield.Api.Workers;
 

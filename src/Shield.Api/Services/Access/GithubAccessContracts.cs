@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Access;
 
 // GitHub-derived access layer. Mirrors the user's GitHub org/repo permissions into Shield's

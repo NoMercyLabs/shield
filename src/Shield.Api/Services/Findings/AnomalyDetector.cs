@@ -1,11 +1,6 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Shield.Api.Contracts;
 using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Services.Findings;
 

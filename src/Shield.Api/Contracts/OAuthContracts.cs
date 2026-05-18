@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Contracts;
 
 // Returned by /api/oauth/{provider}/start — UI redirects the browser here.

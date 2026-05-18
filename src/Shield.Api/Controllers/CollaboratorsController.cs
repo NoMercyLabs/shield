@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Shield.Api.Auth;
-using Shield.Api.Contracts;
 using Shield.Api.Services;
 
 namespace Shield.Api.Controllers;

@@ -3,12 +3,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Shield.Core.Domain;
 using Shield.Core.Http;
-using Shield.Data;
-using Shield.Data.Identity;
 
 namespace Shield.Api.Services.Access;
 

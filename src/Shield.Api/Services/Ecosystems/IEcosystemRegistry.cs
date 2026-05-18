@@ -1,5 +1,3 @@
-using Shield.Core.Domain;
-
 namespace Shield.Api.Services.Ecosystems;
 
 // Index of every registered IEcosystem, resolved once per scope. Consumers call .For(ecosystem)

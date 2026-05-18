@@ -1,8 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Shield.Core.Abstractions;
-using Shield.Core.Domain;
-using Shield.Data;
-
 namespace Shield.Api.Services.Auth;
 
 // Background watcher that wakes hourly and emits an OauthExpiring notification for any

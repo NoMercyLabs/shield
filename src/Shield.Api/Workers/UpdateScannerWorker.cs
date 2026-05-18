@@ -1,8 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Shield.Api.Services;
 using Shield.Api.Services.Ecosystems;
-using Shield.Core.Domain;
-using Shield.Data;
 
 namespace Shield.Api.Workers;
 
