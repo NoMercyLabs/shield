@@ -1,216 +1,149 @@
 using System.Net;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 // Microsoft.AspNetCore.HttpOverrides ships its own legacy IPNetwork that shadows the
-// System.Net one ASP.NET Core's ForwardedHeadersOptions actually uses today (.NET 8+).
-// Alias to keep the rest of the file resolving the right type.
+// System.Net one we use below. Alias to keep the right type resolving.
 using IPNetwork = System.Net.IPNetwork;
 
 namespace Shield.Api.Hardening;
 
-// Cloudflare-aware reverse-proxy unwrap. The stock ForwardedHeaders middleware uses
-// X-Forwarded-For, which works behind any proxy whose IP we've added to KnownNetworks.
-// Behind Cloudflare specifically, CF-Connecting-IP is the better signal: it's a single
-// authoritative client IP (no chain to parse, can't be padded by an earlier hop) and
-// Cloudflare sets it on every request through their edge.
+// Real-client-IP extractor. Walks forwarded-IP headers in priority order and picks the
+// first PUBLIC IP it finds — same shape as nomercy-tv's getIp() Laravel helper. No
+// peer-trust check: any topology where the operator binds Shield to loopback or a
+// private network (which is every supported deployment) means a public IP arriving in
+// any of these headers came through the proxy chain authoritatively. A client that
+// could reach Shield directly with a public source IP wouldn't need to forge the
+// header to attack — the bigger problem is the exposure itself.
 //
-// "Trusted peer" is the union of four sets:
-//   1. Cloudflare's published IP ranges (the request came straight from a CF edge).
-//   2. Operator-configured KnownProxies / KnownNetworks from ForwardedHeadersOptions
-//      (explicit allowlist for unusual deployments).
-//   3. Loopback — Shield's reference Docker compose binds 127.0.0.1:8842 with cloudflared
-//      on the host hitting that loopback port.
-//   4. RFC1918 / ULA / link-local — Shield's sidecar Docker compose puts cloudflared in
-//      the same bridge network, so the immediate peer is a container IP in 172.16.0.0/12
-//      (or 10.x / 192.168.x for custom networks). Treating those as trusted by default
-//      matches Shield's actual deployment shapes; operators exposing Shield directly to
-//      a hostile LAN should bind to loopback like the reference compose does.
-//
-// A public-internet client that bypasses the proxy chain entirely still falls outside
-// every set and can't forge the header.
+// Header priority — CF-specific first because CF-Connecting-IP / -IPv6 are single
+// authoritative values (no chain), then the generic forwarded headers as fallback for
+// non-Cloudflare deployments.
 public sealed class CloudflareForwardedIpMiddleware
 {
-    public const string ConnectingIpHeader = "CF-Connecting-IP";
     public const string VisitorHeader = "CF-Visitor";
 
-    private readonly RequestDelegate _next;
-    private readonly IReadOnlyList<IPNetwork> _cloudflareRanges;
-    private readonly IReadOnlyList<IPAddress> _trustedProxies;
-    private readonly IReadOnlyList<IPNetwork> _trustedNetworks;
+    private static readonly string[] ClientIpHeaders =
+    [
+        "CF-Connecting-IPv6",
+        "CF-Connecting-IP",
+        "True-Client-IP",
+        "X-Real-IP",
+        "X-Client-IP",
+        "X-Forwarded-For",
+        "Forwarded-For",
+        "Forwarded",
+    ];
 
-    public CloudflareForwardedIpMiddleware(
-        RequestDelegate next,
-        IOptions<CloudflareForwardedIpOptions> options,
-        IOptions<ForwardedHeadersOptions> forwardedOptions
-    )
+    private readonly RequestDelegate _next;
+
+    public CloudflareForwardedIpMiddleware(RequestDelegate next)
     {
         _next = next;
-        _cloudflareRanges = options.Value.ResolveRanges();
-        // Snapshot at construction time. ForwardedHeadersOptions is configured once at
-        // startup; the lists are read-only during request processing so capturing them
-        // here is safe and avoids a per-request IOptions resolution.
-        _trustedProxies = forwardedOptions.Value.KnownProxies.ToArray();
-        _trustedNetworks = forwardedOptions.Value.KnownIPNetworks.ToArray();
     }
 
     public Task InvokeAsync(HttpContext context)
     {
-        IPAddress? peer = context.Connection.RemoteIpAddress;
-        if (peer is not null && IsTrustedPeer(peer))
-        {
-            if (
-                context.Request.Headers.TryGetValue(
-                    ConnectingIpHeader,
-                    out Microsoft.Extensions.Primitives.StringValues cfIp
-                )
-                && cfIp.Count > 0
-                && IPAddress.TryParse(cfIp[0], out IPAddress? realClient)
-            )
-            {
-                context.Connection.RemoteIpAddress = realClient;
-            }
+        IPAddress? clientIp = ExtractPublicClientIp(context.Request.Headers);
+        if (clientIp is not null)
+            context.Connection.RemoteIpAddress = clientIp;
 
-            // CF-Visitor: {"scheme":"https"} on TLS terminated by Cloudflare. ASP.NET Core's
-            // ForwardedHeaders middleware reads X-Forwarded-Proto separately; honouring CF-
-            // Visitor here covers the case where the origin connection itself isn't TLS but
-            // the client-side was, which would otherwise make Request.Scheme report "http"
-            // and trip HttpsRedirection into a loop.
-            if (
-                context.Request.Headers.TryGetValue(
-                    VisitorHeader,
-                    out Microsoft.Extensions.Primitives.StringValues cfVisitor
-                )
-                && cfVisitor.Count > 0
-            )
-            {
-                string raw = cfVisitor[0] ?? string.Empty;
-                if (raw.Contains("\"scheme\":\"https\"", StringComparison.OrdinalIgnoreCase))
-                    context.Request.Scheme = "https";
-            }
+        // CF-Visitor: {"scheme":"https"} when CF terminated TLS. Honour it so Request.Scheme
+        // reports https even if the origin connection is plain HTTP — otherwise
+        // HttpsRedirection loops between proxy and app.
+        if (
+            context.Request.Headers.TryGetValue(VisitorHeader, out StringValues cfVisitor)
+            && cfVisitor.Count > 0
+        )
+        {
+            string raw = cfVisitor[0] ?? string.Empty;
+            if (raw.Contains("\"scheme\":\"https\"", StringComparison.OrdinalIgnoreCase))
+                context.Request.Scheme = "https";
         }
 
         return _next(context);
     }
 
-    private bool IsTrustedPeer(IPAddress peer)
+    private static IPAddress? ExtractPublicClientIp(IHeaderDictionary headers)
     {
-        // Kestrel exposes IPv4 connections as IPv4-mapped IPv6 on dual-stack listeners
-        // ("::ffff:192.168.2.201"). Normalise to plain IPv4 before comparing — otherwise
-        // `peer.Equals(192.168.2.201)` and `network.Contains(...)` both miss.
-        IPAddress normalised = peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer;
-
-        if (IPAddress.IsLoopback(normalised))
-            return true;
-        if (IsPrivateAddress(normalised))
-            return true;
-        foreach (IPAddress proxy in _trustedProxies)
+        foreach (string headerName in ClientIpHeaders)
         {
-            IPAddress proxyNormalised = proxy.IsIPv4MappedToIPv6 ? proxy.MapToIPv4() : proxy;
-            if (normalised.Equals(proxyNormalised))
-                return true;
+            if (!headers.TryGetValue(headerName, out StringValues values))
+                continue;
+            foreach (string? raw in values)
+            {
+                if (string.IsNullOrWhiteSpace(raw))
+                    continue;
+                // X-Forwarded-For / Forwarded-For etc. can be comma-separated. CF-Connecting-IP
+                // is single-valued but the split is harmless. Take the first public IP we see.
+                foreach (string candidate in raw.Split(','))
+                {
+                    string trimmed = candidate.Trim();
+                    // Strip an optional [::1]:8080 / 1.2.3.4:8080 port suffix some proxies add.
+                    trimmed = StripPort(trimmed);
+                    if (
+                        IPAddress.TryParse(trimmed, out IPAddress? parsed)
+                        && IsPublicAddress(parsed)
+                    )
+                        return parsed;
+                }
+            }
         }
-        foreach (IPNetwork network in _trustedNetworks)
-        {
-            if (network.Contains(normalised))
-                return true;
-        }
-        foreach (IPNetwork network in _cloudflareRanges)
-        {
-            if (network.Contains(normalised))
-                return true;
-        }
-        return false;
+        return null;
     }
 
-    private static readonly IPNetwork[] PrivateNetworks =
+    private static string StripPort(string raw)
+    {
+        // Bracketed IPv6 with port: "[::1]:443" → "::1"
+        if (raw.StartsWith('['))
+        {
+            int close = raw.IndexOf(']');
+            return close > 0 ? raw.Substring(1, close - 1) : raw;
+        }
+        // Plain IPv4 with port: "1.2.3.4:443" → "1.2.3.4". Bare IPv6 has multiple ':'
+        // and can't carry a port without brackets — leave those alone.
+        int firstColon = raw.IndexOf(':');
+        int lastColon = raw.LastIndexOf(':');
+        if (firstColon == lastColon && firstColon > 0)
+            return raw[..firstColon];
+        return raw;
+    }
+
+    private static bool IsPublicAddress(IPAddress address)
+    {
+        IPAddress ip = address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
+        if (IPAddress.IsLoopback(ip))
+            return false;
+        foreach (IPNetwork network in NonPublicRanges)
+        {
+            if (network.Contains(ip))
+                return false;
+        }
+        return true;
+    }
+
+    // Everything FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE rejects in PHP,
+    // expressed as CIDRs so we can match against a parsed IPAddress.
+    private static readonly IPNetwork[] NonPublicRanges =
     [
-        // IPv4 RFC1918 — covers Docker bridge defaults (172.16.0.0/12) and every typical
-        // home / corporate LAN (10.x, 192.168.x).
+        // IPv4 — RFC1918 private
         new(IPAddress.Parse("10.0.0.0"), 8),
         new(IPAddress.Parse("172.16.0.0"), 12),
         new(IPAddress.Parse("192.168.0.0"), 16),
-        // IPv6 ULA (RFC4193) + link-local (RFC4291).
+        // IPv4 — link-local, multicast, reserved
+        new(IPAddress.Parse("169.254.0.0"), 16),
+        new(IPAddress.Parse("224.0.0.0"), 4),
+        new(IPAddress.Parse("0.0.0.0"), 8),
+        new(IPAddress.Parse("240.0.0.0"), 4),
+        // IPv4 — CGNAT (RFC6598) — shared address space, not internet-routable
+        new(IPAddress.Parse("100.64.0.0"), 10),
+        // IPv4 — documentation ranges (RFC5737)
+        new(IPAddress.Parse("192.0.2.0"), 24),
+        new(IPAddress.Parse("198.51.100.0"), 24),
+        new(IPAddress.Parse("203.0.113.0"), 24),
+        // IPv6 — unique-local, link-local, multicast
         new(IPAddress.Parse("fc00::"), 7),
         new(IPAddress.Parse("fe80::"), 10),
+        new(IPAddress.Parse("ff00::"), 8),
+        // IPv6 — documentation (RFC3849)
+        new(IPAddress.Parse("2001:db8::"), 32),
     ];
-
-    private static bool IsPrivateAddress(IPAddress address)
-    {
-        foreach (IPNetwork network in PrivateNetworks)
-        {
-            if (network.Contains(address))
-                return true;
-        }
-        return false;
-    }
-}
-
-public sealed class CloudflareForwardedIpOptions
-{
-    public const string SectionName = "Shield:Cloudflare";
-
-    // Operator can override the embedded defaults via configuration in case Cloudflare
-    // announces new prefixes between Shield releases. Format: comma-separated CIDR list.
-    public string? IpRanges { get; set; }
-
-    // Embedded Cloudflare public IP ranges — current as of 2026-05-18. Pulled from the
-    // canonical lists at https://www.cloudflare.com/ips-v4 and /ips-v6.
-    private static readonly string[] DefaultRangesV4 =
-    [
-        "173.245.48.0/20",
-        "103.21.244.0/22",
-        "103.22.200.0/22",
-        "103.31.4.0/22",
-        "141.101.64.0/18",
-        "108.162.192.0/18",
-        "190.93.240.0/20",
-        "188.114.96.0/20",
-        "197.234.240.0/22",
-        "198.41.128.0/17",
-        "162.158.0.0/15",
-        "104.16.0.0/13",
-        "104.24.0.0/14",
-        "172.64.0.0/13",
-        "131.0.72.0/22",
-    ];
-
-    private static readonly string[] DefaultRangesV6 =
-    [
-        "2400:cb00::/32",
-        "2606:4700::/32",
-        "2803:f800::/32",
-        "2405:b500::/32",
-        "2405:8100::/32",
-        "2a06:98c0::/29",
-        "2c0f:f248::/32",
-    ];
-
-    public IReadOnlyList<IPNetwork> ResolveRanges()
-    {
-        IEnumerable<string> raw = !string.IsNullOrWhiteSpace(IpRanges)
-            ? IpRanges.Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-            )
-            : DefaultRangesV4.Concat(DefaultRangesV6);
-
-        List<IPNetwork> ranges = [];
-        foreach (string entry in raw)
-        {
-            int slash = entry.IndexOf('/');
-            if (slash <= 0)
-                continue;
-            string addr = entry[..slash];
-            string prefix = entry[(slash + 1)..];
-            if (
-                IPAddress.TryParse(addr, out IPAddress? parsed)
-                && int.TryParse(prefix, out int prefixLength)
-            )
-            {
-                ranges.Add(new(parsed, prefixLength));
-            }
-        }
-        return ranges;
-    }
 }
