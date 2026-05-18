@@ -25,5 +25,14 @@ public class ScanQueueEntryConfiguration : IEntityTypeConfiguration<ScanQueueEnt
             entry.EnqueuedAt,
         });
         builder.HasIndex(entry => entry.SourceId);
+
+        // Cascade pending scan-queue entries when their source is deleted — without this
+        // the worker would pull a queued scan, find the source gone, and either crash or
+        // log "source not found" forever on retry.
+        builder
+            .HasOne<Source>()
+            .WithMany()
+            .HasForeignKey(entry => entry.SourceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Shield.Data;
 
@@ -10,9 +11,11 @@ using Shield.Data;
 namespace Shield.Data.Migrations.Shield
 {
     [DbContext(typeof(ShieldDbContext))]
-    partial class ShieldDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260518090912_AddSourceCascadeForFindingsAclScanQueue")]
+    partial class AddSourceCascadeForFindingsAclScanQueue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");

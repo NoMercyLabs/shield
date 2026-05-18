@@ -17,5 +17,13 @@ public class SourceAccessConfiguration : IEntityTypeConfiguration<SourceAccess>
         // the per-source admin views that list grants for one source.
         builder.HasIndex(access => new { access.SourceId, access.UserId });
         builder.HasIndex(access => new { access.SourceId, access.GroupId });
+
+        // Cascade ACL rows when the parent source goes away — without this the rows hung
+        // around as ghost grants pointing at non-existent sources.
+        builder
+            .HasOne<Source>()
+            .WithMany()
+            .HasForeignKey(access => access.SourceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

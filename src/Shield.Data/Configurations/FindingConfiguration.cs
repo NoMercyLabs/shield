@@ -18,5 +18,18 @@ public class FindingConfiguration : IEntityTypeConfiguration<Finding>
         builder.HasIndex(finding => finding.SourceId);
         builder.HasIndex(finding => finding.InventoryItemId);
         builder.HasIndex(finding => finding.State);
+
+        // Cascade on Source delete. Finding has no Source / InventoryItem navigation
+        // property so EF can't infer the relationship from naming alone — without this
+        // configuration the rows simply orphaned when a Source was deleted, which is the
+        // bug source/112 surfaced. Configure only the SourceId path to avoid the
+        // "multiple cascade paths" warning that would fire if we also wired up the
+        // InventoryItemId cascade (Source → Snapshot → InventoryItem → Finding is the
+        // same effect via a longer route, and the FK constraint isn't needed).
+        builder
+            .HasOne<Source>()
+            .WithMany()
+            .HasForeignKey(finding => finding.SourceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
