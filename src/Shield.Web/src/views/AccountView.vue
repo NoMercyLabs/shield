@@ -43,7 +43,14 @@ watch(enrollUri, async (uri) => {
     return
   }
   try {
-    qrDataUrl.value = await QRCode.toDataURL(uri, { margin: 1, width: 192 })
+    // 256px + margin 2 keeps the cells large enough to scan reliably on phone cameras even
+    // after the otpauth URI grew to spell out algorithm/period/digits explicitly. margin 1
+    // is below the QR spec's quiet-zone minimum and trips some scanners.
+    qrDataUrl.value = await QRCode.toDataURL(uri, {
+      margin: 2,
+      width: 256,
+      errorCorrectionLevel: 'M',
+    })
   }
   catch {
     qrDataUrl.value = null
