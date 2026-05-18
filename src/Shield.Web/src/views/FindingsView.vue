@@ -52,8 +52,8 @@ interface PersistedFilters {
 
 const FILTERS_KEY = 'shield.findings.filters'
 
-function loadFilters(): PersistedFilters {
-  const empty: PersistedFilters = {
+function emptyFilters(): PersistedFilters {
+  return {
     severity: [],
     state: [],
     ecosystem: [],
@@ -67,6 +67,10 @@ function loadFilters(): PersistedFilters {
     sortDir: SortDir.Desc,
     last24h: false,
   }
+}
+
+function loadFilters(): PersistedFilters {
+  const empty = emptyFilters()
   try {
     const raw = localStorage.getItem(FILTERS_KEY)
     if (!raw) return empty
@@ -116,7 +120,24 @@ watch(advisoryQueryFilter, (value) => {
 })
 
 onMounted(() => {
-  const persisted = loadFilters()
+  // If the URL carries any filter-shaped query parameter, the user came from a deep link
+  // (notification, dashboard link, etc.) and the explicit intent is "show me this
+  // specific thing". Persisted localStorage filters — most painfully the "Critical only"
+  // severity floor — would silently hide whatever the deep link is pointing at, which is
+  // how the y18n typosquat notification ended up landing on an empty Findings page.
+  const filterQueryKeys = [
+    'packageName',
+    'severity',
+    'state',
+    'ecosystem',
+    'sourceId',
+    'kevOnly',
+    'epssMin',
+    'advisoryQuery',
+  ]
+  const hasDeepLinkFilter = filterQueryKeys.some(key => key in route.query)
+
+  const persisted = hasDeepLinkFilter ? emptyFilters() : loadFilters()
   severityFilter.value = persisted.severity
   stateFilter.value = persisted.state
   ecosystemFilter.value = persisted.ecosystem
@@ -131,8 +152,7 @@ onMounted(() => {
   sortDirFilter.value = persisted.sortDir
   last24hOnly.value = persisted.last24h
 
-  // Allow ?packageName=foo on the URL to seed the package filter once (back-compat with
-  // Inventory tree deep-links). After load it merges into the persisted set.
+  // Allow ?packageName=foo on the URL to seed the package filter once.
   const raw = route.query.packageName
   if (typeof raw === 'string' && raw.length > 0 && !packageNameFilter.value.includes(raw))
     packageNameFilter.value = [...packageNameFilter.value, raw]

@@ -253,6 +253,28 @@ const hasCurrentDevice = ref<boolean>(false)
       </button>
     </div>
 
+    <!-- Fire-and-forget disclaimer + OS-level troubleshooting. The server can't tell
+         whether the upstream push service delivered the toast or whether Windows/macOS
+         silently swallowed it (Focus Assist, app-level notification permission off,
+         site permission revoked). Surface the checklist instead of pretending the
+         success toast means success. -->
+    <details v-if="subscriptions.length > 0" class="group rounded-md border border-slate-800 bg-slate-900/40 text-xs">
+      <summary class="cursor-pointer list-none px-3 py-2 text-slate-300 hover:text-slate-100">
+        <span class="inline-flex items-center gap-1.5">
+          <span class="transition-transform group-open:rotate-90">▸</span>
+          {{ t('push.troubleshooting_title') }}
+        </span>
+      </summary>
+      <div class="space-y-2 border-t border-slate-800 px-3 py-3 text-slate-400">
+        <p>{{ t('push.troubleshooting_body') }}</p>
+        <ul class="ml-3 list-disc space-y-1">
+          <li>{{ t('push.troubleshooting_focus_assist') }}</li>
+          <li>{{ t('push.troubleshooting_macos_dnd') }}</li>
+          <li>{{ t('push.troubleshooting_browser_perm') }}</li>
+        </ul>
+      </div>
+    </details>
+
     <p v-if="loading" class="text-xs text-slate-500">{{ t('state.loading') }}</p>
 
     <ul v-else-if="subscriptions.length > 0" class="divide-y divide-slate-800 rounded-md border border-slate-800">
