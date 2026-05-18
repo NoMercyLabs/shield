@@ -1,6 +1,6 @@
 using Shield.Core.Domain;
 
-namespace Shield.Feeds.NpmRegistry;
+namespace Shield.Core.Abstractions;
 
 public interface IPackageMetaSink
 {

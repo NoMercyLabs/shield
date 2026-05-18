@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Shield.Core.Abstractions;
 
 namespace Shield.Data.Extensions;
 
@@ -41,6 +43,22 @@ public static class ServiceCollectionExtensions
                 )
         );
 
+        return services;
+    }
+
+    // Registers the EF-backed sinks that replace the in-memory placeholders the feed
+    // libraries ship with. Call AFTER AddShieldFeeds so these registrations are the last
+    // ones seen for their service types and win at resolution time. Without this, every
+    // feed sync (npm registry, GHSA, KEV, EPSS, OSV-broadcast) silently writes to a List
+    // in memory that nothing reads, and the entire PackageMeta-driven anomaly detection
+    // pipeline runs on null inputs.
+    public static IServiceCollection AddShieldDataSinks(this IServiceCollection services)
+    {
+        // Override any prior InMemory registration. .NET DI returns the LAST registration
+        // for single-resolves, so calling this after AddShieldFeeds is sufficient — but
+        // Replace() makes the intent explicit and the order-of-registration safe.
+        services.Replace(ServiceDescriptor.Scoped<IAdvisorySink, EfAdvisorySink>());
+        services.Replace(ServiceDescriptor.Scoped<IPackageMetaSink, EfPackageMetaSink>());
         return services;
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Shield.Alerter.Extensions;
@@ -26,6 +27,7 @@ using Shield.Channels.Smtp;
 using Shield.Core.Options;
 using Shield.Data.Extensions;
 using Shield.Feeds.Extensions;
+using Shield.Feeds.NpmRegistry;
 using Shield.Matcher.Extensions;
 using Shield.Parsers.Extensions;
 using Shield.Scanners.Extensions;
@@ -45,6 +47,25 @@ builder.Services.AddShieldParsers();
 builder.Services.AddScoped<IKevAdvisoryEnricher, EfKevAdvisoryEnricher>();
 builder.Services.AddScoped<IEpssAdvisoryEnricher, EfEpssAdvisoryEnricher>();
 builder.Services.AddShieldFeeds(configuration);
+
+// EF sinks must register after AddShieldFeeds — the feed extensions ship in-memory
+// placeholders, and Replace() in AddShieldDataSinks swaps them for the real DB-backed
+// implementations. Without this, every feed sync writes to a List nobody reads.
+builder.Services.AddShieldDataSinks();
+
+// Per-feed name sources — IPackageNameSource is constructed inside each feed's DI factory
+// so the same interface can serve any ecosystem without keyed-service ceremony in the
+// FeedSync class itself. The factory closes over the ecosystem this feed targets.
+builder.Services.AddScoped<NpmRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<NpmPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource(sp.GetRequiredService<ShieldDbContext>(), Ecosystem.Npm),
+        sp.GetRequiredService<IOptions<NpmRegistryOptions>>(),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<NpmRegistryFeedSync>>()
+    )
+);
 builder.Services.AddShieldScanners();
 builder.Services.AddShieldMatcher();
 builder.Services.AddShieldAlerter();
