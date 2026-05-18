@@ -26,8 +26,14 @@ using Shield.Channels.Inbox;
 using Shield.Channels.Smtp;
 using Shield.Core.Options;
 using Shield.Data.Extensions;
+using Shield.Feeds.CratesRegistry;
 using Shield.Feeds.Extensions;
+using Shield.Feeds.HexRegistry;
 using Shield.Feeds.NpmRegistry;
+using Shield.Feeds.NugetRegistry;
+using Shield.Feeds.PackagistRegistry;
+using Shield.Feeds.PyPiRegistry;
+using Shield.Feeds.RubyGemsRegistry;
 using Shield.Matcher.Extensions;
 using Shield.Parsers.Extensions;
 using Shield.Scanners.Extensions;
@@ -60,10 +66,64 @@ builder.Services.AddScoped<NpmRegistryFeedSync>(sp =>
     new(
         sp.GetRequiredService<NpmPackageClient>(),
         sp.GetRequiredService<IPackageMetaSink>(),
-        new EfPackageNameSource(sp.GetRequiredService<ShieldDbContext>(), Ecosystem.Npm),
+        new EfPackageNameSource<EcosystemTag.Npm>(sp.GetRequiredService<ShieldDbContext>()),
         sp.GetRequiredService<IOptions<NpmRegistryOptions>>(),
         sp.GetService<TimeProvider>(),
         sp.GetService<ILogger<NpmRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<NugetRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<NugetPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.Nuget>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<NugetRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<CratesRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<CratesPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.Rust>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<CratesRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<PyPiRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<PyPiPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.Python>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<PyPiRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<RubyGemsRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<RubyGemsPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.RubyGems>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<RubyGemsRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<PackagistRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<PackagistPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.Composer>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<PackagistRegistryFeedSync>>()
+    )
+);
+builder.Services.AddScoped<HexRegistryFeedSync>(sp =>
+    new(
+        sp.GetRequiredService<HexPackageClient>(),
+        sp.GetRequiredService<IPackageMetaSink>(),
+        new EfPackageNameSource<EcosystemTag.Hex>(sp.GetRequiredService<ShieldDbContext>()),
+        sp.GetService<TimeProvider>(),
+        sp.GetService<ILogger<HexRegistryFeedSync>>()
     )
 );
 builder.Services.AddShieldScanners();

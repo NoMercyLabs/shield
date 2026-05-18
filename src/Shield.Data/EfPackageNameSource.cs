@@ -4,29 +4,31 @@ using Shield.Core.Domain;
 
 namespace Shield.Data;
 
-// Sources package names to sync from InventoryItems — i.e. "what packages do my users
-// actually have". Avoids the obvious foot-gun of pulling the entire registry; we only fetch
-// metadata for packages someone in this Shield instance is depending on.
+// Generic over an IEcosystemTag — the ecosystem the source filters on is encoded in the
+// type, not a runtime constructor argument. Use site reads as
+// `new EfPackageNameSource<EcosystemTag.Npm>(db)` so the ecosystem can't drift from the
+// FeedSync that consumes it.
 //
-// Constructed per ecosystem because IPackageNameSource.GetPackageNamesAsync takes no args
-// (the registry-feed contract assumes a feed knows what ecosystem it serves).
-public sealed class EfPackageNameSource : IPackageNameSource
+// Pulls distinct package names from InventoryItems — the registry sync only fetches
+// metadata for packages someone in this Shield instance actually depends on; we don't
+// crawl the entire registry.
+public sealed class EfPackageNameSource<TTag> : IPackageNameSource
+    where TTag : struct, IEcosystemTag
 {
     private readonly ShieldDbContext _db;
-    private readonly Ecosystem _ecosystem;
 
-    public EfPackageNameSource(ShieldDbContext db, Ecosystem ecosystem)
+    public EfPackageNameSource(ShieldDbContext db)
     {
         _db = db;
-        _ecosystem = ecosystem;
     }
 
     public async ValueTask<IReadOnlyList<string>> GetPackageNamesAsync(CancellationToken ct)
     {
-        // Distinct on Name across all current snapshots. We're after a name list to fetch
-        // metadata for, not the inventory dump itself — duplicates would burn API quota.
+        // Hoist TTag.Value into a local — EF Core can't translate static-abstract interface
+        // member accesses inside an expression tree (CS8927).
+        Ecosystem ecosystem = TTag.Value;
         List<string> names = await _db
-            .InventoryItems.Where(item => item.Ecosystem == _ecosystem)
+            .InventoryItems.Where(item => item.Ecosystem == ecosystem)
             .Select(item => item.Name)
             .Distinct()
             .ToListAsync(ct);

@@ -62,6 +62,12 @@ public enum Feed
     TrivyDb = 5,
     Kev = 6,
     Epss = 7,
+    NugetRegistry = 8,
+    PyPiRegistry = 9,
+    CratesRegistry = 10,
+    RubyGemsRegistry = 11,
+    PackagistRegistry = 12,
+    HexRegistry = 13,
 }
 
 public enum AlertStatus
