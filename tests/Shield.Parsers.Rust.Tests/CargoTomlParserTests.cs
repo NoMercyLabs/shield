@@ -10,7 +10,7 @@ public class CargoTomlParserTests
     [Fact]
     public async Task ParseAsync_CargoToml_ReturnsDirectDependenciesWithoutVersions()
     {
-        RustLockParser parser = new();
+        RustDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Cargo.toml"));
 
         ParseResult result = await parser.ParseAsync(stream, "Cargo.toml", CancellationToken.None);

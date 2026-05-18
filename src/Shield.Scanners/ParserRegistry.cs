@@ -61,12 +61,12 @@ public sealed class ParserRegistry
     };
 
     private readonly NpmLockParser _npm;
-    private readonly NugetLockParser _nuget;
+    private readonly NugetDependencyParser _nuget;
     private readonly ComposerLockParser _composer;
     private readonly GradleLockfileParser _gradle;
-    private readonly PythonLockParser _python;
-    private readonly GoLockParser _go;
-    private readonly RustLockParser _rust;
+    private readonly PythonDependencyParser _python;
+    private readonly GoDependencyParser _go;
+    private readonly RustDependencyParser _rust;
     private readonly GemfileLockParser _ruby;
     private readonly PackageResolvedParser _swift;
     private readonly PubspecLockParser _dart;
@@ -76,12 +76,12 @@ public sealed class ParserRegistry
 
     public ParserRegistry(
         NpmLockParser npm,
-        NugetLockParser nuget,
+        NugetDependencyParser nuget,
         ComposerLockParser composer,
         GradleLockfileParser gradle,
-        PythonLockParser python,
-        GoLockParser go,
-        RustLockParser rust,
+        PythonDependencyParser python,
+        GoDependencyParser go,
+        RustDependencyParser rust,
         GemfileLockParser ruby,
         PackageResolvedParser swift,
         PubspecLockParser dart,

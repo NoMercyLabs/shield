@@ -5,12 +5,12 @@ using Xunit;
 
 namespace Shield.Parsers.Nuget.Tests;
 
-public class NugetLockParserTests
+public class NugetDependencyParserTests
 {
     [Fact]
     public async Task ParseAsync_PackagesLockJson_ReturnsDirectAndTransitive()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "packages.lock.json")
         );
@@ -40,7 +40,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_CsprojFallback_FlagsLockfileMissingAndReturnsDirects()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "Sample.csproj.txt")
         );
@@ -62,7 +62,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_DirectoryPackagesProps_EmitsThreeItemsAllDirect()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "Directory.Packages.props.txt")
         );
@@ -92,7 +92,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_CpmCsproj_NoVersionAttribute_EmitsNothing()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "CpmCsproj.csproj.txt")
         );
@@ -111,7 +111,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_LegacyCsproj_WithVersionAttribute_EmitsAsToday()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "Sample.csproj.txt")
         );
@@ -139,7 +139,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_GlobalPackageReference_IsEmitted()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "GlobalPackageReference.props.txt")
         );
@@ -169,7 +169,7 @@ public class NugetLockParserTests
     [Fact]
     public async Task ParseAsync_EnvVariantPropsFilename_IsRecognisedAsCpm()
     {
-        NugetLockParser parser = new();
+        NugetDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(
             Path.Combine("Fixtures", "Directory.Packages.props.txt")
         );

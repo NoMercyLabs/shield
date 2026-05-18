@@ -1,10 +1,10 @@
 using Shield.Core.Abstractions;
 using Shield.Core.Results;
-using Shield.Parsers.Rust.Formats;
+using Shield.Parsers.Go.Formats;
 
-namespace Shield.Parsers.Rust;
+namespace Shield.Parsers.Go;
 
-public sealed class RustLockParser : IParser
+public sealed class GoDependencyParser : IParser
 {
     public async ValueTask<ParseResult> ParseAsync(
         Stream content,
@@ -19,9 +19,9 @@ public sealed class RustLockParser : IParser
 
         return name switch
         {
-            "cargo.lock" => CargoLockParser.Parse(text),
-            "cargo.toml" => CargoTomlParser.Parse(text),
-            _ => ParseResult.Fail($"Unsupported rust lockfile filename: {filename}"),
+            "go.sum" => GoSumParser.Parse(text),
+            "go.mod" => GoModParser.Parse(text),
+            _ => ParseResult.Fail($"Unsupported Go dependency filename: {filename}"),
         };
     }
 }

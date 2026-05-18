@@ -4,7 +4,7 @@ using Shield.Parsers.Python.Formats;
 
 namespace Shield.Parsers.Python;
 
-public sealed class PythonLockParser : IParser
+public sealed class PythonDependencyParser : IParser
 {
     public async ValueTask<ParseResult> ParseAsync(
         Stream content,
@@ -24,7 +24,7 @@ public sealed class PythonLockParser : IParser
             "uv.lock" => PoetryLockParser.Parse(text),
             "pipfile.lock" => PipfileLockParser.Parse(text),
             "requirements.txt" => RequirementsTxtParser.Parse(text),
-            _ => ParseResult.Fail($"Unsupported python lockfile filename: {filename}"),
+            _ => ParseResult.Fail($"Unsupported Python dependency filename: {filename}"),
         };
     }
 }

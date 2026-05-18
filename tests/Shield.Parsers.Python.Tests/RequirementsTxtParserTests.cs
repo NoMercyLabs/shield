@@ -10,7 +10,7 @@ public class RequirementsTxtParserTests
     [Fact]
     public async Task ParseAsync_RequirementsTxt_PinnedAndUnpinned()
     {
-        PythonLockParser parser = new();
+        PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "requirements.txt"));
 
         ParseResult result = await parser.ParseAsync(stream, "requirements.txt", CancellationToken.None);

@@ -22,27 +22,38 @@ internal static class PackageLockParser
         {
             JsonElement root = doc.RootElement;
 
-            int lockfileVersion = root.TryGetProperty("lockfileVersion", out JsonElement lv) && lv.ValueKind == JsonValueKind.Number
-                ? lv.GetInt32()
-                : 1;
+            int lockfileVersion =
+                root.TryGetProperty("lockfileVersion", out JsonElement lv)
+                && lv.ValueKind == JsonValueKind.Number
+                    ? lv.GetInt32()
+                    : 1;
 
             List<InventoryItem> items = new();
             Dictionary<string, string> diagnostics = new(StringComparer.Ordinal)
             {
-                ["lockfileVersion"] = lockfileVersion.ToString()
+                ["lockfileVersion"] = lockfileVersion.ToString(),
             };
 
-            if (lockfileVersion >= 2 && root.TryGetProperty("packages", out JsonElement packages) && packages.ValueKind == JsonValueKind.Object)
+            if (
+                lockfileVersion >= 2
+                && root.TryGetProperty("packages", out JsonElement packages)
+                && packages.ValueKind == JsonValueKind.Object
+            )
             {
                 ParseV2(packages, items);
             }
-            else if (root.TryGetProperty("dependencies", out JsonElement deps) && deps.ValueKind == JsonValueKind.Object)
+            else if (
+                root.TryGetProperty("dependencies", out JsonElement deps)
+                && deps.ValueKind == JsonValueKind.Object
+            )
             {
                 ParseV1(deps, parents: new List<string>(), isDirect: true, items);
             }
             else
             {
-                return ParseResult.Fail("package-lock.json missing both 'packages' (v2/v3) and 'dependencies' (v1) sections");
+                return ParseResult.Fail(
+                    "package-lock.json missing both 'packages' (v2/v3) and 'dependencies' (v1) sections"
+                );
             }
 
             return ParseResult.Ok(items, diagnostics);
@@ -54,7 +65,10 @@ internal static class PackageLockParser
         // v2/v3 uses a flat map keyed by node_modules path. Root project is key "".
         // Direct deps live in root entry's dep sections.
         HashSet<string> directNames = new(StringComparer.Ordinal);
-        if (packages.TryGetProperty("", out JsonElement rootEntry) && rootEntry.ValueKind == JsonValueKind.Object)
+        if (
+            packages.TryGetProperty("", out JsonElement rootEntry)
+            && rootEntry.ValueKind == JsonValueKind.Object
+        )
         {
             CollectDepNames(rootEntry, "dependencies", directNames);
             CollectDepNames(rootEntry, "devDependencies", directNames);
@@ -81,30 +95,42 @@ internal static class PackageLockParser
             {
                 continue;
             }
-            if (value.TryGetProperty("link", out JsonElement linkEl) && linkEl.ValueKind == JsonValueKind.True)
+            if (
+                value.TryGetProperty("link", out JsonElement linkEl)
+                && linkEl.ValueKind == JsonValueKind.True
+            )
             {
                 continue;
             }
 
-            string version = value.TryGetProperty("version", out JsonElement vEl) && vEl.ValueKind == JsonValueKind.String
-                ? (vEl.GetString() ?? string.Empty)
-                : string.Empty;
+            string version =
+                value.TryGetProperty("version", out JsonElement vEl)
+                && vEl.ValueKind == JsonValueKind.String
+                    ? (vEl.GetString() ?? string.Empty)
+                    : string.Empty;
 
             IReadOnlyList<string> parents = BuildParentChainFromPath(path);
             bool isDirect = CountNodeModulesSegments(path) == 1 && directNames.Contains(name);
 
-            items.Add(new InventoryItem
-            {
-                Ecosystem = Ecosystem.Npm,
-                Name = name,
-                Version = version,
-                ParentChain = ParentChain.Encode(parents),
-                IsDirect = isDirect,
-            });
+            items.Add(
+                new InventoryItem
+                {
+                    Ecosystem = Ecosystem.Npm,
+                    Name = name,
+                    Version = version,
+                    ParentChain = ParentChain.Encode(parents),
+                    IsDirect = isDirect,
+                }
+            );
         }
     }
 
-    private static void ParseV1(JsonElement deps, List<string> parents, bool isDirect, List<InventoryItem> items)
+    private static void ParseV1(
+        JsonElement deps,
+        List<string> parents,
+        bool isDirect,
+        List<InventoryItem> items
+    )
     {
         foreach (JsonProperty prop in deps.EnumerateObject())
         {
@@ -115,20 +141,27 @@ internal static class PackageLockParser
                 continue;
             }
 
-            string version = value.TryGetProperty("version", out JsonElement vEl) && vEl.ValueKind == JsonValueKind.String
-                ? (vEl.GetString() ?? string.Empty)
-                : string.Empty;
+            string version =
+                value.TryGetProperty("version", out JsonElement vEl)
+                && vEl.ValueKind == JsonValueKind.String
+                    ? (vEl.GetString() ?? string.Empty)
+                    : string.Empty;
 
-            items.Add(new InventoryItem
-            {
-                Ecosystem = Ecosystem.Npm,
-                Name = name,
-                Version = version,
-                ParentChain = ParentChain.Encode(parents),
-                IsDirect = isDirect,
-            });
+            items.Add(
+                new InventoryItem
+                {
+                    Ecosystem = Ecosystem.Npm,
+                    Name = name,
+                    Version = version,
+                    ParentChain = ParentChain.Encode(parents),
+                    IsDirect = isDirect,
+                }
+            );
 
-            if (value.TryGetProperty("dependencies", out JsonElement nested) && nested.ValueKind == JsonValueKind.Object)
+            if (
+                value.TryGetProperty("dependencies", out JsonElement nested)
+                && nested.ValueKind == JsonValueKind.Object
+            )
             {
                 List<string> nextParents = new(parents) { name };
                 ParseV1(nested, nextParents, isDirect: false, items);
@@ -138,7 +171,10 @@ internal static class PackageLockParser
 
     private static void CollectDepNames(JsonElement obj, string property, HashSet<string> bag)
     {
-        if (!obj.TryGetProperty(property, out JsonElement el) || el.ValueKind != JsonValueKind.Object)
+        if (
+            !obj.TryGetProperty(property, out JsonElement el)
+            || el.ValueKind != JsonValueKind.Object
+        )
         {
             return;
         }

@@ -6,7 +6,7 @@ using Shield.Core.Results;
 
 namespace Shield.Parsers.Nuget;
 
-public sealed class NugetLockParser : IParser
+public sealed class NugetDependencyParser : IParser
 {
     public async ValueTask<ParseResult> ParseAsync(
         Stream content,

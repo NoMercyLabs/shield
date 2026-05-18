@@ -6,7 +6,11 @@ namespace Shield.Parsers.Npm;
 
 public sealed class NpmLockParser : IParser
 {
-    public async ValueTask<ParseResult> ParseAsync(Stream content, string filename, CancellationToken ct)
+    public async ValueTask<ParseResult> ParseAsync(
+        Stream content,
+        string filename,
+        CancellationToken ct
+    )
     {
         string name = Path.GetFileName(filename).ToLowerInvariant();
 
@@ -19,7 +23,7 @@ public sealed class NpmLockParser : IParser
             "npm-shrinkwrap.json" => PackageLockParser.Parse(text),
             "yarn.lock" => YarnLockParser.Parse(text),
             "pnpm-lock.yaml" => PnpmLockParser.Parse(text),
-            _ => ParseResult.Fail($"Unsupported npm lockfile filename: {filename}")
+            _ => ParseResult.Fail($"Unsupported npm lockfile filename: {filename}"),
         };
     }
 }

@@ -43,9 +43,9 @@ public sealed class GitHubRateLimitStore
 // Sleeps are bounded at 1h so a clock-skewed Reset header can't park a worker forever.
 public sealed class GitHubRateLimitHandler : DelegatingHandler
 {
-    public static readonly TimeSpan MaxSleep = TimeSpan.FromHours(1);
-    public static readonly int RemainingThreshold = 50;
-    public static readonly int Max5xxAttempts = 3;
+    private static readonly TimeSpan MaxSleep = TimeSpan.FromHours(1);
+    private const int RemainingThreshold = 50;
+    private const int Max5XxAttempts = 3;
 
     private static readonly TimeSpan[] BackoffSchedule =
     [
@@ -108,7 +108,7 @@ public sealed class GitHubRateLimitHandler : DelegatingHandler
         bool secondaryRetried = false;
         bool primaryRetried = false;
 
-        for (int attempt = 0; attempt < Max5xxAttempts; attempt++)
+        for (int attempt = 0; attempt < Max5XxAttempts; attempt++)
         {
             // HttpRequestMessage is single-use once sent. On retry we shallow-clone the request
             // (headers + content references — content is null for GETs which is all the GitHub
@@ -169,7 +169,7 @@ public sealed class GitHubRateLimitHandler : DelegatingHandler
 
             // 5xx (except 503 with Retry-After, which we honour like a secondary limit).
             int code = (int)response.StatusCode;
-            if (code >= 500 && code < 600)
+            if (code is >= 500 and < 600)
             {
                 if (
                     response.StatusCode == HttpStatusCode.ServiceUnavailable
@@ -184,14 +184,14 @@ public sealed class GitHubRateLimitHandler : DelegatingHandler
                     continue;
                 }
 
-                if (attempt + 1 < Max5xxAttempts)
+                if (attempt + 1 < Max5XxAttempts)
                 {
                     TimeSpan backoff = BackoffSchedule[attempt];
                     _log.LogWarning(
                         "GitHub {Status} (attempt {Attempt}/{Total}); backing off {Backoff}s",
                         code,
                         attempt + 1,
-                        Max5xxAttempts,
+                        Max5XxAttempts,
                         backoff.TotalSeconds
                     );
                     response.Dispose();

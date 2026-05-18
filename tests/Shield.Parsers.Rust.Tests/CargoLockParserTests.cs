@@ -10,7 +10,7 @@ public class CargoLockParserTests
     [Fact]
     public async Task ParseAsync_CargoLock_SkipsLocalPackageAndReturnsRegistryDeps()
     {
-        RustLockParser parser = new();
+        RustDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Cargo.lock"));
 
         ParseResult result = await parser.ParseAsync(stream, "Cargo.lock", CancellationToken.None);
@@ -34,7 +34,7 @@ public class CargoLockParserTests
     [Fact]
     public async Task ParseAsync_CargoLock_AllRegistryItemsDefaultIsDirect()
     {
-        RustLockParser parser = new();
+        RustDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Cargo.lock"));
 
         ParseResult result = await parser.ParseAsync(stream, "Cargo.lock", CancellationToken.None);

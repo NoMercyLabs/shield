@@ -10,7 +10,7 @@ public class GoModParserTests
     [Fact]
     public async Task ParseAsync_GoMod_MarksIndirectFlag()
     {
-        GoLockParser parser = new();
+        GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.mod"));
 
         ParseResult result = await parser.ParseAsync(stream, "go.mod", CancellationToken.None);

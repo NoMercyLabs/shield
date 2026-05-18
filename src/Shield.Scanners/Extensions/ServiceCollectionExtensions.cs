@@ -31,12 +31,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGitHubScannerClientFactory, AnonymousGitHubScannerClientFactory>();
 
         services.AddSingleton<NpmLockParser>();
-        services.AddSingleton<NugetLockParser>();
+        services.AddSingleton<NugetDependencyParser>();
         services.AddSingleton<ComposerLockParser>();
         services.AddSingleton<GradleLockfileParser>();
-        services.AddSingleton<PythonLockParser>();
-        services.AddSingleton<GoLockParser>();
-        services.AddSingleton<RustLockParser>();
+        services.AddSingleton<PythonDependencyParser>();
+        services.AddSingleton<GoDependencyParser>();
+        services.AddSingleton<RustDependencyParser>();
         services.AddSingleton<GemfileLockParser>();
         services.AddSingleton<PackageResolvedParser>();
         services.AddSingleton<PubspecLockParser>();

@@ -7,7 +7,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddGoParser(this IServiceCollection services)
     {
-        services.AddKeyedSingleton<IParser, GoLockParser>("go");
+        services.AddKeyedSingleton<IParser, GoDependencyParser>("go");
         return services;
     }
 }

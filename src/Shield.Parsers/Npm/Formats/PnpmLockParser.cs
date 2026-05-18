@@ -27,12 +27,15 @@ internal static class PnpmLockParser
         List<InventoryItem> items = new();
         Dictionary<string, string> diagnostics = new(StringComparer.Ordinal)
         {
-            ["format"] = "pnpm-lock.yaml"
+            ["format"] = "pnpm-lock.yaml",
         };
 
         HashSet<string> directNamesAtVersion = new(StringComparer.Ordinal);
 
-        if (root.Children.TryGetValue(new YamlScalarNode("importers"), out YamlNode? importersNode) && importersNode is YamlMappingNode importers)
+        if (
+            root.Children.TryGetValue(new YamlScalarNode("importers"), out YamlNode? importersNode)
+            && importersNode is YamlMappingNode importers
+        )
         {
             foreach (KeyValuePair<YamlNode, YamlNode> kv in importers.Children)
             {
@@ -49,12 +52,18 @@ internal static class PnpmLockParser
         }
 
         YamlMappingNode? source = null;
-        if (root.Children.TryGetValue(new YamlScalarNode("packages"), out YamlNode? packagesNode) && packagesNode is YamlMappingNode pkgs)
+        if (
+            root.Children.TryGetValue(new YamlScalarNode("packages"), out YamlNode? packagesNode)
+            && packagesNode is YamlMappingNode pkgs
+        )
         {
             source = pkgs;
             diagnostics["section"] = "packages";
         }
-        else if (root.Children.TryGetValue(new YamlScalarNode("snapshots"), out YamlNode? snapshotsNode) && snapshotsNode is YamlMappingNode snaps)
+        else if (
+            root.Children.TryGetValue(new YamlScalarNode("snapshots"), out YamlNode? snapshotsNode)
+            && snapshotsNode is YamlMappingNode snaps
+        )
         {
             source = snaps;
             diagnostics["section"] = "snapshots";
@@ -62,7 +71,9 @@ internal static class PnpmLockParser
 
         if (source is null)
         {
-            return ParseResult.Fail("pnpm-lock.yaml: neither 'packages' nor 'snapshots' section found");
+            return ParseResult.Fail(
+                "pnpm-lock.yaml: neither 'packages' nor 'snapshots' section found"
+            );
         }
 
         foreach (KeyValuePair<YamlNode, YamlNode> kv in source.Children)
@@ -77,14 +88,16 @@ internal static class PnpmLockParser
                 continue;
             }
             bool isDirect = directNamesAtVersion.Contains($"{name}@{version}");
-            items.Add(new InventoryItem
-            {
-                Ecosystem = Ecosystem.Npm,
-                Name = name,
-                Version = version,
-                ParentChain = "[]",
-                IsDirect = isDirect,
-            });
+            items.Add(
+                new InventoryItem
+                {
+                    Ecosystem = Ecosystem.Npm,
+                    Name = name,
+                    Version = version,
+                    ParentChain = "[]",
+                    IsDirect = isDirect,
+                }
+            );
         }
 
         return ParseResult.Ok(items, diagnostics);
@@ -92,9 +105,20 @@ internal static class PnpmLockParser
 
     private static void CollectDirectsFromImporter(YamlMappingNode importer, HashSet<string> bag)
     {
-        foreach (string section in new[] { "dependencies", "devDependencies", "optionalDependencies", "peerDependencies" })
+        foreach (
+            string section in new[]
+            {
+                "dependencies",
+                "devDependencies",
+                "optionalDependencies",
+                "peerDependencies",
+            }
+        )
         {
-            if (!importer.Children.TryGetValue(new YamlScalarNode(section), out YamlNode? secNode) || secNode is not YamlMappingNode sec)
+            if (
+                !importer.Children.TryGetValue(new YamlScalarNode(section), out YamlNode? secNode)
+                || secNode is not YamlMappingNode sec
+            )
             {
                 continue;
             }
@@ -110,9 +134,14 @@ internal static class PnpmLockParser
                 {
                     version = versionScalar.Value;
                 }
-                else if (entry.Value is YamlMappingNode versionMap
-                         && versionMap.Children.TryGetValue(new YamlScalarNode("version"), out YamlNode? vNode)
-                         && vNode is YamlScalarNode vScalar)
+                else if (
+                    entry.Value is YamlMappingNode versionMap
+                    && versionMap.Children.TryGetValue(
+                        new YamlScalarNode("version"),
+                        out YamlNode? vNode
+                    )
+                    && vNode is YamlScalarNode vScalar
+                )
                 {
                     version = vScalar.Value;
                 }

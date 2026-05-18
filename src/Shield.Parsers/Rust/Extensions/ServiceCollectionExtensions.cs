@@ -7,7 +7,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddRustParser(this IServiceCollection services)
     {
-        services.AddKeyedSingleton<IParser, RustLockParser>("rust");
+        services.AddKeyedSingleton<IParser, RustDependencyParser>("rust");
         return services;
     }
 }

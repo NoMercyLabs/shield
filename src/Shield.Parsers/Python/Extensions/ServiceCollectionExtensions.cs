@@ -7,7 +7,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddPythonParser(this IServiceCollection services)
     {
-        services.AddKeyedSingleton<IParser, PythonLockParser>("python");
+        services.AddKeyedSingleton<IParser, PythonDependencyParser>("python");
         return services;
     }
 }

@@ -10,7 +10,7 @@ public class PoetryLockParserTests
     [Fact]
     public async Task ParseAsync_PoetryLock_ReturnsPackages()
     {
-        PythonLockParser parser = new();
+        PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "poetry.lock"));
 
         ParseResult result = await parser.ParseAsync(stream, "poetry.lock", CancellationToken.None);

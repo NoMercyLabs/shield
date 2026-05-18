@@ -10,7 +10,7 @@ public class PipfileLockParserTests
     [Fact]
     public async Task ParseAsync_PipfileLock_StripsEqualsAndReturnsBothSections()
     {
-        PythonLockParser parser = new();
+        PythonDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "Pipfile.lock"));
 
         ParseResult result = await parser.ParseAsync(stream, "Pipfile.lock", CancellationToken.None);

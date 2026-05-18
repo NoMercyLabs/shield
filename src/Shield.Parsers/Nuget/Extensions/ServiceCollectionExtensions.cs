@@ -7,8 +7,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNugetParser(this IServiceCollection services)
     {
-        services.AddSingleton<IParser, NugetLockParser>();
-        services.AddSingleton<NugetLockParser>();
+        services.AddSingleton<IParser, NugetDependencyParser>();
+        services.AddSingleton<NugetDependencyParser>();
         return services;
     }
 }

@@ -9,8 +9,9 @@ internal static class YarnLockParser
 {
     public static ParseResult Parse(string text)
     {
-        bool isBerry = text.Contains("\n__metadata:", StringComparison.Ordinal)
-                       || text.StartsWith("__metadata:", StringComparison.Ordinal);
+        bool isBerry =
+            text.Contains("\n__metadata:", StringComparison.Ordinal)
+            || text.StartsWith("__metadata:", StringComparison.Ordinal);
 
         return isBerry ? ParseBerry(text) : ParseV1(text);
     }
@@ -27,7 +28,7 @@ internal static class YarnLockParser
         Dictionary<string, string> diagnostics = new(StringComparer.Ordinal)
         {
             ["format"] = "yarn.lock v1",
-            ["isDirectHeuristic"] = "transitive-default (no package.json context)"
+            ["isDirectHeuristic"] = "transitive-default (no package.json context)",
         };
 
         string[] lines = text.Replace("\r\n", "\n").Split('\n');
@@ -35,7 +36,12 @@ internal static class YarnLockParser
         while (line < lines.Length)
         {
             string current = lines[line];
-            if (current.Length == 0 || current.StartsWith('#') || current[0] == ' ' || current[0] == '\t')
+            if (
+                current.Length == 0
+                || current.StartsWith('#')
+                || current[0] == ' '
+                || current[0] == '\t'
+            )
             {
                 line++;
                 continue;
@@ -76,14 +82,16 @@ internal static class YarnLockParser
             {
                 continue;
             }
-            items.Add(new InventoryItem
-            {
-                Ecosystem = Ecosystem.Npm,
-                Name = packageName,
-                Version = version,
-                ParentChain = "[]",
-                IsDirect = false,
-            });
+            items.Add(
+                new InventoryItem
+                {
+                    Ecosystem = Ecosystem.Npm,
+                    Name = packageName,
+                    Version = version,
+                    ParentChain = "[]",
+                    IsDirect = false,
+                }
+            );
         }
 
         return ParseResult.Ok(items, diagnostics);
@@ -110,7 +118,7 @@ internal static class YarnLockParser
         Dictionary<string, string> diagnostics = new(StringComparer.Ordinal)
         {
             ["format"] = "yarn.lock berry (v2+)",
-            ["isDirectHeuristic"] = "transitive-default (no package.json context)"
+            ["isDirectHeuristic"] = "transitive-default (no package.json context)",
         };
 
         foreach (KeyValuePair<YamlNode, YamlNode> kv in root.Children)
@@ -130,7 +138,10 @@ internal static class YarnLockParser
             }
 
             string? version = null;
-            if (entry.Children.TryGetValue(new YamlScalarNode("version"), out YamlNode? vNode) && vNode is YamlScalarNode vScalar)
+            if (
+                entry.Children.TryGetValue(new YamlScalarNode("version"), out YamlNode? vNode)
+                && vNode is YamlScalarNode vScalar
+            )
             {
                 version = vScalar.Value;
             }
@@ -146,14 +157,16 @@ internal static class YarnLockParser
                 continue;
             }
 
-            items.Add(new InventoryItem
-            {
-                Ecosystem = Ecosystem.Npm,
-                Name = firstName,
-                Version = version,
-                ParentChain = "[]",
-                IsDirect = false,
-            });
+            items.Add(
+                new InventoryItem
+                {
+                    Ecosystem = Ecosystem.Npm,
+                    Name = firstName,
+                    Version = version,
+                    ParentChain = "[]",
+                    IsDirect = false,
+                }
+            );
         }
 
         return ParseResult.Ok(items, diagnostics);

@@ -10,7 +10,7 @@ public class GoSumParserTests
     [Fact]
     public async Task ParseAsync_GoSum_DedupesPerPair()
     {
-        GoLockParser parser = new();
+        GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.sum"));
 
         ParseResult result = await parser.ParseAsync(stream, "go.sum", CancellationToken.None);
@@ -36,7 +36,7 @@ public class GoSumParserTests
     [Fact]
     public async Task ParseAsync_GoSum_AllItemsAreTransitive()
     {
-        GoLockParser parser = new();
+        GoDependencyParser parser = new();
         await using FileStream stream = File.OpenRead(Path.Combine("Fixtures", "go.sum"));
 
         ParseResult result = await parser.ParseAsync(stream, "go.sum", CancellationToken.None);
