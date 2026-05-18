@@ -5,8 +5,16 @@ namespace Shield.Api.Middleware;
 // Inspects each request's path + verb and, on 2xx, writes an AuditEntry naming the action
 // (finding.ack, source.update, …) plus the parsed target id. Whitelist-only so day-to-day
 // reads (GET /api/findings, etc.) don't fill the table; controllers are not touched.
+//
+// Controllers that need before/after capture for the undo endpoint write the entry
+// themselves via IAuditLogger.RecordWriteAsync + flip HttpContext.Items[HandledItemKey] so
+// this middleware doesn't double-write an envelope-only fallback row.
 public sealed class AuditMiddleware : IMiddleware
 {
+    // Items[] key used by controllers to mark "I already wrote a richer audit entry — don't
+    // append the HTTP-envelope fallback." Value is the entry id (Guid) for traceability.
+    public const string HandledItemKey = "shield.audit.handled";
+
     private static readonly Regex s_findingTransition = new(
         @"^/api/findings/(?<id>[0-9a-f-]{36})/(?<verb>ack|resolve|suppress)$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
@@ -54,6 +62,11 @@ public sealed class AuditMiddleware : IMiddleware
 
         (string? action, string? targetType, string? targetId) = Classify(method, path, status);
         if (action is null || targetType is null || targetId is null)
+            return;
+
+        // Controller already wrote a richer entry (with BeforeJson/AfterJson) for this
+        // request — don't append an envelope-only duplicate that would just confuse the UI.
+        if (context.Items.TryGetValue(HandledItemKey, out object? handled) && handled is true)
             return;
 
         IAuditLogger logger = context.RequestServices.GetRequiredService<IAuditLogger>();

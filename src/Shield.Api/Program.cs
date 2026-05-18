@@ -18,6 +18,8 @@ using Shield.Api.Hubs;
 using Shield.Api.Middleware;
 using Shield.Api.Persistence;
 using Shield.Api.Services.Ecosystems;
+using Shield.Api.Services.Security;
+using Shield.Api.Services.Security.Handlers;
 using Shield.Api.Services.Updates;
 using Shield.Api.Workers;
 using Shield.Api.Workers.Queues;
@@ -681,6 +683,13 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 builder.Services.AddTransient<AuditMiddleware>();
+
+// Per-action undo handlers — each implements IAuditUndoHandler.Action = "source.update",
+// etc. Registry maps Action → handler so AuditController.Undo dispatches by string. Adding
+// a new reversible action = drop a new handler class + AddScoped line here.
+builder.Services.AddScoped<IAuditUndoHandler, SourceUpdateUndoHandler>();
+builder.Services.AddScoped<IAuditUndoHandler, UserRoleChangeUndoHandler>();
+builder.Services.AddScoped<IAuditUndoRegistry, AuditUndoRegistry>();
 
 // Personal API tokens (Shield-equivalent of GitHub PATs). Scoped — owns a DbContext + writes
 // LastUsedAt on auth. Pepper rotates separately from password hashes via Shield:Auth:ApiTokenPepper.

@@ -1,6 +1,7 @@
 using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
+using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Core.Results;
 using WireMock.RequestBuilders;

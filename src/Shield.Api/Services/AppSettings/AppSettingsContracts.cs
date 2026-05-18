@@ -40,13 +40,24 @@ public sealed record AppSettingsSnapshot(
     OAuthClientSettings GithubOAuth,
     OAuthClientSettings SlackOAuth,
     OAuthClientSettings GoogleOAuth,
+    OAuthClientSettings GitlabOAuth,
+    OAuthClientSettings BitbucketOAuth,
+    OAuthClientSettings ForgejoOAuth,
+    OAuthClientSettings GiteaOAuth,
+    OAuthClientSettings CodebergOAuth,
     string? OAuthRedirectBase,
     IReadOnlyList<string> DetectedRemoteHosts
 );
 
 // ClientId/Scopes are plain strings; ClientSecret is held decrypted in-memory only
-// (loaded via the same DataProtector that encrypts AppSetting rows).
-public sealed record OAuthClientSettings(string? ClientId, string? ClientSecret, string? Scopes);
+// (loaded via the same DataProtector that encrypts AppSetting rows). Host is set for
+// self-hosted Forgejo + Gitea instances; null for SaaS providers.
+public sealed record OAuthClientSettings(
+    string? ClientId,
+    string? ClientSecret,
+    string? Scopes,
+    string? Host = null
+);
 
 // PreserveOidcClientSecret=true means "leave whatever is stored alone"; otherwise the
 // provided ClientSecret value (including null/empty) overwrites the row.
@@ -64,13 +75,20 @@ public sealed record AppSettingsPatch(
     OAuthClientPatch GithubOAuth,
     OAuthClientPatch SlackOAuth,
     OAuthClientPatch GoogleOAuth,
+    OAuthClientPatch GitlabOAuth,
+    OAuthClientPatch BitbucketOAuth,
+    OAuthClientPatch ForgejoOAuth,
+    OAuthClientPatch GiteaOAuth,
+    OAuthClientPatch CodebergOAuth,
     string? OAuthRedirectBase
 );
 
-// Same preserve-on-null contract as OidcClientSecret — empty string means "clear".
+// Same preserve-on-null contract as OidcClientSecret — empty string means "clear". Host is
+// only honoured for Forgejo + Gitea; ignored for SaaS providers.
 public sealed record OAuthClientPatch(
     string? ClientId,
     string? ClientSecret,
     bool PreserveClientSecret,
-    string? Scopes
+    string? Scopes,
+    string? Host = null
 );

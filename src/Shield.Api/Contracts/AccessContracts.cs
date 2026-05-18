@@ -46,6 +46,11 @@ public sealed record AccessUserDto(
     DateTime CreatedAt
 );
 
+// Body for PUT /api/access/users/{id}/role. The action is destructive — it clears every
+// Shield role the user has and sets exactly `Role`. UI presents a 3-way picker (Admin /
+// Maintainer / Viewer); legacy multi-role memberships normalise on the first swap.
+public sealed record UpdateUserRoleRequest(string Role);
+
 // Owner-issued invite link. The user is NOT created up-front — see Invite domain entity
 // for why. SourceGroupIds is the list of groups the invitee will be added to on accept.
 //

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Identity;
+using Shield.Api.Services.Security;
 
 namespace Shield.Api.Controllers;
 
@@ -14,11 +15,20 @@ public sealed class AuditController : ControllerBase
 
     private readonly ShieldDbContext _db;
     private readonly UserManager<ShieldUser> _userManager;
+    private readonly IAuditUndoRegistry _undoRegistry;
+    private readonly IAuditLogger _audit;
 
-    public AuditController(ShieldDbContext db, UserManager<ShieldUser> userManager)
+    public AuditController(
+        ShieldDbContext db,
+        UserManager<ShieldUser> userManager,
+        IAuditUndoRegistry undoRegistry,
+        IAuditLogger audit
+    )
     {
         _db = db;
         _userManager = userManager;
+        _undoRegistry = undoRegistry;
+        _audit = audit;
     }
 
     [HttpGet]
@@ -77,6 +87,13 @@ public sealed class AuditController : ControllerBase
                         ? tuple
                         : (null, null);
                 targetMap.TryGetValue((entry.TargetType, entry.TargetId), out string? targetLabel);
+                // Per-row reversibility = column flag AND a handler is registered. Mismatched
+                // flag (e.g. captured before-state but handler was later removed) hides the
+                // button instead of showing a misleading one.
+                bool reversible =
+                    entry.IsReversible
+                    && entry.ReversedAt is null
+                    && _undoRegistry.For(entry.Action) is not null;
                 return new AuditEntryResponse(
                     entry.Id,
                     entry.At,
@@ -89,12 +106,95 @@ public sealed class AuditController : ControllerBase
                     entry.TargetId,
                     targetLabel,
                     entry.DetailsJson,
-                    entry.RemoteIp
+                    entry.RemoteIp,
+                    reversible,
+                    entry.ReversedAt,
+                    entry.ReversedByEntryId
                 );
             })
             .ToList();
 
         return Ok(new AuditPage(items, total, page, pageSize));
+    }
+
+    // Roll back a previously-recorded reversible action. Looks up the entry, dispatches
+    // to its registered handler, and writes a new audit entry of the form `<action>.undone`
+    // linking back to the original. Returns 400 when:
+    //  - the entry doesn't exist
+    //  - it isn't reversible (no captured before-state OR no handler registered)
+    //  - it's already been reversed
+    //  - the handler refuses (e.g. target row no longer exists)
+    [HttpPost("{id:guid}/undo")]
+    [Authorize(Policy = ShieldPolicies.Admin)]
+    public async Task<ActionResult<AuditUndoResponse>> Undo(Guid id, CancellationToken ct)
+    {
+        AuditEntry? entry = await _db.AuditEntries.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (entry is null)
+            return NotFound(
+                new AuditUndoResponse(false, string.Empty, null, "Audit entry not found.")
+            );
+
+        if (entry.ReversedAt.HasValue)
+            return BadRequest(
+                new AuditUndoResponse(
+                    false,
+                    string.Empty,
+                    entry.ReversedByEntryId,
+                    "This action has already been reversed."
+                )
+            );
+
+        if (!entry.IsReversible)
+            return BadRequest(
+                new AuditUndoResponse(false, string.Empty, null, "This action is not reversible.")
+            );
+
+        IAuditUndoHandler? handler = _undoRegistry.For(entry.Action);
+        if (handler is null)
+            return BadRequest(
+                new AuditUndoResponse(
+                    false,
+                    string.Empty,
+                    null,
+                    $"No undo handler registered for action '{entry.Action}'."
+                )
+            );
+
+        AuditUndoResult result;
+        try
+        {
+            result = await handler.UndoAsync(entry, ct);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(
+                new AuditUndoResponse(false, string.Empty, null, $"Undo failed: {ex.Message}")
+            );
+        }
+
+        if (!result.Success)
+            return BadRequest(new AuditUndoResponse(false, result.Summary, null));
+
+        // Record the inverse as a NEW audit entry. Action name `<original>.undone` keeps
+        // the link visible in the timeline; details point back at the original entry id.
+        Guid newEntryId = await _audit.RecordAsync(
+            $"{entry.Action}.undone",
+            entry.TargetType,
+            entry.TargetId,
+            details: new
+            {
+                originalEntryId = entry.Id,
+                summary = result.Summary,
+                extras = result.Details,
+            },
+            ct: ct
+        );
+
+        entry.ReversedAt = DateTime.UtcNow;
+        entry.ReversedByEntryId = newEntryId;
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new AuditUndoResponse(true, result.Summary, newEntryId));
     }
 
     private async Task<

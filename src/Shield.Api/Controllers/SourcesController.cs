@@ -1,6 +1,9 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.RateLimiting;
+using Shield.Api.Middleware;
 using Shield.Api.Services.BulkFix;
+using Shield.Api.Services.Security;
+using Shield.Api.Services.Security.Snapshots;
 
 namespace Shield.Api.Controllers;
 
@@ -19,6 +22,7 @@ public sealed class SourcesController : ControllerBase
     private readonly IAnomalyDetector _anomalyDetector;
     private readonly IAccessResolver _access;
     private readonly IBulkApplyOrchestrator _bulkApply;
+    private readonly IAuditLogger _audit;
 
     public SourcesController(
         ShieldDbContext db,
@@ -26,7 +30,8 @@ public sealed class SourcesController : ControllerBase
         FeedsDbContext feedsDb,
         IAnomalyDetector anomalyDetector,
         IAccessResolver access,
-        IBulkApplyOrchestrator bulkApply
+        IBulkApplyOrchestrator bulkApply,
+        IAuditLogger audit
     )
     {
         _db = db;
@@ -35,6 +40,7 @@ public sealed class SourcesController : ControllerBase
         _anomalyDetector = anomalyDetector;
         _access = access;
         _bulkApply = bulkApply;
+        _audit = audit;
     }
 
     [HttpGet]
@@ -271,6 +277,19 @@ public sealed class SourcesController : ControllerBase
         )
             return ValidationProblem(configError ?? "Invalid configJson.");
 
+        // Snapshot the row BEFORE the mutation so /api/audit/{id}/undo can roll the change
+        // back. Captured here (not in middleware) because the middleware fires post-response
+        // — too late to see the pre-edit values.
+        SourceSnapshot before = new(
+            source.Name,
+            source.ConfigJson,
+            source.ScanInterval,
+            source.Enabled,
+            source.AutoFixMode,
+            source.IsProduction,
+            source.MinPackageAgeHours
+        );
+
         source.Name = request.Name;
         source.ConfigJson = configJson;
         source.ScanInterval = request.ScanInterval ?? source.ScanInterval;
@@ -283,6 +302,28 @@ public sealed class SourcesController : ControllerBase
         }
         source.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        SourceSnapshot after = new(
+            source.Name,
+            source.ConfigJson,
+            source.ScanInterval,
+            source.Enabled,
+            source.AutoFixMode,
+            source.IsProduction,
+            source.MinPackageAgeHours
+        );
+        await _audit.RecordWriteAsync(
+            "source.update",
+            "Source",
+            source.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            before,
+            after,
+            ct: ct
+        );
+        // Signal AuditMiddleware to skip its fallback envelope-only entry — we already wrote
+        // the reversible one with full before/after state.
+        HttpContext.Items[AuditMiddleware.HandledItemKey] = true;
+
         return Ok(SourceResponse.From(source));
     }
 

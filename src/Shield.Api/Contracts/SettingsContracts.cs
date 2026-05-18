@@ -12,15 +12,23 @@ public sealed record SettingsResponse(
     OAuthProviderConfigResponse Github,
     OAuthProviderConfigResponse Slack,
     OAuthProviderConfigResponse Google,
+    OAuthProviderConfigResponse Gitlab,
+    OAuthProviderConfigResponse Bitbucket,
+    OAuthProviderConfigResponse Forgejo,
+    OAuthProviderConfigResponse Gitea,
+    OAuthProviderConfigResponse Codeberg,
     string? OAuthRedirectBase = null
 );
 
-// Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is "****<last4>" when present.
+// Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is
+// "****<last4>" when present. Host is only meaningful for self-hosted providers
+// (Forgejo, Gitea) — null for SaaS.
 public sealed record OAuthProviderConfigResponse(
     string? ClientId,
     string? ClientSecretMasked,
     string? Scopes,
-    bool Configured
+    bool Configured,
+    string? Host = null
 );
 
 public sealed record UpdateSettingsRequest(
@@ -35,6 +43,11 @@ public sealed record UpdateSettingsRequest(
     OAuthProviderConfigPatch? Github = null,
     OAuthProviderConfigPatch? Slack = null,
     OAuthProviderConfigPatch? Google = null,
+    OAuthProviderConfigPatch? Gitlab = null,
+    OAuthProviderConfigPatch? Bitbucket = null,
+    OAuthProviderConfigPatch? Forgejo = null,
+    OAuthProviderConfigPatch? Gitea = null,
+    OAuthProviderConfigPatch? Codeberg = null,
     // Override for the base URL Shield uses when constructing redirect_uri for OAuth code
     // flows. Falls back to `{Request.Scheme}://{Request.Host}` when null — set explicitly
     // when running behind a proxy/tunnel where the auto-detected scheme is wrong.
@@ -42,10 +55,12 @@ public sealed record UpdateSettingsRequest(
 );
 
 // ClientSecret semantics: null = leave existing, "" = clear, non-empty = overwrite.
+// Host is honoured only for Forgejo + Gitea; ignored on every other provider.
 public sealed record OAuthProviderConfigPatch(
     string? ClientId,
     string? ClientSecret,
-    string? Scopes
+    string? Scopes,
+    string? Host = null
 );
 
 public sealed record UpdateSettingsResponse(

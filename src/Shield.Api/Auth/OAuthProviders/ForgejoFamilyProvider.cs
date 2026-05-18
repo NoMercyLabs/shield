@@ -1,23 +1,37 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
+using Shield.Api.Services.AppSettings;
 using Shield.Core.Http;
 
 namespace Shield.Api.Auth.OAuthProviders;
 
 // Forgejo / Gitea / Codeberg share the exact same OAuth2 + REST API shapes (Forgejo is a
 // hard fork of Gitea, Codeberg is a hosted Forgejo). One base class, three thin concrete
-// subclasses that pin the upstream host. Codeberg is hardcoded; Forgejo and Gitea are
-// configurable via `Shield:OAuth:<Provider>:Host` for self-hosted instances.
+// subclasses that pin the upstream host. Codeberg is hardcoded; Forgejo and Gitea read
+// their Host field from AppSettings at call time so SettingsView edits apply without a
+// service restart.
 public abstract class ForgejoFamilyProvider : IOAuthProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly Uri _hostBase;
+    private readonly Func<string> _hostResolver;
 
-    protected ForgejoFamilyProvider(IHttpClientFactory httpClientFactory, string hostUrl)
+    protected ForgejoFamilyProvider(IHttpClientFactory httpClientFactory, Func<string> hostResolver)
     {
         _httpClientFactory = httpClientFactory;
-        _hostBase = new(hostUrl.TrimEnd('/') + "/");
+        _hostResolver = hostResolver;
+    }
+
+    // Build the call-time host URI. The trailing slash is mandatory for `new Uri(base, …)`
+    // composition; we add it here so callers stay simple.
+    private Uri HostBase()
+    {
+        string host = _hostResolver().Trim();
+        if (string.IsNullOrEmpty(host))
+            throw new InvalidOperationException(
+                $"OAuth host is not configured for provider {Provider}. Set it in Shield Settings."
+            );
+        return new(host.TrimEnd('/') + "/");
     }
 
     public abstract OAuthProvider Provider { get; }
@@ -43,7 +57,9 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
             ["code_challenge"] = codeChallenge,
             ["code_challenge_method"] = "S256",
         };
-        return new Uri(_hostBase, "login/oauth/authorize").ToString() + "?" + UrlForm.Encode(query);
+        return new Uri(HostBase(), "login/oauth/authorize").ToString()
+            + "?"
+            + UrlForm.Encode(query);
     }
 
     public async Task<OAuthTokenSnapshot> ExchangeCodeAsync(
@@ -55,7 +71,7 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
     {
         HttpClient http = _httpClientFactory.CreateClient("oauth");
         using HttpResponseMessage response = await http.PostAsync(
-            new Uri(_hostBase, "login/oauth/access_token"),
+            new Uri(HostBase(), "login/oauth/access_token"),
             new FormUrlEncodedContent(
                 new Dictionary<string, string>
                 {
@@ -105,7 +121,7 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
 
         HttpClient http = _httpClientFactory.CreateClient("oauth");
         using HttpResponseMessage response = await http.PostAsync(
-            new Uri(_hostBase, "login/oauth/access_token"),
+            new Uri(HostBase(), "login/oauth/access_token"),
             new FormUrlEncodedContent(
                 new Dictionary<string, string>
                 {
@@ -184,7 +200,7 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
 
         while (repos.Count < maxRepos)
         {
-            Uri url = new(_hostBase, $"api/v1/user/repos?page={page}&limit={perPage}");
+            Uri url = new(HostBase(), $"api/v1/user/repos?page={page}&limit={perPage}");
             using HttpRequestMessage request = new(HttpMethod.Get, url);
             request.Headers.Authorization = new("token", accessToken);
             request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
@@ -239,7 +255,7 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
         CancellationToken ct
     )
     {
-        using HttpRequestMessage request = new(HttpMethod.Get, new Uri(_hostBase, "api/v1/user"));
+        using HttpRequestMessage request = new(HttpMethod.Get, new Uri(HostBase(), "api/v1/user"));
         request.Headers.Authorization = new("token", accessToken);
         request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
         using HttpResponseMessage response = await http.SendAsync(request, ct);
@@ -263,7 +279,7 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
         CancellationToken ct
     )
     {
-        using HttpRequestMessage request = new(HttpMethod.Get, new Uri(_hostBase, "api/v1/user"));
+        using HttpRequestMessage request = new(HttpMethod.Get, new Uri(HostBase(), "api/v1/user"));
         request.Headers.Authorization = new("token", accessToken);
         request.Headers.UserAgent.ParseAdd(ShieldUserAgent.Header);
         using HttpResponseMessage response = await http.SendAsync(request, ct);
@@ -323,20 +339,29 @@ public abstract class ForgejoFamilyProvider : IOAuthProvider
 
 public sealed class CodebergProvider : ForgejoFamilyProvider
 {
+    // Codeberg is a hosted Forgejo at a fixed URL — no Host override surfaced in the UI.
     public CodebergProvider(IHttpClientFactory httpClientFactory)
-        : base(httpClientFactory, "https://codeberg.org") { }
+        : base(httpClientFactory, () => "https://codeberg.org") { }
 
     public override OAuthProvider Provider => OAuthProvider.Codeberg;
 }
 
 public sealed class ForgejoProvider : ForgejoFamilyProvider
 {
-    // Self-hosted instance — operator points Shield:OAuth:Forgejo:Host at their host.
-    // Falls back to codeberg.org so the provider is at least bootable in dev.
-    public ForgejoProvider(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    // Self-hosted instance — operator points Shield Settings → OAuth → Forgejo → Host at
+    // their host. Reads at call time via IAppSettingsService so the SPA edit takes effect
+    // without a service restart. Falls back to appsettings.json then codeberg.org for dev.
+    public ForgejoProvider(
+        IHttpClientFactory httpClientFactory,
+        IAppSettingsService appSettings,
+        IConfiguration configuration
+    )
         : base(
             httpClientFactory,
-            configuration["Shield:OAuth:Forgejo:Host"] ?? "https://codeberg.org"
+            () =>
+                appSettings.Current.ForgejoOAuth.Host
+                ?? configuration["Shield:OAuth:Forgejo:Host"]
+                ?? "https://codeberg.org"
         ) { }
 
     public override OAuthProvider Provider => OAuthProvider.Forgejo;
@@ -344,9 +369,18 @@ public sealed class ForgejoProvider : ForgejoFamilyProvider
 
 public sealed class GiteaProvider : ForgejoFamilyProvider
 {
-    public GiteaProvider(IHttpClientFactory httpClientFactory, IConfiguration configuration)
-        : base(httpClientFactory, configuration["Shield:OAuth:Gitea:Host"] ?? "https://gitea.com")
-    { }
+    public GiteaProvider(
+        IHttpClientFactory httpClientFactory,
+        IAppSettingsService appSettings,
+        IConfiguration configuration
+    )
+        : base(
+            httpClientFactory,
+            () =>
+                appSettings.Current.GiteaOAuth.Host
+                ?? configuration["Shield:OAuth:Gitea:Host"]
+                ?? "https://gitea.com"
+        ) { }
 
     public override OAuthProvider Provider => OAuthProvider.Gitea;
 }

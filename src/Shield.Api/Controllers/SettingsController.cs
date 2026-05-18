@@ -95,21 +95,64 @@ public sealed class SettingsController : ControllerBase
             request.Github,
             AppSettingKeys.GithubOAuthClientId,
             AppSettingKeys.GithubOAuthClientSecret,
-            AppSettingKeys.GithubOAuthScopes
+            AppSettingKeys.GithubOAuthScopes,
+            hostKey: null
         );
         ApplyProviderPatch(
             updated,
             request.Slack,
             AppSettingKeys.SlackOAuthClientId,
             AppSettingKeys.SlackOAuthClientSecret,
-            AppSettingKeys.SlackOAuthScopes
+            AppSettingKeys.SlackOAuthScopes,
+            hostKey: null
         );
         ApplyProviderPatch(
             updated,
             request.Google,
             AppSettingKeys.GoogleOAuthClientId,
             AppSettingKeys.GoogleOAuthClientSecret,
-            AppSettingKeys.GoogleOAuthScopes
+            AppSettingKeys.GoogleOAuthScopes,
+            hostKey: null
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Gitlab,
+            AppSettingKeys.GitlabOAuthClientId,
+            AppSettingKeys.GitlabOAuthClientSecret,
+            AppSettingKeys.GitlabOAuthScopes,
+            hostKey: null
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Bitbucket,
+            AppSettingKeys.BitbucketOAuthClientId,
+            AppSettingKeys.BitbucketOAuthClientSecret,
+            AppSettingKeys.BitbucketOAuthScopes,
+            hostKey: null
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Forgejo,
+            AppSettingKeys.ForgejoOAuthClientId,
+            AppSettingKeys.ForgejoOAuthClientSecret,
+            AppSettingKeys.ForgejoOAuthScopes,
+            hostKey: AppSettingKeys.ForgejoOAuthHost
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Gitea,
+            AppSettingKeys.GiteaOAuthClientId,
+            AppSettingKeys.GiteaOAuthClientSecret,
+            AppSettingKeys.GiteaOAuthScopes,
+            hostKey: AppSettingKeys.GiteaOAuthHost
+        );
+        ApplyProviderPatch(
+            updated,
+            request.Codeberg,
+            AppSettingKeys.CodebergOAuthClientId,
+            AppSettingKeys.CodebergOAuthClientSecret,
+            AppSettingKeys.CodebergOAuthScopes,
+            hostKey: null
         );
 
         List<string> restartKeys = [];
@@ -165,7 +208,8 @@ public sealed class SettingsController : ControllerBase
         OAuthProviderConfigPatch? patch,
         string clientIdKey,
         string secretKey,
-        string scopesKey
+        string scopesKey,
+        string? hostKey
     )
     {
         if (patch is null)
@@ -177,6 +221,8 @@ public sealed class SettingsController : ControllerBase
         // null = preserve; "" = clear; non-empty = overwrite.
         if (patch.ClientSecret is not null)
             updated[secretKey] = patch.ClientSecret;
+        if (hostKey is not null && patch.Host is not null)
+            updated[hostKey] = patch.Host;
     }
 
     [HttpPost("test-oidc")]
@@ -323,21 +369,72 @@ public sealed class SettingsController : ControllerBase
             AppSettingKeys.GithubOAuthClientId,
             AppSettingKeys.GithubOAuthClientSecret,
             AppSettingKeys.GithubOAuthScopes,
-            _configuration["Shield:OAuth:Github:ClientId"]
+            hostKey: null,
+            _configuration["Shield:OAuth:Github:ClientId"],
+            hostFallback: null
         );
         OAuthProviderConfigResponse slack = BuildProviderResponse(
             stored,
             AppSettingKeys.SlackOAuthClientId,
             AppSettingKeys.SlackOAuthClientSecret,
             AppSettingKeys.SlackOAuthScopes,
-            _configuration["Shield:OAuth:Slack:ClientId"]
+            hostKey: null,
+            _configuration["Shield:OAuth:Slack:ClientId"],
+            hostFallback: null
         );
         OAuthProviderConfigResponse google = BuildProviderResponse(
             stored,
             AppSettingKeys.GoogleOAuthClientId,
             AppSettingKeys.GoogleOAuthClientSecret,
             AppSettingKeys.GoogleOAuthScopes,
-            _configuration["Shield:OAuth:Google:ClientId"]
+            hostKey: null,
+            _configuration["Shield:OAuth:Google:ClientId"],
+            hostFallback: null
+        );
+        OAuthProviderConfigResponse gitlab = BuildProviderResponse(
+            stored,
+            AppSettingKeys.GitlabOAuthClientId,
+            AppSettingKeys.GitlabOAuthClientSecret,
+            AppSettingKeys.GitlabOAuthScopes,
+            hostKey: null,
+            _configuration["Shield:OAuth:Gitlab:ClientId"],
+            hostFallback: null
+        );
+        OAuthProviderConfigResponse bitbucket = BuildProviderResponse(
+            stored,
+            AppSettingKeys.BitbucketOAuthClientId,
+            AppSettingKeys.BitbucketOAuthClientSecret,
+            AppSettingKeys.BitbucketOAuthScopes,
+            hostKey: null,
+            _configuration["Shield:OAuth:Bitbucket:ClientId"],
+            hostFallback: null
+        );
+        OAuthProviderConfigResponse forgejo = BuildProviderResponse(
+            stored,
+            AppSettingKeys.ForgejoOAuthClientId,
+            AppSettingKeys.ForgejoOAuthClientSecret,
+            AppSettingKeys.ForgejoOAuthScopes,
+            AppSettingKeys.ForgejoOAuthHost,
+            _configuration["Shield:OAuth:Forgejo:ClientId"],
+            _configuration["Shield:OAuth:Forgejo:Host"]
+        );
+        OAuthProviderConfigResponse gitea = BuildProviderResponse(
+            stored,
+            AppSettingKeys.GiteaOAuthClientId,
+            AppSettingKeys.GiteaOAuthClientSecret,
+            AppSettingKeys.GiteaOAuthScopes,
+            AppSettingKeys.GiteaOAuthHost,
+            _configuration["Shield:OAuth:Gitea:ClientId"],
+            _configuration["Shield:OAuth:Gitea:Host"]
+        );
+        OAuthProviderConfigResponse codeberg = BuildProviderResponse(
+            stored,
+            AppSettingKeys.CodebergOAuthClientId,
+            AppSettingKeys.CodebergOAuthClientSecret,
+            AppSettingKeys.CodebergOAuthScopes,
+            hostKey: null,
+            _configuration["Shield:OAuth:Codeberg:ClientId"],
+            hostFallback: null
         );
 
         string? redirectBase = ReadString(stored, Keys.OAuthRedirectBase);
@@ -354,6 +451,11 @@ public sealed class SettingsController : ControllerBase
             github,
             slack,
             google,
+            gitlab,
+            bitbucket,
+            forgejo,
+            gitea,
+            codeberg,
             OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase
         );
     }
@@ -363,19 +465,25 @@ public sealed class SettingsController : ControllerBase
         string clientIdKey,
         string secretKey,
         string scopesKey,
-        string? clientIdFallback
+        string? hostKey,
+        string? clientIdFallback,
+        string? hostFallback
     )
     {
         string? clientId = ReadString(stored, clientIdKey) ?? clientIdFallback;
         string? secret = ReadString(stored, secretKey);
         string? scopes = ReadString(stored, scopesKey);
+        string? host = hostKey is not null
+            ? ReadString(stored, hostKey) ?? hostFallback
+            : hostFallback;
         string? secretMasked = string.IsNullOrEmpty(secret) ? null : MaskProviderSecret(secret);
         bool configured = !string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(secret);
         return new(
             string.IsNullOrEmpty(clientId) ? null : clientId,
             secretMasked,
             string.IsNullOrEmpty(scopes) ? null : scopes,
-            configured
+            configured,
+            string.IsNullOrEmpty(host) ? null : host
         );
     }
 

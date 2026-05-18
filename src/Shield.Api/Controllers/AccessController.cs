@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
+using Shield.Api.Middleware;
+using Shield.Api.Services.Security.Snapshots;
 
 namespace Shield.Api.Controllers;
 
@@ -54,6 +56,125 @@ public sealed class AccessController : ControllerBase
             );
         }
         return Ok(result);
+    }
+
+    // Promote / demote a user. Destructive: clears every Shield role the user currently has
+    // and sets exactly one. Legacy multi-role memberships (e.g. Admin+Maintainer from the
+    // seeder) collapse to a single role on first swap — that's the model going forward.
+    //
+    // Lockout protection: refuses to demote the last remaining Admin so the install can't
+    // strand itself. Single-user mode is treated as "always at least one Admin" since the
+    // synthetic principal is permanent.
+    [HttpPut("users/{userId:guid}/role")]
+    [RequireOriginalIdentity]
+    public async Task<ActionResult<AccessUserDto>> SetUserRole(
+        Guid userId,
+        [FromBody] UpdateUserRoleRequest request,
+        CancellationToken ct
+    )
+    {
+        string requestedRole = (request.Role ?? string.Empty).Trim();
+        if (
+            !string.Equals(requestedRole, ShieldRoles.Admin, StringComparison.Ordinal)
+            && !string.Equals(requestedRole, ShieldRoles.Maintainer, StringComparison.Ordinal)
+            && !string.Equals(requestedRole, ShieldRoles.Viewer, StringComparison.Ordinal)
+        )
+        {
+            return ValidationProblem(
+                $"Role must be one of: {ShieldRoles.Admin}, {ShieldRoles.Maintainer}, {ShieldRoles.Viewer}."
+            );
+        }
+
+        ShieldUser? user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return NotFound();
+
+        IList<string> currentRoles = await _userManager.GetRolesAsync(user);
+        bool currentlyAdmin = currentRoles.Any(role =>
+            string.Equals(role, ShieldRoles.Admin, StringComparison.Ordinal)
+        );
+
+        // Last-Admin guard: refuse to demote this user FROM Admin when no other Admin user
+        // exists. Without it the operator could orphan the install — no way back to admin
+        // surfaces without DB surgery. (Single-user mode has its own permanent Admin claim
+        // so the guard never fires there.)
+        bool wouldRemoveAdmin =
+            currentlyAdmin
+            && !string.Equals(requestedRole, ShieldRoles.Admin, StringComparison.Ordinal);
+        if (wouldRemoveAdmin)
+        {
+            List<ShieldUser> adminUsers = (
+                await _userManager.GetUsersInRoleAsync(ShieldRoles.Admin)
+            ).ToList();
+            bool isOnlyAdmin =
+                adminUsers.Count <= 1 || adminUsers.All(other => other.Id == user.Id);
+            if (isOnlyAdmin)
+            {
+                return Conflict(
+                    new
+                    {
+                        error = "last_admin",
+                        message = "Refusing to demote the only remaining Admin — install would have no path back to admin without DB surgery.",
+                    }
+                );
+            }
+        }
+
+        UserRolesSnapshot before = new(currentRoles.ToList());
+
+        // Swap = remove all three Shield roles, then add exactly the requested one. Identity
+        // ops are individually transactional but not joint; the order minimises the window
+        // where the user has zero roles (remove → add).
+        string[] manageable = [ShieldRoles.Admin, ShieldRoles.Maintainer, ShieldRoles.Viewer];
+        List<string> toRemove = currentRoles.Where(manageable.Contains).ToList();
+        if (toRemove.Count > 0)
+        {
+            IdentityResult removeResult = await _userManager.RemoveFromRolesAsync(user, toRemove);
+            if (!removeResult.Succeeded)
+            {
+                return Problem(
+                    title: "Failed to clear existing roles",
+                    detail: string.Join(
+                        "; ",
+                        removeResult.Errors.Select(error => error.Description)
+                    ),
+                    statusCode: 500
+                );
+            }
+        }
+        IdentityResult addResult = await _userManager.AddToRoleAsync(user, requestedRole);
+        if (!addResult.Succeeded)
+        {
+            return Problem(
+                title: "Failed to assign new role",
+                detail: string.Join("; ", addResult.Errors.Select(error => error.Description)),
+                statusCode: 500
+            );
+        }
+
+        IList<string> finalRoles = await _userManager.GetRolesAsync(user);
+        UserRolesSnapshot after = new(finalRoles.ToList());
+
+        await _audit.RecordWriteAsync(
+            "user.role.changed",
+            "User",
+            user.Id.ToString(),
+            before,
+            after,
+            details: new { username = user.UserName, newRole = requestedRole },
+            ct: ct
+        );
+        HttpContext.Items[AuditMiddleware.HandledItemKey] = true;
+
+        return Ok(
+            new AccessUserDto(
+                user.Id,
+                user.UserName ?? string.Empty,
+                user.Email,
+                finalRoles.ToList(),
+                user.CreatedAt
+            )
+        );
     }
 
     // Token-based invite — creates a pending Invite row + emails the invitee a link. The

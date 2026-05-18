@@ -19,12 +19,63 @@ public sealed class AuditLogger : IAuditLogger
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task RecordAsync(
+    public Task<Guid> RecordAsync(
         string action,
         string targetType,
         string targetId,
         object? details = null,
         CancellationToken ct = default
+    ) =>
+        WriteAsync(
+            action,
+            targetType,
+            targetId,
+            before: null,
+            after: null,
+            details,
+            isReversible: false,
+            ct
+        );
+
+    public async Task<Guid> RecordWriteAsync(
+        string action,
+        string targetType,
+        string targetId,
+        object? before,
+        object? after,
+        object? details = null,
+        CancellationToken ct = default
+    )
+    {
+        // IsReversible flips on when we have a beforeJson to roll back to. afterJson without
+        // beforeJson is informational-only (e.g. create with no prior shape — the inverse is
+        // a delete, which the handler reads from TargetId).
+        bool isReversible =
+            before is not null
+            || string.Equals(action, "source.create", StringComparison.Ordinal)
+            || string.Equals(action, "channel.create", StringComparison.Ordinal)
+            || string.Equals(action, "user.role.changed", StringComparison.Ordinal);
+        return await WriteAsync(
+            action,
+            targetType,
+            targetId,
+            before,
+            after,
+            details,
+            isReversible,
+            ct
+        );
+    }
+
+    private async Task<Guid> WriteAsync(
+        string action,
+        string targetType,
+        string targetId,
+        object? before,
+        object? after,
+        object? details,
+        bool isReversible,
+        CancellationToken ct
     )
     {
         HttpContext? ctx = _httpContextAccessor.HttpContext;
@@ -97,10 +148,14 @@ public sealed class AuditLogger : IAuditLogger
             DetailsJson = finalDetails is null
                 ? null
                 : JsonSerializer.Serialize(finalDetails, s_jsonOptions),
+            BeforeJson = before is null ? null : JsonSerializer.Serialize(before, s_jsonOptions),
+            AfterJson = after is null ? null : JsonSerializer.Serialize(after, s_jsonOptions),
+            IsReversible = isReversible,
             RemoteIp = remoteIp,
         };
 
         _db.AuditEntries.Add(entry);
         await _db.SaveChangesAsync(ct);
+        return entry.Id;
     }
 }
