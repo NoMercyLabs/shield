@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shield.Core.Abstractions;
 using Shield.Core.Domain;
 using Shield.Matcher.Versioning;
@@ -8,11 +11,18 @@ namespace Shield.Matcher;
 public sealed class AdvisoryMatcher
 {
     private readonly Dictionary<Ecosystem, IVersionComparer> _comparers;
+    private readonly ILogger<AdvisoryMatcher> _log;
+    private readonly ConcurrentDictionary<Ecosystem, byte> _missingComparerWarned = new();
 
     public AdvisoryMatcher(IEnumerable<IVersionComparer> comparers)
+        : this(comparers, NullLogger<AdvisoryMatcher>.Instance) { }
+
+    public AdvisoryMatcher(IEnumerable<IVersionComparer> comparers, ILogger<AdvisoryMatcher> log)
     {
         ArgumentNullException.ThrowIfNull(comparers);
+        ArgumentNullException.ThrowIfNull(log);
         _comparers = comparers.ToDictionary(comparer => comparer.Ecosystem);
+        _log = log;
     }
 
     public IReadOnlyList<Finding> Match(
@@ -20,15 +30,20 @@ public sealed class AdvisoryMatcher
         IReadOnlyList<InventoryItem> items,
         IReadOnlyList<Advisory> advisories,
         IReadOnlyList<Finding> existingFindings,
-        DateTime nowUtc)
+        DateTime nowUtc
+    )
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(advisories);
         ArgumentNullException.ThrowIfNull(existingFindings);
 
-        Dictionary<string, Finding> existingByKey = existingFindings.ToDictionary(finding => finding.DedupKey);
-        Dictionary<(Ecosystem, string), List<Advisory>> advisoryIndex = BuildAdvisoryIndex(advisories);
+        Dictionary<string, Finding> existingByKey = existingFindings.ToDictionary(finding =>
+            finding.DedupKey
+        );
+        Dictionary<(Ecosystem, string), List<Advisory>> advisoryIndex = BuildAdvisoryIndex(
+            advisories
+        );
         List<Finding> results = [];
 
         foreach (InventoryItem item in items)
@@ -38,14 +53,33 @@ public sealed class AdvisoryMatcher
                 continue;
 
             if (!_comparers.TryGetValue(item.Ecosystem, out IVersionComparer? comparer))
+            {
+                // No comparer registered for this ecosystem — log once per ecosystem so we
+                // notice the blind spot instead of silently skipping advisory matches.
+                if (_missingComparerWarned.TryAdd(item.Ecosystem, 0))
+                {
+                    _log.LogWarning(
+                        "No version comparer registered for ecosystem {Ecosystem}; advisories "
+                            + "for items in this ecosystem will not match. Register an "
+                            + "IVersionComparer with Ecosystem={Ecosystem} via AddShieldMatcher.",
+                        item.Ecosystem,
+                        item.Ecosystem
+                    );
+                }
                 continue;
+            }
 
             foreach (Advisory advisory in candidates)
             {
                 if (!AdvisoryMatchesItem(comparer, item, advisory))
                     continue;
 
-                string dedupKey = DedupKey.Compute(snapshot.SourceId, item.Ecosystem, item.Name, advisory.ExternalId);
+                string dedupKey = DedupKey.Compute(
+                    snapshot.SourceId,
+                    item.Ecosystem,
+                    item.Name,
+                    advisory.ExternalId
+                );
 
                 if (existingByKey.TryGetValue(dedupKey, out Finding? existing))
                 {
@@ -58,19 +92,21 @@ public sealed class AdvisoryMatcher
                     // prefer over the SHA dedup key. Channels still fall back to DedupKey when
                     // Notes is null (legacy rows from before this lands).
                     string notes = $"{item.Name}@{item.Version} → {advisory.ExternalId}";
-                    results.Add(new()
-                    {
-                        Id = Guid.NewGuid(),
-                        SourceId = snapshot.SourceId,
-                        InventoryItemId = item.Id,
-                        AdvisoryRefId = advisory.Id,
-                        Severity = advisory.Severity,
-                        FirstSeenAt = nowUtc,
-                        LastSeenAt = nowUtc,
-                        State = FindingState.Open,
-                        DedupKey = dedupKey,
-                        Notes = notes,
-                    });
+                    results.Add(
+                        new()
+                        {
+                            Id = Guid.NewGuid(),
+                            SourceId = snapshot.SourceId,
+                            InventoryItemId = item.Id,
+                            AdvisoryRefId = advisory.Id,
+                            Severity = advisory.Severity,
+                            FirstSeenAt = nowUtc,
+                            LastSeenAt = nowUtc,
+                            State = FindingState.Open,
+                            DedupKey = dedupKey,
+                            Notes = notes,
+                        }
+                    );
                 }
             }
         }
@@ -78,7 +114,9 @@ public sealed class AdvisoryMatcher
         return results;
     }
 
-    private static Dictionary<(Ecosystem, string), List<Advisory>> BuildAdvisoryIndex(IReadOnlyList<Advisory> advisories)
+    private static Dictionary<(Ecosystem, string), List<Advisory>> BuildAdvisoryIndex(
+        IReadOnlyList<Advisory> advisories
+    )
     {
         Dictionary<(Ecosystem, string), List<Advisory>> index = new();
         foreach (Advisory advisory in advisories)
@@ -94,7 +132,11 @@ public sealed class AdvisoryMatcher
         return index;
     }
 
-    private static bool AdvisoryMatchesItem(IVersionComparer comparer, InventoryItem item, Advisory advisory)
+    private static bool AdvisoryMatchesItem(
+        IVersionComparer comparer,
+        InventoryItem item,
+        Advisory advisory
+    )
     {
         IReadOnlyList<VersionRange> ranges = ParseRanges(advisory.AffectedRangesJson);
         foreach (VersionRange range in ranges)
@@ -129,10 +171,14 @@ public sealed class AdvisoryMatcher
                     foreach (VersionRange range in VersionRange.ParseOsvEvents(events))
                         ranges.Add(range);
                 }
-                else if (element.ValueKind == JsonValueKind.Object &&
-                         (element.TryGetProperty("introduced", out _) ||
-                          element.TryGetProperty("fixed", out _) ||
-                          element.TryGetProperty("last_affected", out _)))
+                else if (
+                    element.ValueKind == JsonValueKind.Object
+                    && (
+                        element.TryGetProperty("introduced", out _)
+                        || element.TryGetProperty("fixed", out _)
+                        || element.TryGetProperty("last_affected", out _)
+                    )
+                )
                 {
                     foreach (VersionRange range in VersionRange.ParseOsvEvents(root))
                         ranges.Add(range);
@@ -147,6 +193,5 @@ public sealed class AdvisoryMatcher
         }
     }
 
-    private static string NormalizeName(string name)
-        => name.Trim().ToLowerInvariant();
+    private static string NormalizeName(string name) => name.Trim().ToLowerInvariant();
 }

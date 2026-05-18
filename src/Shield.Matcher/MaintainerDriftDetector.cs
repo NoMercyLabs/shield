@@ -12,7 +12,8 @@ public sealed class MaintainerDriftDetector
         string package,
         PackageMeta? previous,
         PackageMeta current,
-        DateTime nowUtc)
+        DateTime nowUtc
+    )
     {
         ArgumentNullException.ThrowIfNull(package);
         ArgumentNullException.ThrowIfNull(current);
@@ -25,41 +26,57 @@ public sealed class MaintainerDriftDetector
 
         IReadOnlyList<string> previousMaintainers = ParseMaintainers(previous.MaintainersJson);
 
-        List<string> added = currentMaintainers.Except(previousMaintainers, StringComparer.OrdinalIgnoreCase).ToList();
-        List<string> removed = previousMaintainers.Except(currentMaintainers, StringComparer.OrdinalIgnoreCase).ToList();
+        List<string> added = currentMaintainers
+            .Except(previousMaintainers, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        List<string> removed = previousMaintainers
+            .Except(currentMaintainers, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        if (added.Count > 0 && current.PublishedAt is { } publishedAt &&
-            publishedAt >= nowUtc - _newMaintainerWindow)
+        if (
+            added.Count > 0
+            && current.PublishedAt is { } publishedAt
+            && publishedAt >= nowUtc - _newMaintainerWindow
+        )
         {
-            advisories.Add(BuildAdvisory(
-                eco,
-                package,
-                "new-maintainer-immediate-publish",
-                Severity.High,
-                $"Package '{package}' added maintainer(s) [{string.Join(", ", added)}] and published within 24h.",
-                nowUtc));
+            advisories.Add(
+                BuildAdvisory(
+                    eco,
+                    package,
+                    "new-maintainer-immediate-publish",
+                    Severity.High,
+                    $"Package '{package}' added maintainer(s) [{string.Join(", ", added)}] and published within 24h.",
+                    nowUtc
+                )
+            );
         }
 
         if (removed.Count > 0)
         {
-            advisories.Add(BuildAdvisory(
-                eco,
-                package,
-                "maintainer-dropped",
-                Severity.Medium,
-                $"Package '{package}' lost maintainer(s) [{string.Join(", ", removed)}].",
-                nowUtc));
+            advisories.Add(
+                BuildAdvisory(
+                    eco,
+                    package,
+                    "maintainer-dropped",
+                    Severity.Medium,
+                    $"Package '{package}' lost maintainer(s) [{string.Join(", ", removed)}].",
+                    nowUtc
+                )
+            );
         }
 
         if (current.Deprecated && !previous.Deprecated)
         {
-            advisories.Add(BuildAdvisory(
-                eco,
-                package,
-                "deprecated",
-                Severity.Low,
-                $"Package '{package}' was marked deprecated since the last sync.",
-                nowUtc));
+            advisories.Add(
+                BuildAdvisory(
+                    eco,
+                    package,
+                    "deprecated",
+                    Severity.Low,
+                    $"Package '{package}' was marked deprecated since the last sync.",
+                    nowUtc
+                )
+            );
         }
 
         return advisories;
@@ -71,8 +88,9 @@ public sealed class MaintainerDriftDetector
         string kind,
         Severity severity,
         string summary,
-        DateTime nowUtc)
-        => new()
+        DateTime nowUtc
+    ) =>
+        new()
         {
             Id = Guid.NewGuid(),
             Feed = Feed.NpmRegistry,
@@ -108,9 +126,11 @@ public sealed class MaintainerDriftDetector
                     if (!string.IsNullOrWhiteSpace(value))
                         maintainers.Add(value);
                 }
-                else if (element.ValueKind == JsonValueKind.Object &&
-                         element.TryGetProperty("name", out JsonElement nameEl) &&
-                         nameEl.ValueKind == JsonValueKind.String)
+                else if (
+                    element.ValueKind == JsonValueKind.Object
+                    && element.TryGetProperty("name", out JsonElement nameEl)
+                    && nameEl.ValueKind == JsonValueKind.String
+                )
                 {
                     string? value = nameEl.GetString();
                     if (!string.IsNullOrWhiteSpace(value))
