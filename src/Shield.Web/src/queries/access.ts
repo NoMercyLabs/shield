@@ -182,7 +182,11 @@ export const useRevokeInviteMutation = () => {
 
 // ---------- GitHub collaborator picker ----------
 
-export const useGithubOrgsQuery = (enabled = true) => useQuery({
+// Accept a getter so the caller can pass a reactive ref/computed and have TanStack
+// re-evaluate enabled on every dependency change. Passing a static boolean captured the
+// value at construction time and the query never re-enabled when the invite dialog
+// opened — refetch() can't rescue it either, it's a no-op on a disabled query in v5.
+export const useGithubOrgsQuery = (enabled: boolean | (() => boolean) = true) => useQuery({
   queryKey: ['collaborators', 'github', 'orgs'],
   enabled,
   queryFn: async (): Promise<GithubOrgListResponse> => {

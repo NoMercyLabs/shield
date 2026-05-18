@@ -93,11 +93,12 @@ const lastInviteSkipReason = ref<string | null>(null)
 // GitHub picker state. Orgs lazy-load when the tab is first opened; members + search are
 // per-org / per-query so they re-fetch when the admin picks a different org or types.
 const githubEnabled = computed(() => inviteOpen.value && inviteTab.value === 'github')
-const githubOrgsQ = useGithubOrgsQuery(githubEnabled.value)
-watch(githubEnabled, (next) => {
-  if (next)
-    githubOrgsQ.refetch()
-})
+// Pass a getter so TanStack re-evaluates whenever the computed flips. Previous shape
+// captured githubEnabled.value at component-construction time (always false at mount
+// because the dialog isn't open yet) and the watch-and-refetch fallback couldn't
+// rescue it because v5's refetch() is a no-op on a disabled query — which is what
+// left the invite-collaborator picker empty.
+const githubOrgsQ = useGithubOrgsQuery(() => githubEnabled.value)
 const selectedOrg = ref<string | null>(null)
 const memberPage = ref(1)
 const membersQ = useGithubOrgMembersQuery(() => selectedOrg.value, () => memberPage.value)
