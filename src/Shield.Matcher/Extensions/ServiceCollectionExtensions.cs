@@ -26,7 +26,7 @@ public static class ServiceCollectionExtensions
         // dependency RESOLUTION syntax (^1.2, ~1.2, wildcards in Cargo.toml) which only matters
         // for manifest parsing, not advisory range matching.
         services.AddSingleton<IVersionComparer>(_ => new SemverVersionComparer(Ecosystem.Rust));
-        // TODO: Vcpkg (port-version) still needs a dedicated comparer.
+        services.AddSingleton<IVersionComparer, VcpkgVersionComparer>();
 
         services.AddSingleton<AdvisoryMatcher>();
         services.AddSingleton<MaintainerDriftDetector>();

@@ -281,7 +281,7 @@ public sealed class NpmManifestEditor : IManifestEditor
         using MemoryStream ms = new();
         using (Utf8JsonWriter writer = new(ms))
             writer.WriteStringValue(value);
-        return System.Text.Encoding.UTF8.GetString(ms.ToArray());
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
     // Determines the most appropriate install command based on which lockfile exists.

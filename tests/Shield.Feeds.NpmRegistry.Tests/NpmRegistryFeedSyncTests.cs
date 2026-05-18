@@ -74,7 +74,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             client,
             sink,
             nameSource,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         FeedSyncState state = new() { Feed = Feed.NpmRegistry };
@@ -114,7 +114,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             client,
             sink,
             nameSource,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         FeedSyncResult result = await feedSync.SyncAsync(
@@ -143,7 +143,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             client,
             sink,
             nameSource,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         FeedSyncResult result = await feedSync.SyncAsync(
@@ -167,7 +167,7 @@ public sealed class NpmRegistryFeedSyncTests : IDisposable
             client,
             sink,
             nameSource,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         feedSync.Feed.Should().Be(Feed.NpmRegistry);

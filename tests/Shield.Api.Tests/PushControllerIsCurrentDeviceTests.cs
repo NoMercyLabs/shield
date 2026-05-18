@@ -113,10 +113,10 @@ public sealed class PushControllerIsCurrentDeviceTests : IClassFixture<ShieldWeb
         ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
 
         // Resolve the first admin user seeded by SingleUser mode.
-        Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> userManager =
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
-        Shield.Data.Identity.ShieldUser? admin = (
-            await userManager.GetUsersInRoleAsync(Shield.Api.Auth.ShieldRoles.Admin)
+        Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> userManager =
+            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
+        Data.Identity.ShieldUser? admin = (
+            await userManager.GetUsersInRoleAsync(Auth.ShieldRoles.Admin)
         ).FirstOrDefault();
         admin.Should().NotBeNull("SingleUser factory must seed an admin");
 

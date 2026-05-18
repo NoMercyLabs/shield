@@ -148,7 +148,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
         GhsaFeedSync feedSync = new(
             client,
             sink,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         FeedSyncState state = new() { Feed = Feed.Ghsa, Cursor = "2026-04-01T00:00:00Z" };
@@ -190,7 +190,7 @@ public sealed class GhsaFeedSyncTests : IDisposable
         GhsaFeedSync feedSync = new(
             client,
             sink,
-            Microsoft.Extensions.Options.Options.Create(options)
+            Options.Create(options)
         );
 
         feedSync.Feed.Should().Be(Feed.Ghsa);

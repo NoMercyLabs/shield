@@ -497,7 +497,7 @@ public sealed class AuthController : ControllerBase
             : null;
 
         string? impersonatedBy = User.FindFirstValue(
-            Auth.RequireOriginalIdentityAttribute.ImpersonatorClaimType
+            RequireOriginalIdentityAttribute.ImpersonatorClaimType
         );
         string? impersonatorLogin = User.FindFirstValue("imp.admin.name");
 

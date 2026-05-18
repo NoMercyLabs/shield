@@ -102,7 +102,7 @@ public sealed class ImpersonationMiddleware : IMiddleware
         // so the claim types (UserIdClaimType, RoleClaimType, etc.) match what
         // UserManager.GetUserAsync / IsInRole expect. Adding the imp.admin* claims afterwards
         // preserves the admin's seat for audit + the SPA banner.
-        System.Security.Claims.ClaimsPrincipal targetPrincipal =
+        ClaimsPrincipal targetPrincipal =
             await signInManager.CreateUserPrincipalAsync(target);
         if (targetPrincipal.Identity is ClaimsIdentity primaryIdentity)
         {

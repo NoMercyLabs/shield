@@ -28,7 +28,7 @@ public sealed class GitHubRepoScanner : IScanner
 
     public SourceType SourceType => SourceType.GithubRepo;
 
-    private static DateTimeOffset ParseRateLimitReset(Octokit.RateLimitExceededException ex)
+    private static DateTimeOffset ParseRateLimitReset(RateLimitExceededException ex)
     {
         DateTimeOffset reset = ex.Reset;
         return reset > DateTimeOffset.UtcNow ? reset : DateTimeOffset.UtcNow.AddMinutes(1);
@@ -64,11 +64,11 @@ public sealed class GitHubRepoScanner : IScanner
         {
             repo = await client.Repository.Get(config.Owner, config.Repo).ConfigureAwait(false);
         }
-        catch (Octokit.RateLimitExceededException ex)
+        catch (RateLimitExceededException ex)
         {
             throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
         }
-        catch (Octokit.AbuseException ex)
+        catch (AbuseException ex)
         {
             throw new GitHubScanRateLimitedException(
                 DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)
@@ -86,11 +86,11 @@ public sealed class GitHubRepoScanner : IScanner
                 .Git.Reference.Get(repo.Id, $"heads/{branch}")
                 .ConfigureAwait(false);
         }
-        catch (Octokit.RateLimitExceededException ex)
+        catch (RateLimitExceededException ex)
         {
             throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
         }
-        catch (Octokit.AbuseException ex)
+        catch (AbuseException ex)
         {
             throw new GitHubScanRateLimitedException(
                 DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)
@@ -108,11 +108,11 @@ public sealed class GitHubRepoScanner : IScanner
                 .Git.Tree.GetRecursive(repo.Id, reference.Object.Sha)
                 .ConfigureAwait(false);
         }
-        catch (Octokit.RateLimitExceededException ex)
+        catch (RateLimitExceededException ex)
         {
             throw new GitHubScanRateLimitedException(ParseRateLimitReset(ex));
         }
-        catch (Octokit.AbuseException ex)
+        catch (AbuseException ex)
         {
             throw new GitHubScanRateLimitedException(
                 DateTimeOffset.UtcNow.AddSeconds(ex.RetryAfterSeconds ?? 60)

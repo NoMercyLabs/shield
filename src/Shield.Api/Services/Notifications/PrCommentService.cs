@@ -372,8 +372,8 @@ public sealed class GitHubClientFactory : IGitHubClientFactory
         // is safe (no risk of "handler already assigned" from a sibling pipeline).
         Octokit.Internal.HttpClientAdapter adapter = new(() =>
         {
-            Shield.Api.Http.GitHubRateLimitHandler handler =
-                _services.GetRequiredService<Shield.Api.Http.GitHubRateLimitHandler>();
+            Http.GitHubRateLimitHandler handler =
+                _services.GetRequiredService<Http.GitHubRateLimitHandler>();
             handler.InnerHandler ??= new HttpClientHandler();
             return handler;
         });

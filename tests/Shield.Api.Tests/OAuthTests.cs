@@ -107,8 +107,8 @@ public sealed class OAuthTests
 
         // Read raw row through DbContext — value must not equal the plaintext token.
         using IServiceScope scope = factory.Services.CreateScope();
-        Shield.Data.ShieldDbContext db =
-            scope.ServiceProvider.GetRequiredService<Shield.Data.ShieldDbContext>();
+        Data.ShieldDbContext db =
+            scope.ServiceProvider.GetRequiredService<Data.ShieldDbContext>();
         IntegrationToken? row = db.IntegrationTokens.FirstOrDefault(t =>
             t.Provider == OAuthProvider.Slack
         );
@@ -287,9 +287,9 @@ public sealed class OAuthTests
 
         // Verify the user was created with Admin role.
         using IServiceScope scope = factory.Services.CreateScope();
-        Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> users =
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
-        Shield.Data.Identity.ShieldUser? user = await users.FindByEmailAsync("first@example.com");
+        Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> users =
+            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
+        Data.Identity.ShieldUser? user = await users.FindByEmailAsync("first@example.com");
         user.Should().NotBeNull();
         IList<string> roles = await users.GetRolesAsync(user!);
         roles.Should().Contain("Admin");
@@ -359,12 +359,12 @@ public sealed class OAuthTests
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
         using IServiceScope scope = factory.Services.CreateScope();
-        Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> users =
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
+        Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> users =
+            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
         // Existing user found by email — no synthetic provider+login duplicate created.
-        Shield.Data.Identity.ShieldUser? seeded = await users.FindByNameAsync("seed-admin");
+        Data.Identity.ShieldUser? seeded = await users.FindByNameAsync("seed-admin");
         seeded.Should().NotBeNull();
-        Shield.Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync(
+        Data.Identity.ShieldUser? duplicate = await users.FindByNameAsync(
             "githubseedadminexternal"
         );
         duplicate.Should().BeNull();
@@ -431,9 +431,9 @@ public sealed class OAuthTests
             .Contain("oauth_signin_rejected=oauth_signin_rejected");
 
         using IServiceScope scope = factory.Services.CreateScope();
-        Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser> users =
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Shield.Data.Identity.ShieldUser>>();
-        Shield.Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync(
+        Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser> users =
+            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Data.Identity.ShieldUser>>();
+        Data.Identity.ShieldUser? rejected = await users.FindByEmailAsync(
             "stranger@example.com"
         );
         rejected.Should().BeNull();
@@ -550,7 +550,7 @@ public sealed class OAuthTests
             CancellationToken ct
         )
         {
-            OAuthSigninResult? result =
+            OAuthSigninResult result =
                 NextResult
                 ?? throw new InvalidOperationException("FakeOAuthProvider.NextResult was not set");
             NextResult = null;

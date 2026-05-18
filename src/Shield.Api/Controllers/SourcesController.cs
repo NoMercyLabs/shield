@@ -302,7 +302,7 @@ public sealed class SourcesController : ControllerBase
         // Cascade — manual cleanup for tables EF doesn't auto-cascade. PackageUpdates lacks an
         // FK to Source (kept loose so a re-added repo by name doesn't accidentally rehydrate
         // history), so wipe by SourceId before removing the source row.
-        List<Core.Domain.PackageUpdate> orphans = await _db
+        List<PackageUpdate> orphans = await _db
             .PackageUpdates.Where(update => update.SourceId == id)
             .ToListAsync(ct);
         if (orphans.Count > 0)

@@ -18,5 +18,5 @@ public sealed record BulkApplyResult(
     IReadOnlyList<BulkApplyError> Errors,
     string? ReusedBranch,
     IReadOnlyList<BulkApplyEntry> MajorBumps,
-    IReadOnlyList<Contracts.BulkApplyWarning> Warnings
+    IReadOnlyList<BulkApplyWarning> Warnings
 );

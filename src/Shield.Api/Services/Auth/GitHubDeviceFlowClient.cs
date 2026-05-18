@@ -84,7 +84,7 @@ public sealed class GitHubDeviceFlowClient : IGitHubDeviceFlowClient
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
-        GitHubDeviceCodeResponse? body =
+        GitHubDeviceCodeResponse body =
             await response.Content.ReadFromJsonAsync<GitHubDeviceCodeResponse>(
                 cancellationToken: ct
             )
@@ -126,7 +126,7 @@ public sealed class GitHubDeviceFlowClient : IGitHubDeviceFlowClient
             response.EnsureSuccessStatusCode();
         }
 
-        GitHubDeviceTokenResponse? body =
+        GitHubDeviceTokenResponse body =
             await response.Content.ReadFromJsonAsync<GitHubDeviceTokenResponse>(
                 cancellationToken: ct
             )

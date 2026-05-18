@@ -230,7 +230,7 @@ builder
                         return;
                     }
                     var um = ctx.HttpContext.RequestServices.GetRequiredService<
-                        UserManager<Shield.Data.Identity.ShieldUser>
+                        UserManager<ShieldUser>
                     >();
                     var user = await um.FindByIdAsync(rawUserId);
                     if (user is null)
@@ -359,7 +359,7 @@ builder.Services.AddAntiforgery(options =>
 });
 
 builder.Services.AddControllers(options =>
-    options.Filters.Add<Shield.Api.Auth.CookieAuthCsrfFilter>()
+    options.Filters.Add<CookieAuthCsrfFilter>()
 );
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IFindingsBroadcaster, FindingsBroadcaster>();
@@ -482,7 +482,7 @@ builder.Services.AddRateLimiter(options =>
             await securityLog.LogAsync(
                 source: "shield.ratelimit",
                 eventType: "rate.limit",
-                severity: Shield.Core.Domain.Severity.Low,
+                severity: Severity.Low,
                 remoteIp: context.HttpContext.Connection.RemoteIpAddress?.ToString(),
                 userAgent: context.HttpContext.Request.Headers.UserAgent.ToString()
                     is { Length: > 0 } ua
@@ -726,7 +726,7 @@ builder.Services.AddSingleton<IOgImageRenderer, OgImageRenderer>();
 // Crawler middleware reads the SPA index.html via the same physical file provider the
 // static-file pipeline uses. Provider is registered below (after webroot resolution)
 // because the path depends on runtime layout.
-builder.Services.AddTransient<Shield.Api.Middleware.CrawlerMetaMiddleware>();
+builder.Services.AddTransient<CrawlerMetaMiddleware>();
 
 // endregion OG
 
@@ -766,12 +766,12 @@ if (enableOpenApi)
             "Bearer",
             new()
             {
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
                 BearerFormat = "shld_xxx or JWT",
                 Description =
                     "API tokens have prefix `shld_` (see /account/tokens). JWTs come from /api/auth/login.",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                In = ParameterLocation.Header,
             }
         );
 
@@ -781,8 +781,8 @@ if (enableOpenApi)
             "Cookie",
             new()
             {
-                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                In = Microsoft.OpenApi.Models.ParameterLocation.Cookie,
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Cookie,
                 Name = "shield.auth",
                 Description = "Cookie issued by /api/auth/login. Used by the SPA.",
             }
@@ -797,7 +797,7 @@ if (enableOpenApi)
                     {
                         Reference = new()
                         {
-                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Type = ReferenceType.SecurityScheme,
                             Id = "Bearer",
                         },
                     },
@@ -969,7 +969,7 @@ app.UseMiddleware<AuditMiddleware>();
 // participates in the standard pipeline, but BEFORE MapControllers/MapFallback so it can
 // short-circuit bot GETs to non-/api/* routes with the enriched HTML. Regular browsers
 // don't match the bot user-agent regex and fall through to the SPA fallback unchanged.
-app.UseMiddleware<Shield.Api.Middleware.CrawlerMetaMiddleware>();
+app.UseMiddleware<CrawlerMetaMiddleware>();
 
 // endregion OG
 

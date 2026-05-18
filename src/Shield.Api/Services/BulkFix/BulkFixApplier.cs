@@ -198,7 +198,7 @@ public sealed class BulkFixApplier : IBulkFixApplier
         // a 30-minute-old fix version is still the right thing to ship. The warning surfaces in
         // the modal so the operator can spot a brand-new "fix" that arrived suspiciously fast.
         // Non-blocking by design: see source.MinPackageAgeHours docs.
-        List<Contracts.BulkApplyWarning> warnings = [];
+        List<BulkApplyWarning> warnings = [];
         if (entries.Count > 0 && source.MinPackageAgeHours > 0)
         {
             DateTime ageCutoff = DateTime.UtcNow - TimeSpan.FromHours(source.MinPackageAgeHours);

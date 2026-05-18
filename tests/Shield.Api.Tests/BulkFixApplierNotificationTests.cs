@@ -85,10 +85,10 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
 
         // Seed directly via the publisher so we can assert shape without needing a real GitHub token.
         using IServiceScope scope = _factory.Services.CreateScope();
-        Shield.Core.Abstractions.INotificationPublisher publisher =
-            scope.ServiceProvider.GetRequiredService<Shield.Core.Abstractions.INotificationPublisher>();
-        Shield.Core.Abstractions.IAdminAudienceProvider adminAudience =
-            scope.ServiceProvider.GetRequiredService<Shield.Core.Abstractions.IAdminAudienceProvider>();
+        Core.Abstractions.INotificationPublisher publisher =
+            scope.ServiceProvider.GetRequiredService<Core.Abstractions.INotificationPublisher>();
+        Core.Abstractions.IAdminAudienceProvider adminAudience =
+            scope.ServiceProvider.GetRequiredService<Core.Abstractions.IAdminAudienceProvider>();
 
         IReadOnlyList<Guid> adminIds = await adminAudience.GetAdminUserIdsAsync();
         adminIds.Should().NotBeEmpty("SingleUser mode seeds one admin");
@@ -136,8 +136,8 @@ public sealed class BulkFixApplierNotificationTests : IClassFixture<ShieldWebApp
     public async Task IAdminAudienceProvider_is_registered_in_DI()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
-        Shield.Core.Abstractions.IAdminAudienceProvider? provider =
-            scope.ServiceProvider.GetService<Shield.Core.Abstractions.IAdminAudienceProvider>();
+        Core.Abstractions.IAdminAudienceProvider? provider =
+            scope.ServiceProvider.GetService<Core.Abstractions.IAdminAudienceProvider>();
         provider.Should().NotBeNull("IAdminAudienceProvider must be registered");
     }
 

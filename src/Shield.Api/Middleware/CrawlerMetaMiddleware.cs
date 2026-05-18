@@ -81,7 +81,7 @@ public sealed class CrawlerMetaMiddleware : IMiddleware
                 await securityLog.LogAsync(
                     source: "shield.crawler",
                     eventType: "crawler.detected",
-                    severity: Shield.Core.Domain.Severity.Low,
+                    severity: Severity.Low,
                     remoteIp: context.Connection.RemoteIpAddress?.ToString(),
                     userAgent: userAgent,
                     path: context.Request.Path.Value,
