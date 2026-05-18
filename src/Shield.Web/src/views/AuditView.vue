@@ -53,10 +53,10 @@ const { data, isLoading, isError } = useAuditQuery(filter)
 const auditRows = computed<AuditEntry[]>(() => data.value?.items ?? [])
 const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<AuditEntry>(auditRows, [
   { key: 'when', extract: row => row.at, defaultDirection: 'desc' },
-  { key: 'actor', extract: row => row.actorDisplayName ?? row.actorUserId ?? '', defaultDirection: 'asc' },
+  { key: 'actor', extract: row => row.actorName, defaultDirection: 'asc' },
   { key: 'action', extract: row => row.action, defaultDirection: 'asc' },
-  { key: 'target', extract: row => `${row.targetType ?? ''}/${row.targetId ?? ''}`, defaultDirection: 'asc' },
-  { key: 'ip', extract: row => row.ipAddress, defaultDirection: 'asc' },
+  { key: 'target', extract: row => `${row.targetType}/${row.targetLabel ?? row.targetId}`, defaultDirection: 'asc' },
+  { key: 'ip', extract: row => row.remoteIp, defaultDirection: 'asc' },
 ])
 
 const totalPages = computed(() => {
