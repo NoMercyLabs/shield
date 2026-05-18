@@ -11,10 +11,11 @@ public class PackageMeta
     public string? TarballSha { get; set; }
     public bool Deprecated { get; set; }
 
-    // Weekly downloads from the package's home registry — the popularity signal that
-    // replaces the curated KnownPopularPackages list. Null = registry has no per-package
-    // count (Pub, Hex, SwiftPM) or sync hasn't reached this version yet. Stored as long
-    // because npm packages like react / lodash routinely exceed int.MaxValue per week.
+    // Weekly downloads from the package's home registry — popularity signal the anomaly
+    // detector uses to gate typosquat scoring (popular candidates skip typosquat, suspect
+    // candidates are required to be low-traffic). Null = registry has no per-package count
+    // or sync hasn't reached this version yet. Stored as long because npm packages like
+    // react / lodash routinely exceed int.MaxValue per week.
     public long? WeeklyDownloads { get; set; }
     public DateTime FetchedAt { get; set; }
 }

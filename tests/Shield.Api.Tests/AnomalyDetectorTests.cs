@@ -10,8 +10,13 @@ using Xunit;
 
 namespace Shield.Api.Tests;
 
+// The new detector uses PackageMeta-driven popularity (rather than a hardcoded list) so
+// every typosquat / scope-mismatch test seeds a popular reference package into FeedsDb
+// before evaluating. Pure Evaluate() calls take an explicit popular-names set so the
+// tests stay deterministic without needing a real PackageMetas table.
 public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
 {
+    private static readonly IReadOnlySet<string> NoPopularNames = new HashSet<string>();
     private readonly ShieldWebAppFactory _factory;
 
     public AnomalyDetectorTests(ShieldWebAppFactory factory)
@@ -43,7 +48,8 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             "0.1.0",
             current,
             priorVersionMeta: null,
-            now
+            now,
+            NoPopularNames
         );
 
         flags.HasFlag(AnomalyFlags.BrandNew).Should().BeTrue();
@@ -73,7 +79,8 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             "5.0.0",
             current,
             priorVersionMeta: null,
-            now
+            now,
+            NoPopularNames
         );
 
         flags.HasFlag(AnomalyFlags.BrandNew).Should().BeFalse();
@@ -81,37 +88,103 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
     }
 
     [Fact]
-    public void EvaluateFlagsTyposquatForCloseNpmName()
+    public void EvaluateFlagsTyposquatWhenCandidateIsLowTrafficNearPopularName()
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
+        DateTime now = DateTime.UtcNow;
 
-        // "lodahs" — one transposition away from "lodash".
+        IReadOnlySet<string> popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "lodash",
+        };
+
+        // "lodahs" — one transposition away from "lodash", low downloads, single maintainer.
+        PackageMeta candidate = new()
+        {
+            Id = Guid.NewGuid(),
+            Ecosystem = Ecosystem.Npm,
+            Name = "lodahs",
+            Version = "1.0.0",
+            PublishedAt = now.AddDays(-5),
+            MaintainersJson = "[\"mallory\"]",
+            WeeklyDownloads = 30,
+            FetchedAt = now,
+        };
+
         AnomalyFlags flags = detector.Evaluate(
             Ecosystem.Npm,
             "lodahs",
             "1.0.0",
-            current: null,
+            candidate,
             priorVersionMeta: null,
-            DateTime.UtcNow
+            now,
+            popular
         );
 
         flags.HasFlag(AnomalyFlags.Typosquat).Should().BeTrue();
     }
 
     [Fact]
-    public void EvaluateDoesNotFlagKnownPopularPackageAsTyposquat()
+    public void EvaluateDoesNotFlagPopularPackageAsTyposquatEvenWhenNameSimilar()
     {
+        // The y18n regression — `y18n` is Levenshtein 2 from `yarn` but has 100M+
+        // downloads/week. New detector must not fire typosquat on a candidate whose own
+        // download count clears the popularity threshold.
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
+        DateTime now = DateTime.UtcNow;
+
+        IReadOnlySet<string> popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "yarn",
+        };
+
+        PackageMeta candidate = new()
+        {
+            Id = Guid.NewGuid(),
+            Ecosystem = Ecosystem.Npm,
+            Name = "y18n",
+            Version = "4.0.3",
+            PublishedAt = now.AddYears(-3),
+            MaintainersJson = "[\"node-org\", \"bcoe\"]",
+            WeeklyDownloads = 100_000_000,
+            FetchedAt = now,
+        };
 
         AnomalyFlags flags = detector.Evaluate(
             Ecosystem.Npm,
+            "y18n",
+            "4.0.3",
+            candidate,
+            priorVersionMeta: null,
+            now,
+            popular
+        );
+
+        flags.HasFlag(AnomalyFlags.Typosquat).Should().BeFalse();
+    }
+
+    [Fact]
+    public void EvaluateDoesNotFlagTyposquatWithoutCandidateMetadata()
+    {
+        // Conservative fallback: without registry metadata we can't distinguish legit-but-
+        // unknown from a real squat. Refuse to fire on name alone.
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
+        IReadOnlySet<string> popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
             "lodash",
-            "4.17.21",
+        };
+
+        AnomalyFlags flags = detector.Evaluate(
+            Ecosystem.Npm,
+            "lodahs",
+            "1.0.0",
             current: null,
             priorVersionMeta: null,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            popular
         );
 
         flags.HasFlag(AnomalyFlags.Typosquat).Should().BeFalse();
@@ -151,7 +224,8 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
             "2.0.0",
             current,
             prior,
-            now
+            now,
+            NoPopularNames
         );
 
         flags.HasFlag(AnomalyFlags.NewMaintainerThisVersion).Should().BeTrue();
@@ -163,13 +237,19 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
         using IServiceScope scope = _factory.Services.CreateScope();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
 
+        IReadOnlySet<string> popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "lodash",
+        };
+
         AnomalyFlags flags = detector.Evaluate(
             Ecosystem.Npm,
             "@lodash/lodash",
             "1.0.0",
             current: null,
             priorVersionMeta: null,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            popular
         );
 
         flags.HasFlag(AnomalyFlags.HighScopeMismatch).Should().BeTrue();
@@ -233,6 +313,39 @@ public sealed class AnomalyDetectorTests : IClassFixture<ShieldWebAppFactory>
         ShieldDbContext shieldDb = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
         FeedsDbContext feedsDb = scope.ServiceProvider.GetRequiredService<FeedsDbContext>();
         IAnomalyDetector detector = scope.ServiceProvider.GetRequiredService<IAnomalyDetector>();
+
+        DateTime now = DateTime.UtcNow;
+
+        // Seed PackageMetas: one popular reference (lodash, 1B downloads) + one suspect
+        // candidate (lodahs, 30 downloads, brand new, single maintainer). The detector
+        // loads its popular set from this table at runtime.
+        feedsDb.PackageMetas.Add(
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Ecosystem = Ecosystem.Npm,
+                Name = "lodash",
+                Version = "4.17.21",
+                PublishedAt = now.AddYears(-2),
+                MaintainersJson = "[\"jdalton\", \"mathias\"]",
+                WeeklyDownloads = 1_000_000_000,
+                FetchedAt = now,
+            }
+        );
+        feedsDb.PackageMetas.Add(
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Ecosystem = Ecosystem.Npm,
+                Name = "lodahs",
+                Version = "1.0.0",
+                PublishedAt = now.AddDays(-3),
+                MaintainersJson = "[\"mallory\"]",
+                WeeklyDownloads = 30,
+                FetchedAt = now,
+            }
+        );
+        await feedsDb.SaveChangesAsync();
 
         Source source = new()
         {

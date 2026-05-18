@@ -651,6 +651,28 @@ public sealed class SourcesController : ControllerBase
         }
 
         DateTime nowUtc = DateTime.UtcNow;
+        // Load popular-names sets once per ecosystem present in the diff so the
+        // per-item anomaly evaluation doesn't hit FeedsDb 13 times for nothing.
+        HashSet<Ecosystem> diffEcosystems = addedRaw.Select(item => item.Ecosystem).ToHashSet();
+        Dictionary<Ecosystem, IReadOnlySet<string>> popularByEcosystem = new();
+        foreach (Ecosystem ecosystem in diffEcosystems)
+        {
+            List<string> names = await _feedsDb
+                .PackageMetas.AsNoTracking()
+                .Where(meta =>
+                    meta.Ecosystem == ecosystem
+                    && meta.WeeklyDownloads != null
+                    && meta.WeeklyDownloads >= 100_000
+                )
+                .Select(meta => meta.Name)
+                .Distinct()
+                .ToListAsync(ct);
+            popularByEcosystem[ecosystem] = new HashSet<string>(
+                names,
+                StringComparer.OrdinalIgnoreCase
+            );
+        }
+
         List<InventoryDiffEntry> added = new(addedRaw.Count);
         foreach (InventoryItem item in addedRaw)
         {
@@ -679,7 +701,8 @@ public sealed class SourcesController : ControllerBase
                 item.Version,
                 current,
                 prior,
-                nowUtc
+                nowUtc,
+                popularByEcosystem[item.Ecosystem]
             );
 
             added.Add(
