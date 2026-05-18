@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Text;
-using System.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -788,12 +787,17 @@ public sealed class AuthController : ControllerBase
 
     private static string BuildAuthenticatorUri(string username, string sharedKey)
     {
+        // Explicit algorithm + period in addition to secret/issuer/digits. Most authenticator
+        // apps default to SHA1 / 30s when omitted, but a few (FreeOTP, some 1Password setups)
+        // require them spelled out or they pick a different mode and the codes never match.
+        // Uri.EscapeDataString uses RFC 3986 percent-encoding — HttpUtility.UrlEncode uses
+        // `+` for space, which authenticator apps treat as a literal plus in the label.
         StringBuilder builder = new();
         builder.Append("otpauth://totp/Shield:");
-        builder.Append(HttpUtility.UrlEncode(username));
+        builder.Append(Uri.EscapeDataString(username));
         builder.Append("?secret=");
         builder.Append(sharedKey);
-        builder.Append("&issuer=Shield&digits=6");
+        builder.Append("&issuer=Shield&algorithm=SHA1&digits=6&period=30");
         return builder.ToString();
     }
 
