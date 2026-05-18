@@ -14,8 +14,9 @@ import {
   useUpdateSettings,
 } from '@/queries/settings'
 import { useSourcesQuery, useUpdateSourceAutoFixModeMutation } from '@/queries/sources'
+import { enumEntries, enumName } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
-import { AutoFixMode, AutoFixModeNames, Severity, SeverityNames, type SeverityName } from '@/types/api'
+import { AutoFixMode, Severity, type SeverityName } from '@/types/api'
 
 const { t } = useI18n()
 const { data, isLoading, isError } = useSettingsQuery()
@@ -68,6 +69,7 @@ const slackForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Slack)
 const googleForm = reactive<ProviderForm>(emptyProviderForm(DEFAULT_SCOPES.Google))
 
 const callbackBase = computed(() => `${window.location.origin}/api/oauth`)
+const autoFixModeOptions = computed(() => enumEntries('AutoFixMode'))
 
 const slackConfigured = computed(() => data.value?.slack?.configured ?? false)
 const googleConfigured = computed(() => data.value?.google?.configured ?? false)
@@ -85,7 +87,7 @@ watch(data, (next) => {
   oidcClientId.value = next.oidcClientId ?? ''
   oidcClientSecret.value = ''
   oidcSecretMasked.value = next.oidcClientSecretMasked
-  alertSeverityFloor.value = SeverityNames[next.alertSeverityFloor] ?? 'Low'
+  alertSeverityFloor.value = (enumName('Severity', next.alertSeverityFloor) || 'Low') as SeverityName
   retentionDays.value = next.retentionDays
 
   githubForm.clientId = next.github?.clientId ?? ''
@@ -109,7 +111,7 @@ watch(data, (next) => {
     oidcEnabled: next.oidcEnabled,
     oidcIssuer: next.oidcIssuer ?? '',
     oidcClientId: next.oidcClientId ?? '',
-    alertSeverityFloor: SeverityNames[next.alertSeverityFloor] ?? 'Low',
+    alertSeverityFloor: (enumName('Severity', next.alertSeverityFloor) || 'Low') as SeverityName,
     retentionDays: next.retentionDays,
   }
 }, { immediate: true })
@@ -667,8 +669,8 @@ async function onTestOidc(): Promise<void> {
                       class="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
                       @change="onAutoFixModeChange(src.id, Number(($event.target as HTMLSelectElement).value) as AutoFixMode)"
                     >
-                      <option v-for="(name, val) in AutoFixModeNames" :key="val" :value="val">
-                        {{ t(`screen.settings.auto_fix_mode.${name}`) }}
+                      <option v-for="entry in autoFixModeOptions" :key="entry.value" :value="entry.value">
+                        {{ t(`screen.settings.auto_fix_mode.${entry.name}`) }}
                       </option>
                     </select>
                   </td>

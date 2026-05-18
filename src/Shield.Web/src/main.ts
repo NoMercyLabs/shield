@@ -6,6 +6,7 @@ import { i18n } from '@/i18n'
 import { bootstrapPwa } from '@/lib/pwa'
 import { router } from '@/router'
 import { bootstrapAuth } from '@/stores/auth'
+import { loadEnums } from '@/stores/enums'
 
 import '@/styles/main.css'
 
@@ -19,7 +20,9 @@ app.use(i18n)
 // build doesn't miss the event (it fires once per session, usually right after first paint).
 bootstrapPwa()
 
-bootstrapAuth().finally(() => {
+// Auth + enum catalog hydrate in parallel — neither blocks the other, and both finish
+// before mount so the first render has the labels needed for nav badges + dropdowns.
+Promise.all([bootstrapAuth(), loadEnums()]).finally(() => {
   app.mount('#app')
 
   // Register the service worker AFTER mount so the first paint isn't blocked on it. The SW

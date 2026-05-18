@@ -22,11 +22,12 @@ import {
 } from '@/queries/access'
 import { useStartImpersonationMutation } from '@/queries/impersonation'
 import { useAuth } from '@/stores/auth'
+import { enumName } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import SortableTh from '@/components/SortableTh.vue'
 import { useClientSort } from '@/composables/useClientSort'
 import type { AccessRoleName, AccessUser, GithubUserSummary, PendingInvite } from '@/types/api'
-import { SourceAccessLevel, SourceAccessLevelNames } from '@/types/api'
+import { SourceAccessLevel } from '@/types/api'
 
 const users = useAccessUsersQuery()
 const groups = useAccessGroupsQuery()
@@ -931,8 +932,8 @@ function fmtDate(iso: string): string {
       <p class="mt-2 text-xs">
         {{ t('access_view.access_levels_label') }}
         {{ t('access_view.access_levels_detail', {
-          read: SourceAccessLevelNames[SourceAccessLevel.Read],
-          triage: SourceAccessLevelNames[SourceAccessLevel.Triage],
+          read: enumName('SourceAccessLevel', SourceAccessLevel.Read),
+          triage: enumName('SourceAccessLevel', SourceAccessLevel.Triage),
         }) }}
       </p>
     </section>

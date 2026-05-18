@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 
 import { api } from '@/lib/api'
-import { FeedNames } from '@/types/api'
+import { enumName } from '@/stores/enums'
 import type { Feed, FeedStatus } from '@/types/api'
 
 export const useFeedsQuery = () => useQuery({
@@ -17,7 +17,7 @@ export const useRefreshFeedMutation = () => {
   return useMutation({
     mutationFn: async (feed: Feed): Promise<void> => {
       // Refresh endpoint expects the enum name on the route (case-insensitive).
-      await api.post(`/feeds/${FeedNames[feed]}/refresh`)
+      await api.post(`/feeds/${enumName('Feed', feed)}/refresh`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feeds'] })

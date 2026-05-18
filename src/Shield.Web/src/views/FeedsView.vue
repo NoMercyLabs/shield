@@ -6,9 +6,9 @@ import { useI18n } from 'vue-i18n'
 import SortableTh from '@/components/SortableTh.vue'
 import { useClientSort } from '@/composables/useClientSort'
 import { useFeedsQuery, useRefreshFeedMutation } from '@/queries/feeds'
+import { enumName } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
-import { FeedNames } from '@/types/api'
 import type { Feed, FeedStatus } from '@/types/api'
 
 const { t } = useI18n()
@@ -20,7 +20,7 @@ const rows = computed<FeedStatus[]>(() => data.value ?? [])
 const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<FeedStatus>(
   rows,
   [
-    { key: 'feed', extract: row => FeedNames[row.feed], defaultDirection: 'asc' },
+    { key: 'feed', extract: row => enumName('Feed', row.feed), defaultDirection: 'asc' },
     { key: 'lastSuccess', extract: row => row.lastSuccessAt, defaultDirection: 'desc' },
     { key: 'nextRun', extract: row => row.nextRunAt, defaultDirection: 'asc' },
     {
@@ -35,10 +35,10 @@ const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<FeedStatus>(
 async function onRefresh(feed: Feed): Promise<void> {
   try {
     await refresh.mutateAsync(feed)
-    push('success', t('feeds.refresh_queued', { name: FeedNames[feed] }))
+    push('success', t('feeds.refresh_queued', { name: enumName('Feed', feed) }))
   }
   catch {
-    push('error', t('feeds.refresh_failed', { name: FeedNames[feed] }))
+    push('error', t('feeds.refresh_failed', { name: enumName('Feed', feed) }))
   }
 }
 </script>
@@ -71,7 +71,7 @@ async function onRefresh(feed: Feed): Promise<void> {
         </thead>
         <tbody class="divide-y divide-slate-800">
           <tr v-for="status in sortedRows" :key="status.feed" class="hover:bg-slate-800/50">
-            <td class="px-4 py-2 font-medium">{{ FeedNames[status.feed] }}</td>
+            <td class="px-4 py-2 font-medium">{{ enumName('Feed', status.feed) }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.lastSuccessAt) }}</td>
             <td class="px-4 py-2 text-slate-400">{{ formatDate(status.nextRunAt) }}</td>
             <td class="px-4 py-2">

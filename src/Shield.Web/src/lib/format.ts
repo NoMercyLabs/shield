@@ -1,4 +1,5 @@
-import { Severity, SeverityNames } from '@/types/api'
+import { enumName } from '@/stores/enums'
+import { Severity } from '@/types/api'
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -8,13 +9,13 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 export function severityName(severity: Severity): string {
-  return SeverityNames[severity] ?? String(severity)
+  return enumName('Severity', severity) || String(severity)
 }
 
-// i18n key for vue-i18n lookups (e.g. `severity.critical`). Falls back to the English name
-// when the severity is out of range, so the missing-key warning surfaces instead of crashing.
+// i18n key for vue-i18n lookups (e.g. `severity.critical`). Falls back to "low" when the
+// catalog hasn't hydrated, so the missing-key warning surfaces instead of crashing.
 export function severityI18nKey(severity: Severity): string {
-  const name = SeverityNames[severity]
+  const name = enumName('Severity', severity)
   return name ? `severity.${name.toLowerCase()}` : 'severity.low'
 }
 

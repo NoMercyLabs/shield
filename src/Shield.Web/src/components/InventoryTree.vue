@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import InventoryTreeRow from '@/components/InventoryTreeRow.vue'
 import { buildInventoryTree } from '@/lib/inventory-tree'
 import type { EcosystemGroup } from '@/lib/inventory-tree'
-import { EcosystemNames } from '@/types/api'
+import { enumName } from '@/stores/enums'
 import type { Ecosystem, InventoryItemResponse } from '@/types/api'
 
 const props = defineProps<{ items: InventoryItemResponse[] }>()
@@ -78,7 +78,7 @@ function toggleNode(id: string): void {
         <span class="flex items-center gap-2 text-sm font-medium text-slate-200">
           <ChevronRight v-if="collapsedEcosystems.has(group.ecosystem)" class="h-4 w-4 text-slate-500" />
           <ChevronDown v-else class="h-4 w-4 text-slate-500" />
-          {{ EcosystemNames[group.ecosystem] }}
+          {{ enumName('Ecosystem', group.ecosystem) }}
           <span class="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-400">
             {{ group.totalCount }}
           </span>

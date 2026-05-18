@@ -1,8 +1,11 @@
 // Hand-written API types, aligned with the live server contract on 2026-05-16.
 // Re-run `npm run types:gen` once OpenAPI exposes enum metadata.
 //
-// Server enums serialize as INTEGERS (System.Text.Json default) and the API
-// accepts integers in request bodies. UI surfaces use the string names below.
+// Server enums serialize as INTEGERS (System.Text.Json default) and the API accepts
+// integers in request bodies. Display names come from the server-hydrated enum catalog
+// via `enumName('EnumType', value)` in `@/stores/enums` — that endpoint reflects the C#
+// enum at startup so adding a value server-side propagates to the SPA without a second
+// copy here to forget.
 
 // ---------- enums (numeric — wire format) ----------
 
@@ -14,12 +17,6 @@ export const Severity = {
 } as const
 export type Severity = (typeof Severity)[keyof typeof Severity]
 export type SeverityName = keyof typeof Severity
-export const SeverityNames: Record<Severity, SeverityName> = {
-  0: 'Low',
-  1: 'Medium',
-  2: 'High',
-  3: 'Critical',
-}
 
 export const Ecosystem = {
   Npm: 0,
@@ -39,22 +36,6 @@ export const Ecosystem = {
 } as const
 export type Ecosystem = (typeof Ecosystem)[keyof typeof Ecosystem]
 export type EcosystemName = keyof typeof Ecosystem
-export const EcosystemNames: Record<Ecosystem, EcosystemName> = {
-  0: 'Npm',
-  1: 'Nuget',
-  2: 'Composer',
-  3: 'Gradle',
-  4: 'Os',
-  5: 'Python',
-  6: 'Go',
-  7: 'Rust',
-  8: 'RubyGems',
-  9: 'SwiftPM',
-  10: 'Pub',
-  11: 'Maven',
-  12: 'Hex',
-  13: 'Vcpkg',
-}
 
 export const SourceType = {
   GithubRepo: 0,
@@ -68,16 +49,6 @@ export const SourceType = {
 } as const
 export type SourceType = (typeof SourceType)[keyof typeof SourceType]
 export type SourceTypeName = keyof typeof SourceType
-export const SourceTypeNames: Record<SourceType, SourceTypeName> = {
-  0: 'GithubRepo',
-  1: 'LocalFolder',
-  2: 'LinuxHost',
-  3: 'GitlabRepo',
-  4: 'BitbucketRepo',
-  5: 'ForgejoRepo',
-  6: 'GiteaRepo',
-  7: 'CodebergRepo',
-}
 
 export const AutoFixMode = {
   Off: 0,
@@ -86,11 +57,6 @@ export const AutoFixMode = {
 } as const
 export type AutoFixMode = (typeof AutoFixMode)[keyof typeof AutoFixMode]
 export type AutoFixModeName = keyof typeof AutoFixMode
-export const AutoFixModeNames: Record<AutoFixMode, AutoFixModeName> = {
-  0: 'Off',
-  1: 'WeeklyDigest',
-  2: 'OnEveryScan',
-}
 
 export const FindingState = {
   Open: 0,
@@ -100,12 +66,6 @@ export const FindingState = {
 } as const
 export type FindingState = (typeof FindingState)[keyof typeof FindingState]
 export type FindingStateName = keyof typeof FindingState
-export const FindingStateNames: Record<FindingState, FindingStateName> = {
-  0: 'Open',
-  1: 'Acked',
-  2: 'Resolved',
-  3: 'Suppressed',
-}
 
 export const ChannelType = {
   Discord: 0,
@@ -117,14 +77,6 @@ export const ChannelType = {
 } as const
 export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType]
 export type ChannelTypeName = keyof typeof ChannelType
-export const ChannelTypeNames: Record<ChannelType, ChannelTypeName> = {
-  0: 'Discord',
-  1: 'Ntfy',
-  2: 'Smtp',
-  3: 'Inbox',
-  4: 'Slack',
-  5: 'Webhook',
-}
 
 export const Feed = {
   Osv: 0,
@@ -135,19 +87,15 @@ export const Feed = {
   TrivyDb: 5,
   Kev: 6,
   Epss: 7,
+  NugetRegistry: 8,
+  PyPiRegistry: 9,
+  CratesRegistry: 10,
+  RubyGemsRegistry: 11,
+  PackagistRegistry: 12,
+  HexRegistry: 13,
 } as const
 export type Feed = (typeof Feed)[keyof typeof Feed]
 export type FeedName = keyof typeof Feed
-export const FeedNames: Record<Feed, FeedName> = {
-  0: 'Osv',
-  1: 'Ghsa',
-  2: 'NpmRegistry',
-  3: 'DepsDev',
-  4: 'Socket',
-  5: 'TrivyDb',
-  6: 'Kev',
-  7: 'Epss',
-}
 
 // ---------- auth ----------
 
@@ -298,7 +246,7 @@ export interface SnapshotSummary {
   takenAt: string
   contentsSha: string
   itemCount: number
-  ecosystems?: Partial<Record<keyof typeof EcosystemNames, number>>
+  ecosystems?: Partial<Record<EcosystemName, number>>
 }
 
 export interface SourceDetail {
@@ -597,7 +545,15 @@ export interface ChangePasswordRequest {
   newPassword: string
 }
 
-export type OAuthProviderName = 'Github' | 'Slack' | 'Google'
+export type OAuthProviderName =
+  | 'Github'
+  | 'Slack'
+  | 'Google'
+  | 'Gitlab'
+  | 'Bitbucket'
+  | 'Forgejo'
+  | 'Gitea'
+  | 'Codeberg'
 
 export interface OAuthStartResponse {
   authorizationUrl: string
@@ -866,10 +822,6 @@ export const SourceAccessLevel = {
 } as const
 export type SourceAccessLevel = (typeof SourceAccessLevel)[keyof typeof SourceAccessLevel]
 export type SourceAccessLevelName = keyof typeof SourceAccessLevel
-export const SourceAccessLevelNames: Record<SourceAccessLevel, SourceAccessLevelName> = {
-  0: 'Read',
-  1: 'Triage',
-}
 
 export type AccessRoleName = 'Admin' | 'Maintainer' | 'Viewer'
 
@@ -1076,14 +1028,6 @@ export const NotificationKind = {
 } as const
 export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind]
 export type NotificationKindName = keyof typeof NotificationKind
-export const NotificationKindNames: Record<NotificationKind, NotificationKindName> = {
-  0: 'ScanFailed',
-  1: 'OauthExpiring',
-  2: 'FeedDown',
-  3: 'MaintainerChange',
-  4: 'NewAnomaly',
-  5: 'SystemMessage',
-}
 
 export interface Notification {
   id: string

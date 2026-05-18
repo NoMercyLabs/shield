@@ -12,11 +12,11 @@ import {
   useSecurityEventsQuery,
   useSecurityHostsQuery,
 } from '@/queries/security'
+import { enumName } from '@/stores/enums'
 import { useLiveSecurityEvents } from '@/stores/liveSecurityEvents'
 import { formatDate } from '@/lib/format'
 import {
   Severity,
-  SeverityNames,
   type IpReputation,
   type SecurityEvent,
   type SecurityEventFilter,
@@ -107,7 +107,7 @@ const totalTimelinePages = computed(() => {
 })
 
 function severityLabel(value: Severity): string {
-  return SeverityNames[value] ?? 'Unknown'
+  return enumName('Severity', value) || 'Unknown'
 }
 
 function severityBadgeClass(value: Severity): string {

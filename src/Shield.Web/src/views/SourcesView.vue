@@ -13,10 +13,11 @@ import { useRefreshGithubAccessMutation } from '@/queries/access'
 import { useOAuthStatus } from '@/queries/oauth'
 import { useBulkFromGithubMutation, useBulkLocalFoldersMutation, useCreateSourceMutation, useSourcesQuery } from '@/queries/sources'
 import { useAuth } from '@/stores/auth'
+import { enumName } from '@/stores/enums'
 import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
 import type { BulkSelection, Source } from '@/types/api'
-import { AutoFixMode, SourceType, SourceTypeNames } from '@/types/api'
+import { AutoFixMode, SourceType } from '@/types/api'
 
 const { t } = useI18n()
 const { data, isLoading, isError } = useSourcesQuery()
@@ -40,7 +41,7 @@ const { sortedRows, sortKey, sortDir, toggleSort } = useClientSort<Source>(
   sortableRows,
   [
     { key: 'name', extract: row => row.name, defaultDirection: 'asc' },
-    { key: 'type', extract: row => SourceTypeNames[row.type], defaultDirection: 'asc' },
+    { key: 'type', extract: row => enumName('SourceType', row.type), defaultDirection: 'asc' },
     { key: 'lastScanned', extract: row => row.lastScannedAt, defaultDirection: 'desc' },
     {
       key: 'status',
@@ -282,7 +283,7 @@ async function onSubmit(): Promise<void> {
             </td>
             <td class="px-4 py-2 text-slate-400">
               <span class="inline-flex items-center gap-1">
-                {{ SourceTypeNames[source.type] }}
+                {{ enumName('SourceType', source.type) }}
                 <span
                   v-if="source.detectedRemote"
                   class="inline-flex items-center gap-0.5 text-xs text-slate-500"
