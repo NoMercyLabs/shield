@@ -15,14 +15,20 @@ namespace Shield.Api.Hardening;
 // authoritative client IP (no chain to parse, can't be padded by an earlier hop) and
 // Cloudflare sets it on every request through their edge.
 //
-// "Trusted peer" is the union of three sets:
-//   1. Cloudflare's published IP ranges (the request came straight from a CF edge),
+// "Trusted peer" is the union of four sets:
+//   1. Cloudflare's published IP ranges (the request came straight from a CF edge).
 //   2. Operator-configured KnownProxies / KnownNetworks from ForwardedHeadersOptions
-//      (so an in-network cloudflared daemon or sidecar nginx still gets to forward the
-//      header — this was the bug that left LAN IPs in audit logs),
-//   3. Loopback (so a local dev cloudflared on the same host works too).
-// A client that bypasses the proxy chain entirely still falls outside all three sets
-// and can't forge the header.
+//      (explicit allowlist for unusual deployments).
+//   3. Loopback — Shield's reference Docker compose binds 127.0.0.1:8842 with cloudflared
+//      on the host hitting that loopback port.
+//   4. RFC1918 / ULA / link-local — Shield's sidecar Docker compose puts cloudflared in
+//      the same bridge network, so the immediate peer is a container IP in 172.16.0.0/12
+//      (or 10.x / 192.168.x for custom networks). Treating those as trusted by default
+//      matches Shield's actual deployment shapes; operators exposing Shield directly to
+//      a hostile LAN should bind to loopback like the reference compose does.
+//
+// A public-internet client that bypasses the proxy chain entirely still falls outside
+// every set and can't forge the header.
 public sealed class CloudflareForwardedIpMiddleware
 {
     public const string ConnectingIpHeader = "CF-Connecting-IP";
@@ -96,6 +102,8 @@ public sealed class CloudflareForwardedIpMiddleware
 
         if (IPAddress.IsLoopback(normalised))
             return true;
+        if (IsPrivateAddress(normalised))
+            return true;
         foreach (IPAddress proxy in _trustedProxies)
         {
             IPAddress proxyNormalised = proxy.IsIPv4MappedToIPv6 ? proxy.MapToIPv4() : proxy;
@@ -110,6 +118,28 @@ public sealed class CloudflareForwardedIpMiddleware
         foreach (IPNetwork network in _cloudflareRanges)
         {
             if (network.Contains(normalised))
+                return true;
+        }
+        return false;
+    }
+
+    private static readonly IPNetwork[] PrivateNetworks =
+    [
+        // IPv4 RFC1918 — covers Docker bridge defaults (172.16.0.0/12) and every typical
+        // home / corporate LAN (10.x, 192.168.x).
+        new(IPAddress.Parse("10.0.0.0"), 8),
+        new(IPAddress.Parse("172.16.0.0"), 12),
+        new(IPAddress.Parse("192.168.0.0"), 16),
+        // IPv6 ULA (RFC4193) + link-local (RFC4291).
+        new(IPAddress.Parse("fc00::"), 7),
+        new(IPAddress.Parse("fe80::"), 10),
+    ];
+
+    private static bool IsPrivateAddress(IPAddress address)
+    {
+        foreach (IPNetwork network in PrivateNetworks)
+        {
+            if (network.Contains(address))
                 return true;
         }
         return false;
