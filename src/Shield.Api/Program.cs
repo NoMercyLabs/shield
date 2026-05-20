@@ -988,6 +988,11 @@ if (enableOpenApi)
 // Resolve wwwroot defensively — prefer the configured WebRootPath, fall back to AppContext.BaseDirectory/wwwroot
 // then ContentRootPath/wwwroot. Necessary because `dotnet run`, `dotnet publish` output, and the Docker image
 // each leave wwwroot in a different spot, and a missing dir silently disables static-file serving.
+//
+// Single-file publish has no physical wwwroot — the SPA is embedded as resources under the
+// `wwwroot/` logical prefix and served via ManifestEmbeddedFileProvider. The probe order
+// below tries disk first so an operator who drops a custom wwwroot/ next to the binary can
+// override the bundled SPA without rebuilding.
 string[] candidateWebRoots =
 [
     app.Environment.WebRootPath ?? string.Empty,
@@ -995,21 +1000,33 @@ string[] candidateWebRoots =
     Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
     Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "wwwroot"),
 ];
-string resolvedWebRoot =
-    candidateWebRoots
-        .Where(path => !string.IsNullOrWhiteSpace(path))
-        .Select(Path.GetFullPath)
-        .FirstOrDefault(Directory.Exists)
-    ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+string? resolvedWebRoot = candidateWebRoots
+    .Where(path => !string.IsNullOrWhiteSpace(path))
+    .Select(Path.GetFullPath)
+    .FirstOrDefault(Directory.Exists);
 
-Microsoft.Extensions.FileProviders.PhysicalFileProvider spaFileProvider = new(resolvedWebRoot);
-
-// Keep IWebHostEnvironment.WebRootFileProvider aligned with the resolved path so middleware
-// that resolves IWebHostEnvironment from DI (e.g. CrawlerMetaMiddleware) reads index.html
-// from the same wwwroot the static-file pipeline serves.
-app.Environment.WebRootPath = resolvedWebRoot;
-app.Environment.WebRootFileProvider = spaFileProvider;
-app.Logger.LogInformation("SPA file provider rooted at {ResolvedWebRoot}", resolvedWebRoot);
+Microsoft.Extensions.FileProviders.IFileProvider spaFileProvider;
+if (resolvedWebRoot is not null)
+{
+    spaFileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(resolvedWebRoot);
+    app.Environment.WebRootPath = resolvedWebRoot;
+    app.Environment.WebRootFileProvider = spaFileProvider;
+    app.Logger.LogInformation("SPA file provider rooted at {ResolvedWebRoot}", resolvedWebRoot);
+}
+else
+{
+    // Single-file publish path — wwwroot lives as embedded resources under the assembly's
+    // root namespace. The /wwwroot subdirectory inside the manifest matches the logical
+    // names the csproj writes via the EmbeddedResource glob.
+    spaFileProvider = new Microsoft.Extensions.FileProviders.ManifestEmbeddedFileProvider(
+        typeof(Program).Assembly,
+        "wwwroot"
+    );
+    app.Environment.WebRootFileProvider = spaFileProvider;
+    app.Logger.LogInformation(
+        "SPA file provider rooted at embedded resources (single-file publish — no on-disk wwwroot)"
+    );
+}
 
 app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = spaFileProvider });
 app.UseStaticFiles(new StaticFileOptions { FileProvider = spaFileProvider });
@@ -1109,19 +1126,39 @@ app.MapGet(
 );
 
 // SPA fallback — serve index.html for non-API GETs.
-app.MapFallback(context =>
+app.MapFallback(async context =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
-        return Task.CompletedTask;
+        return;
     }
     context.Response.ContentType = "text/html";
-    string indexPath = Path.Combine(resolvedWebRoot, "index.html");
-    if (File.Exists(indexPath))
-        return context.Response.SendFileAsync(indexPath);
+
+    // Disk path takes priority when present (operator-supplied SPA override). Otherwise the
+    // SPA index.html comes from whatever provider was resolved above (PhysicalFileProvider on
+    // disk, or ManifestEmbeddedFileProvider when running as a single-file publish).
+    if (resolvedWebRoot is not null)
+    {
+        string indexPath = Path.Combine(resolvedWebRoot, "index.html");
+        if (File.Exists(indexPath))
+        {
+            await context.Response.SendFileAsync(indexPath);
+            return;
+        }
+    }
+
+    Microsoft.Extensions.FileProviders.IFileInfo embeddedIndex = spaFileProvider.GetFileInfo(
+        "index.html"
+    );
+    if (embeddedIndex.Exists)
+    {
+        await using Stream stream = embeddedIndex.CreateReadStream();
+        await stream.CopyToAsync(context.Response.Body);
+        return;
+    }
+
     context.Response.StatusCode = StatusCodes.Status404NotFound;
-    return Task.CompletedTask;
 });
 
 app.Run();

@@ -24,6 +24,9 @@
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="WebPush" />
+    <!-- Serves wwwroot from inside the single-file assembly when no on-disk wwwroot exists.
+         Always referenced (cheap, ~50 KB) so debug + publish paths share the same provider type. -->
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Shield.Api.Tests" />
@@ -33,5 +36,27 @@
        and any host between. ~880 KB cost is acceptable for fontconfig-free rendering. -->
   <ItemGroup>
     <EmbeddedResource Include="Services\Assets\InterVariable.ttf" />
+  </ItemGroup>
+  <!-- Single-file publish opt-in. Activate via `dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true`
+       (or the publish-singlefile.ps1 helper). Self-contained + native-libs-in-bundle means no .NET runtime
+       install required on the target machine; the SPA wwwroot ships as embedded resources via
+       ManifestEmbeddedFileProvider — see Program.cs SPA file provider resolution. Trimming stays off because
+       ASP.NET Core / EF Core lean on reflection. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+  <!-- Embed the built SPA into the assembly so a single Shield.exe can serve it via
+       ManifestEmbeddedFileProvider. LogicalName preserves the relative path under `wwwroot/`
+       so the manifest matches the on-disk layout the dev-mode PhysicalFileProvider serves. -->
+  <ItemGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <EmbeddedResource Include="wwwroot\**\*" Exclude="wwwroot\**\*.map;wwwroot\**\*.gz">
+      <LogicalName>$([System.String]::Copy('%(RelativeDir)%(Filename)%(Extension)').Replace('\','/'))</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

@@ -44,3 +44,4 @@ secrets.json
 
 # Local build verification scratch
 bin-verify/
+/dist/
