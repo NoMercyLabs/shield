@@ -81,6 +81,13 @@ if (Test-Path $exePath) {
         $launcherDest = Join-Path (Split-Path $outDir -Parent) 'Run-Shield.cmd'
         Copy-Item $launcherTemplate $launcherDest -Force
     }
+    # Also drop the secrets example alongside so operators see the format. Live secrets.cmd
+    # under dist/data/ is never overwritten because it's gitignored + outside the publish path.
+    $secretsExample = Join-Path $root 'scripts/secrets.cmd.example'
+    if (Test-Path $secretsExample) {
+        $secretsDest = Join-Path (Split-Path $outDir -Parent) 'secrets.cmd.example'
+        Copy-Item $secretsExample $secretsDest -Force
+    }
 
     $size = [math]::Round((Get-Item $exePath).Length / 1MB, 1)
     Write-Host ""

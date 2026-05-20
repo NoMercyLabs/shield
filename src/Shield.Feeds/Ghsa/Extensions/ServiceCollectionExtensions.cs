@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -23,6 +22,12 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddTransient<PollyTransientHandler>();
+        services.AddTransient<GhsaAuthHandler>();
+
+        // Default token source reads GhsaOptions.Pat from config. Shield.Api overrides
+        // this binding (Replace) with OAuthBackedGhsaTokenSource so a logged-in GitHub
+        // user is enough — no separate PAT required.
+        services.AddSingleton<IGhsaAuthTokenSource, GhsaPatTokenSource>();
 
         services
             .AddHttpClient<GhsaGraphQLClient>(
@@ -31,15 +36,9 @@ public static class ServiceCollectionExtensions
                     GhsaOptions options = sp.GetRequiredService<IOptions<GhsaOptions>>().Value;
                     client.BaseAddress = new Uri(options.Endpoint);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent);
-                    if (!string.IsNullOrWhiteSpace(options.Pat))
-                    {
-                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                            "Bearer",
-                            options.Pat
-                        );
-                    }
                 }
             )
+            .AddHttpMessageHandler<GhsaAuthHandler>()
             .AddHttpMessageHandler<PollyTransientHandler>();
 
         services.AddSingleton<IAdvisorySink, InMemoryAdvisorySink>();

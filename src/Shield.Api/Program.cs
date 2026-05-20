@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -60,6 +61,16 @@ builder.Services.AddShieldFeeds(configuration);
 // placeholders, and Replace() in AddShieldDataSinks swaps them for the real DB-backed
 // implementations. Without this, every feed sync writes to a List nobody reads.
 builder.Services.AddShieldDataSinks();
+
+// Override the default Pat-only token source with one that ALSO checks the OAuth store —
+// a logged-in GitHub user is enough to raise the GHSA quota, no separate PAT required.
+// Registered as Scoped because IOAuthTokenStore depends on scoped DbContext access.
+builder.Services.Replace(
+    ServiceDescriptor.Scoped<
+        IGhsaAuthTokenSource,
+        Shield.Api.Services.Feeds.OAuthBackedGhsaTokenSource
+    >()
+);
 
 // Per-feed name sources — IPackageNameSource is constructed inside each feed's DI factory
 // so the same interface can serve any ecosystem without keyed-service ceremony in the

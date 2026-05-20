@@ -1,31 +1,48 @@
 @echo off
-REM One-click Shield launcher. Sets sensible defaults so a fresh extract just works.
-REM Override anything below by setting the env var before running this script.
+REM One-click Shield launcher. Defaults to Development env so the DataProtection master
+REM key isn't required — keys persist unprotected to data\keys\, matching the dev-mode
+REM dotnet-run flow. To deploy in real production, set DOTNET_ENVIRONMENT=Production AND
+REM Shield__Auth__DataProtectionMasterKey to a stable 32-byte base64 value BEFORE running.
 
 setlocal
 pushd "%~dp0win-x64"
 
-if "%Shield__Auth__DataProtectionMasterKey%"=="" (
-    echo [Shield] Shield__Auth__DataProtectionMasterKey is not set.
-    echo [Shield] Set it to a stable 32-byte base64 string before first run, otherwise
-    echo [Shield] stored secrets would be lost on every restart. Aborting.
-    pause
-    exit /b 1
-)
+if not exist "%~dp0data" mkdir "%~dp0data"
 
-if "%DOTNET_ENVIRONMENT%"=="" set DOTNET_ENVIRONMENT=Production
+REM Optional per-install secrets file. Kept under data\ so it travels with the DB and not
+REM with the dist/ checkout. Typical contents:
+REM   set Shield__Feeds__Ghsa__Pat=ghp_yourPersonalAccessToken
+REM   set Shield__Channels__Smtp__Password=...
+REM Anyone with read access to this file can act as Shield's outbound integrations — keep
+REM it next to the database it serves and back it up the same way.
+if exist "%~dp0data\secrets.cmd" call "%~dp0data\secrets.cmd"
+
+if "%DOTNET_ENVIRONMENT%"=="" set DOTNET_ENVIRONMENT=Development
 if "%Shield__Db__Shield%"=="" set Shield__Db__Shield=Data Source=%~dp0data\shield.db
 if "%Shield__Db__Feeds%"=="" set Shield__Db__Feeds=Data Source=%~dp0data\feeds.db
 if "%Shield__Auth__DataProtectionKeysPath%"=="" set Shield__Auth__DataProtectionKeysPath=%~dp0data\keys
 if "%SHIELD_PORT%"=="" set SHIELD_PORT=8842
 
-if not exist "%~dp0data" mkdir "%~dp0data"
+REM Quiet the EF Core / framework debug spam that ships with Development env defaults so
+REM the console stays readable. Override per-category if you need to diagnose a specific
+REM subsystem (e.g. set Logging__LogLevel__Shield=Debug before running).
+if "%Logging__LogLevel__Default%"=="" set Logging__LogLevel__Default=Warning
+if "%Logging__LogLevel__Shield%"=="" set Logging__LogLevel__Shield=Information
+if "%Logging__LogLevel__Microsoft%"=="" set Logging__LogLevel__Microsoft=Warning
+if "%Logging__LogLevel__Microsoft.Hosting.Lifetime%"=="" set Logging__LogLevel__Microsoft.Hosting.Lifetime=Information
+if "%Logging__LogLevel__Microsoft.AspNetCore.Hosting.Diagnostics%"=="" set Logging__LogLevel__Microsoft.AspNetCore.Hosting.Diagnostics=Warning
 
-echo [Shield] Starting on http://localhost:%SHIELD_PORT%
+REM Bind on all interfaces so reverse proxies on the LAN (e.g. Caddy at 192.168.2.201)
+REM can forward to this box. The browser still opens on localhost — that's just the URL
+REM the user lands on; the listener accepts every IP that resolves to this host.
+set ASPNETCORE_URLS=http://+:%SHIELD_PORT%
+
+echo [Shield] Listening on %ASPNETCORE_URLS%
+echo [Shield] Browser opens: http://localhost:%SHIELD_PORT%
 echo [Shield] Press Ctrl+C to stop.
 echo.
 start "" http://localhost:%SHIELD_PORT%
-Shield.exe --urls http://localhost:%SHIELD_PORT%
+Shield.exe
 
 popd
 endlocal
