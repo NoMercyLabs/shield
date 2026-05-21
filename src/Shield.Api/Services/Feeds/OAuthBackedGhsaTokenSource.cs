@@ -38,24 +38,51 @@ public sealed class OAuthBackedGhsaTokenSource : IGhsaAuthTokenSource
 
     public async ValueTask<string?> GetTokenAsync(CancellationToken ct = default)
     {
+        (string? token, _) = await ResolveAsync(ct);
+        return token;
+    }
+
+    public async ValueTask<GhsaTokenStatus> GetStatusAsync(CancellationToken ct = default)
+    {
+        (_, GhsaTokenStatus status) = await ResolveAsync(ct);
+        return status;
+    }
+
+    private async ValueTask<(string? Token, GhsaTokenStatus Status)> ResolveAsync(
+        CancellationToken ct
+    )
+    {
         string? dashboardPat = await _appSettings.GetStringAsync(AppSettingKeys.GhsaPat, ct);
         if (!string.IsNullOrWhiteSpace(dashboardPat))
-            return dashboardPat;
+            return (dashboardPat, new GhsaTokenStatus(GhsaTokenOrigin.DashboardPat));
 
         string? configPat = _options.CurrentValue.Pat;
         if (!string.IsNullOrWhiteSpace(configPat))
-            return configPat;
+            return (configPat, new GhsaTokenStatus(GhsaTokenOrigin.ConfigPat));
 
-        OAuthTokenSnapshot? snapshot = await _tokens.GetAnyAsync(OAuthProvider.Github, ct);
-        if (snapshot is not null && !string.IsNullOrWhiteSpace(snapshot.AccessToken))
+        OAuthTokenSnapshot? connect = await _tokens.GetAsync(OAuthProvider.Github, ct);
+        if (connect is not null && !string.IsNullOrWhiteSpace(connect.AccessToken))
         {
             _log.LogDebug(
-                "GHSA bearer resolved from OAuth store (account {Login})",
-                snapshot.AccountLogin
+                "GHSA bearer resolved from OAuth connect-flow ({Login})",
+                connect.AccountLogin
             );
-            return snapshot.AccessToken;
+            return (
+                connect.AccessToken,
+                new GhsaTokenStatus(GhsaTokenOrigin.OAuthConnect, connect.AccountLogin)
+            );
         }
 
-        return null;
+        OAuthTokenSnapshot? signin = await _tokens.GetAnyAsync(OAuthProvider.Github, ct);
+        if (signin is not null && !string.IsNullOrWhiteSpace(signin.AccessToken))
+        {
+            _log.LogDebug("GHSA bearer resolved from OAuth signin ({Login})", signin.AccountLogin);
+            return (
+                signin.AccessToken,
+                new GhsaTokenStatus(GhsaTokenOrigin.OAuthSignin, signin.AccountLogin)
+            );
+        }
+
+        return (null, new GhsaTokenStatus(GhsaTokenOrigin.None));
     }
 }

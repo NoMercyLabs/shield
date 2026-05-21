@@ -725,6 +725,19 @@ export interface Settings {
   codeberg?: OAuthProviderConfig | null
   publicUrl: string | null
   ghsaPatMasked: string | null
+  ghsaTokenStatus: GhsaTokenStatus | null
+}
+
+export type GhsaTokenOrigin =
+  | 'None'
+  | 'DashboardPat'
+  | 'ConfigPat'
+  | 'OAuthConnect'
+  | 'OAuthSignin'
+
+export interface GhsaTokenStatus {
+  origin: GhsaTokenOrigin
+  accountLogin: string | null
 }
 
 export interface SettingsUpdate {

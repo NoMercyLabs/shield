@@ -20,4 +20,14 @@ public sealed class GhsaPatTokenSource : IGhsaAuthTokenSource
         string? pat = _options.CurrentValue.Pat;
         return ValueTask.FromResult(string.IsNullOrWhiteSpace(pat) ? null : pat);
     }
+
+    public ValueTask<GhsaTokenStatus> GetStatusAsync(CancellationToken ct = default)
+    {
+        string? pat = _options.CurrentValue.Pat;
+        return ValueTask.FromResult(
+            string.IsNullOrWhiteSpace(pat)
+                ? new GhsaTokenStatus(GhsaTokenOrigin.None)
+                : new GhsaTokenStatus(GhsaTokenOrigin.ConfigPat)
+        );
+    }
 }

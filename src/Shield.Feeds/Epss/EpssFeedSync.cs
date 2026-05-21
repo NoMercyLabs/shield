@@ -15,8 +15,7 @@ public sealed class EpssFeedSync : IFeedSync
     // handler chain when chasing the redirect, leaving every EPSS sync stalled with zero
     // log signal. Pointing directly at the new origin avoids the dance entirely. Update
     // this constant if Empirical ever moves again.
-    public const string CsvUrl =
-        "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz";
+    public const string CsvUrl = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz";
     public const int BatchSize = 500;
 
     private readonly HttpClient _http;

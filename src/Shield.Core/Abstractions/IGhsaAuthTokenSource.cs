@@ -13,4 +13,22 @@ namespace Shield.Core.Abstractions;
 public interface IGhsaAuthTokenSource
 {
     ValueTask<string?> GetTokenAsync(CancellationToken ct = default);
+
+    /// Reports which source supplied the token (or none) without exposing the token itself.
+    /// Used by the dashboard to tell the operator that a GitHub OAuth sign-in already covers
+    /// the GHSA feed and no PAT is required.
+    ValueTask<GhsaTokenStatus> GetStatusAsync(CancellationToken ct = default);
 }
+
+public enum GhsaTokenOrigin
+{
+    None = 0,
+    DashboardPat = 1,
+    ConfigPat = 2,
+    OAuthConnect = 3,
+    OAuthSignin = 4,
+}
+
+/// Snapshot of which authentication path is supplying the GHSA token right now. AccountLogin
+/// is non-null only when the source is one of the OAuth origins.
+public sealed record GhsaTokenStatus(GhsaTokenOrigin Origin, string? AccountLogin = null);

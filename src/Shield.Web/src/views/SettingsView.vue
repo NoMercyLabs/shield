@@ -39,6 +39,7 @@ const publicUrl = ref('')
 const ghsaPatInput = ref('')
 const ghsaPatMasked = ref<string | null>(null)
 const ghsaPatClear = ref(false)
+const ghsaTokenStatus = ref<{ origin: string, accountLogin: string | null } | null>(null)
 
 // Dirty tracking — compared against the last loaded snapshot. The snapshot resets after
 // every successful save so the section dots clear together with the toast.
@@ -131,6 +132,7 @@ watch(data, (next) => {
   ghsaPatInput.value = ''
   ghsaPatMasked.value = next.ghsaPatMasked
   ghsaPatClear.value = false
+  ghsaTokenStatus.value = next.ghsaTokenStatus
 
   githubForm.clientId = next.github?.clientId ?? ''
   githubForm.scopes = next.github?.scopes ?? DEFAULT_SCOPES.Github
@@ -818,6 +820,28 @@ async function onTestOidc(): Promise<void> {
             </header>
 
             <div class="space-y-3">
+              <div
+                v-if="ghsaTokenStatus"
+                class="rounded border p-3 text-sm"
+                :class="ghsaTokenStatus.origin === 'None'
+                  ? 'border-amber-700 bg-amber-900/20 text-amber-200'
+                  : 'border-emerald-700 bg-emerald-900/20 text-emerald-200'"
+                role="status"
+              >
+                <template v-if="ghsaTokenStatus.origin === 'OAuthConnect' || ghsaTokenStatus.origin === 'OAuthSignin'">
+                  {{ t('screen.settings.section_feeds.ghsa_status_oauth', { login: ghsaTokenStatus.accountLogin || '?' }) }}
+                </template>
+                <template v-else-if="ghsaTokenStatus.origin === 'DashboardPat'">
+                  {{ t('screen.settings.section_feeds.ghsa_status_dashboard') }}
+                </template>
+                <template v-else-if="ghsaTokenStatus.origin === 'ConfigPat'">
+                  {{ t('screen.settings.section_feeds.ghsa_status_config') }}
+                </template>
+                <template v-else>
+                  {{ t('screen.settings.section_feeds.ghsa_status_none') }}
+                </template>
+              </div>
+
               <label class="block">
                 <span class="block text-sm text-slate-200">{{ t('screen.settings.section_feeds.ghsa_pat_label') }}</span>
                 <span class="mt-0.5 block text-xs text-slate-500">{{ t('screen.settings.section_feeds.ghsa_pat_hint') }}</span>

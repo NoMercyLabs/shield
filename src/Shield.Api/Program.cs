@@ -1194,22 +1194,33 @@ if (configuration.GetValue("Shield:Launcher:OpenBrowser", false))
                 .GetAwaiter()
                 .GetResult();
 
+            // Cookie domain is the next-best signal — production deploys behind a reverse
+            // proxy already set it for cookie scoping, so reuse it for the launcher.
             if (string.IsNullOrWhiteSpace(launchUrl))
             {
+                string? cookieDomain = configuration["Shield:Auth:CookieDomain"];
+                if (!string.IsNullOrWhiteSpace(cookieDomain))
+                    launchUrl = $"https://{cookieDomain.TrimStart('.')}";
+            }
+
+            if (string.IsNullOrWhiteSpace(launchUrl))
+            {
+                // Refuse to pop localhost when no public URL is configured — session cookies
+                // are bound to whichever host the admin actually uses Shield on, so opening
+                // localhost just bounces them to a login screen their session can't satisfy.
                 IServerAddressesFeature? addresses = app
                     .Services.GetRequiredService<IServer>()
                     .Features.Get<IServerAddressesFeature>();
-                string? bound = addresses?.Addresses.FirstOrDefault(addr =>
-                    addr.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                    || addr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                string boundList = addresses is null
+                    ? "(unknown)"
+                    : string.Join(", ", addresses.Addresses);
+                app.Logger.LogInformation(
+                    "Browser auto-open skipped: set Public URL in Settings → Public exposure "
+                        + "to enable it. Kestrel is bound on {Addresses} — open Shield yourself "
+                        + "at the host your session belongs to.",
+                    boundList
                 );
-                if (string.IsNullOrWhiteSpace(bound))
-                    return;
-                launchUrl = bound
-                    .Replace("://+", "://localhost")
-                    .Replace("://*", "://localhost")
-                    .Replace("://0.0.0.0", "://localhost")
-                    .Replace("://[::]", "://localhost");
+                return;
             }
 
             app.Logger.LogInformation("Opening browser at {Url}", launchUrl);

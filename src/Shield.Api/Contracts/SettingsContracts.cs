@@ -18,8 +18,13 @@ public sealed record SettingsResponse(
     OAuthProviderConfigResponse Codeberg,
     string? OAuthRedirectBase = null,
     string? PublicUrl = null,
-    string? GhsaPatMasked = null
+    string? GhsaPatMasked = null,
+    GhsaTokenStatusResponse? GhsaTokenStatus = null
 );
+
+// Effective resolver state surfaced so the dashboard can tell the operator "OAuth as @login
+// is covering this — no PAT needed" instead of nagging them to paste a token they don't need.
+public sealed record GhsaTokenStatusResponse(string Origin, string? AccountLogin);
 
 // Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is
 // "****<last4>" when present. Host is only meaningful for self-hosted providers

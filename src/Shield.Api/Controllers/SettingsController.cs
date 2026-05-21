@@ -44,6 +44,7 @@ public sealed class SettingsController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAppSettingsService _appSettings;
+    private readonly IGhsaAuthTokenSource _ghsaTokenSource;
 
     public SettingsController(
         ShieldDbContext db,
@@ -51,7 +52,8 @@ public sealed class SettingsController : ControllerBase
         IConfiguration configuration,
         IWebHostEnvironment environment,
         IAppSettingsService appSettings,
-        IHttpClientFactory httpClientFactory
+        IHttpClientFactory httpClientFactory,
+        IGhsaAuthTokenSource ghsaTokenSource
     )
     {
         _db = db;
@@ -60,13 +62,15 @@ public sealed class SettingsController : ControllerBase
         _environment = environment;
         _appSettings = appSettings;
         _httpClientFactory = httpClientFactory;
+        _ghsaTokenSource = ghsaTokenSource;
     }
 
     [HttpGet]
     public async Task<ActionResult<SettingsResponse>> Get(CancellationToken ct)
     {
         Dictionary<string, string> stored = await LoadAllAsync(ct);
-        return Ok(BuildResponse(stored));
+        GhsaTokenStatus ghsaStatus = await _ghsaTokenSource.GetStatusAsync(ct);
+        return Ok(BuildResponse(stored, ghsaStatus));
     }
 
     [HttpPut]
@@ -205,8 +209,13 @@ public sealed class SettingsController : ControllerBase
         await _appSettings.ReloadAsync(ct);
 
         Dictionary<string, string> fresh = await LoadAllAsync(ct);
+        GhsaTokenStatus ghsaStatus = await _ghsaTokenSource.GetStatusAsync(ct);
         return Ok(
-            new UpdateSettingsResponse(BuildResponse(fresh), restartKeys.Count > 0, restartKeys)
+            new UpdateSettingsResponse(
+                BuildResponse(fresh, ghsaStatus),
+                restartKeys.Count > 0,
+                restartKeys
+            )
         );
     }
 
@@ -328,7 +337,10 @@ public sealed class SettingsController : ControllerBase
         return map;
     }
 
-    private SettingsResponse BuildResponse(Dictionary<string, string> stored)
+    private SettingsResponse BuildResponse(
+        Dictionary<string, string> stored,
+        GhsaTokenStatus ghsaStatus
+    )
     {
         bool openApi = ReadBool(
             stored,
@@ -462,7 +474,11 @@ public sealed class SettingsController : ControllerBase
             codeberg,
             OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase,
             PublicUrl: string.IsNullOrEmpty(publicUrl) ? null : publicUrl,
-            GhsaPatMasked: ghsaPatMasked
+            GhsaPatMasked: ghsaPatMasked,
+            GhsaTokenStatus: new GhsaTokenStatusResponse(
+                ghsaStatus.Origin.ToString(),
+                ghsaStatus.AccountLogin
+            )
         );
     }
 
