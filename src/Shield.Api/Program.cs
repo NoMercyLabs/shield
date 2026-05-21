@@ -1184,20 +1184,31 @@ if (configuration.GetValue("Shield:Launcher:OpenBrowser", false))
             string? launchUrl = configuration["Shield:Launcher:Url"];
             if (string.IsNullOrWhiteSpace(launchUrl))
             {
-                IServerAddressesFeature? addresses = app
-                    .Services.GetRequiredService<IServer>()
-                    .Features.Get<IServerAddressesFeature>();
-                string? bound = addresses?.Addresses.FirstOrDefault(addr =>
-                    addr.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                    || addr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                );
-                if (string.IsNullOrWhiteSpace(bound))
-                    return;
-                launchUrl = bound
-                    .Replace("://+", "://localhost")
-                    .Replace("://*", "://localhost")
-                    .Replace("://0.0.0.0", "://localhost")
-                    .Replace("://[::]", "://localhost");
+                // Cookie domain is what an admin already configures for production behind a
+                // reverse proxy; reuse it so the launcher lands them on the public URL
+                // without a second override.
+                string? cookieDomain = configuration["Shield:Auth:CookieDomain"];
+                if (!string.IsNullOrWhiteSpace(cookieDomain))
+                {
+                    launchUrl = $"https://{cookieDomain.TrimStart('.')}";
+                }
+                else
+                {
+                    IServerAddressesFeature? addresses = app
+                        .Services.GetRequiredService<IServer>()
+                        .Features.Get<IServerAddressesFeature>();
+                    string? bound = addresses?.Addresses.FirstOrDefault(addr =>
+                        addr.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                        || addr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                    );
+                    if (string.IsNullOrWhiteSpace(bound))
+                        return;
+                    launchUrl = bound
+                        .Replace("://+", "://localhost")
+                        .Replace("://*", "://localhost")
+                        .Replace("://0.0.0.0", "://localhost")
+                        .Replace("://[::]", "://localhost");
+                }
             }
 
             app.Logger.LogInformation("Opening browser at {Url}", launchUrl);
