@@ -15,6 +15,7 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
+  Webhook,
 } from 'lucide-vue-next'
 
 import { useAuth } from '@/stores/auth'
@@ -76,6 +77,7 @@ const groups: NavGroup[] = [
       { name: 'access', to: '/access', labelKey: 'nav.access', icon: KeyRound, adminOnly: true },
       { name: 'settings', to: '/settings', labelKey: 'nav.settings', icon: Settings },
       { name: 'security', to: '/security', labelKey: 'nav.security', icon: Lock, adminOnly: true, badge: () => liveSecurity.banCount.value },
+      { name: 'webhooks', to: '/webhooks', labelKey: 'nav.webhooks', icon: Webhook, adminOnly: true },
       { name: 'audit', to: '/audit', labelKey: 'nav.audit', icon: ScrollText, adminOnly: true },
       { name: 'tokens', to: '/account/tokens', labelKey: 'nav.tokens', icon: KeyRound },
     ],

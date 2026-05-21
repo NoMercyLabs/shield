@@ -124,6 +124,12 @@ const routes: RouteRecordRaw[] = [
     meta: { adminOnly: true },
   },
   {
+    path: '/webhooks',
+    name: 'webhooks',
+    component: () => import('@/views/WebhooksView.vue'),
+    meta: { adminOnly: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },

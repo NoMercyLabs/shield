@@ -48,7 +48,8 @@
     "tokens": "API-Token",
     "sign_in": "Anmelden",
     "sign_out": "Abmelden",
-    "updates": "Updates"
+    "updates": "Updates",
+    "webhooks": "Webhooks"
   },
   "sidebar": {
     "group": {
@@ -405,6 +406,38 @@
         "retention_days_suffix": "Tage",
         "leave_blank_keep_current": "Leer lassen, um das aktuelle beizubehalten"
       }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Konfiguriere Code-Source-Provider, damit Ereignisse (Commits, Pull Requests, Workflow-Lufe) an Shield gesendet werden. Empfaenger gehen online, sobald wir sie ausliefern; du kannst die URL jetzt schon registrieren und Auslieferungen spaeter aus der Provider-Oberflaeche erneut abspielen.",
+      "secret": {
+        "title": "Webhook-Secret erzeugen",
+        "desc": "Ein zufaelliger 64-stelliger Hex-Wert. Fuege ihn in die Webhook-Konfiguration des Providers und in deine Shield-Secrets-Datei ein. Der Wert wird im Browser erzeugt — Shield sieht ihn erst, wenn du ihn selbst speicherst.",
+        "generate_btn": "Secret erzeugen",
+        "regenerate_btn": "Neu erzeugen",
+        "local_note": "Speichere diesen Wert jetzt. Beim Verlassen der Seite ist er verloren.",
+        "aria_value": "Erzeugtes Webhook-Secret",
+        "copy_aria": "Webhook-Secret in die Zwischenablage kopieren"
+      },
+      "providers": {
+        "title": "Provider-Endpoints",
+        "desc": "Verwende eine dieser URLs als Webhook-Payload-Ziel. Jeder Provider erwartet sein eigenes Secret in der angezeigten Umgebungsvariable."
+      },
+      "provider": {
+        "url_label": "Payload-URL",
+        "content_type_label": "Content-Type",
+        "secret_env_label": "Secret-Env-Var",
+        "events_label": "Ereignisse",
+        "events_value": "Alles senden — Shield empfaengt jedes Ereignis roh und projiziert nur, was es verarbeitet.",
+        "docs_link": "Provider-Doku",
+        "status_pending": "Empfaenger ausstehend",
+        "copy_url_aria": "{provider}-Webhook-URL in die Zwischenablage kopieren"
+      },
+      "toast": {
+        "secret_copied": "Webhook-Secret kopiert.",
+        "url_copied": "Webhook-URL kopiert."
+      },
+      "copy_failed": "Kopieren in die Zwischenablage fehlgeschlagen."
     },
     "accept_invite": {
       "title": "Shield-Einladung annehmen",

@@ -44,7 +44,8 @@
     "tokens": "API tokens",
     "sign_in": "Aanmelden",
     "sign_out": "Afmelden",
-    "updates": "Updates"
+    "updates": "Updates",
+    "webhooks": "Webhooks"
   },
   "sidebar": {
     "group": {
@@ -403,6 +404,38 @@
         "retention_days_suffix": "dagen",
         "leave_blank_keep_current": "Leeg laten om huidig te bewaren"
       }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Configureer codebron-providers om events (commits, pull requests, workflow-runs) naar Shield te sturen. Ontvangers gaan live zodra we ze uitrollen; je kan de URL nu al registreren en deliveries later opnieuw afspelen vanuit de provider-UI zodra ze actief zijn.",
+      "secret": {
+        "title": "Genereer een webhook-secret",
+        "desc": "Een willekeurige hex-waarde van 64 tekens. Plak hem in de webhook-config van de provider en in je Shield secrets-bestand. De waarde wordt in je browser gegenereerd — Shield ziet hem pas als je hem zelf opslaat.",
+        "generate_btn": "Secret genereren",
+        "regenerate_btn": "Opnieuw genereren",
+        "local_note": "Sla deze waarde nu op. Bij het sluiten van deze pagina is hij weg.",
+        "aria_value": "Gegenereerd webhook-secret",
+        "copy_aria": "Webhook-secret naar klembord kopiëren"
+      },
+      "providers": {
+        "title": "Provider-endpoints",
+        "desc": "Gebruik één van deze URLs als webhook-payloadbestemming. Elke provider verwacht z'n eigen secret in de getoonde environment-variabele."
+      },
+      "provider": {
+        "url_label": "Payload-URL",
+        "content_type_label": "Content type",
+        "secret_env_label": "Secret env-var",
+        "events_label": "Events",
+        "events_value": "Stuur alles — Shield ontvangt elk event raw en projecteert alleen wat het verwerkt.",
+        "docs_link": "Provider-docs",
+        "status_pending": "Ontvanger in voorbereiding",
+        "copy_url_aria": "{provider}-webhook-URL naar klembord kopiëren"
+      },
+      "toast": {
+        "secret_copied": "Webhook-secret gekopieerd.",
+        "url_copied": "Webhook-URL gekopieerd."
+      },
+      "copy_failed": "Kopiëren naar klembord mislukt."
     },
     "accept_invite": {
       "title": "Accepteer je Shield-uitnodiging",
