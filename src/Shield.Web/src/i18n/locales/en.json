@@ -371,12 +371,9 @@
       },
       "section_exposure": {
         "title": "Public exposure",
-        "description": "Read-only — these come from env vars set at boot. Edit your compose file to change them.",
-        "public_label": "Shield:Public",
-        "require_https_label": "Require HTTPS",
-        "cookie_domain_label": "Cookie domain",
-        "value_unset": "unset",
-        "docs_link": "How to configure exposure"
+        "description": "How Shield reaches the outside world. The public URL drives the launcher's browser-open and, in time, every callback or email that has to point back at this instance.",
+        "public_url_label": "Public URL",
+        "public_url_hint": "Full URL operators land on (e.g. https://shield.example.com). Leave empty to fall back to the local bound address."
       },
       "section_api": {
         "title": "API",

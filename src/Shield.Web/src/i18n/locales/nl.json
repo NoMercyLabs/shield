@@ -371,12 +371,9 @@
       },
       "section_exposure": {
         "title": "Publieke blootstelling",
-        "description": "Alleen-lezen — deze waarden komen uit omgevingsvariabelen die bij het opstarten worden ingesteld. Bewerk je compose-bestand om ze te wijzigen.",
-        "public_label": "Shield:Public",
-        "require_https_label": "HTTPS vereisen",
-        "cookie_domain_label": "Cookie-domein",
-        "value_unset": "niet ingesteld",
-        "docs_link": "Blootstelling configureren"
+        "description": "Hoe Shield de buitenwereld bereikt. De publieke URL stuurt de browser-open van de launcher aan en op termijn elke callback of e-mail die terug naar deze instantie moet wijzen.",
+        "public_url_label": "Publieke URL",
+        "public_url_hint": "Volledige URL waar operators op landen (bijv. https://shield.example.com). Leeg laten valt terug op het lokale bindadres."
       },
       "section_api": {
         "title": "API",

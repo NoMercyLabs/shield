@@ -35,6 +35,7 @@ const oidcClientSecret = ref('')
 const oidcSecretMasked = ref<string | null>(null)
 const alertSeverityFloor = ref<SeverityName>('Low')
 const retentionDays = ref(90)
+const publicUrl = ref('')
 
 // Dirty tracking — compared against the last loaded snapshot. The snapshot resets after
 // every successful save so the section dots clear together with the toast.
@@ -46,6 +47,7 @@ const snapshot = ref({
   oidcClientId: '',
   alertSeverityFloor: 'Low' as SeverityName,
   retentionDays: 90,
+  publicUrl: '',
 })
 
 interface ProviderForm {
@@ -119,6 +121,7 @@ watch(data, (next) => {
   oidcSecretMasked.value = next.oidcClientSecretMasked
   alertSeverityFloor.value = (enumName('Severity', next.alertSeverityFloor) || 'Low') as SeverityName
   retentionDays.value = next.retentionDays
+  publicUrl.value = next.publicUrl ?? ''
 
   githubForm.clientId = next.github?.clientId ?? ''
   githubForm.scopes = next.github?.scopes ?? DEFAULT_SCOPES.Github
@@ -176,6 +179,7 @@ watch(data, (next) => {
     oidcClientId: next.oidcClientId ?? '',
     alertSeverityFloor: (enumName('Severity', next.alertSeverityFloor) || 'Low') as SeverityName,
     retentionDays: next.retentionDays,
+    publicUrl: next.publicUrl ?? '',
   }
 }, { immediate: true })
 
@@ -192,6 +196,7 @@ const alertsDirty = computed(() =>
   || retentionDays.value !== snapshot.value.retentionDays,
 )
 const apiDirty = computed(() => openApiEnabled.value !== snapshot.value.openApiEnabled)
+const exposureDirty = computed(() => publicUrl.value !== snapshot.value.publicUrl)
 const oauthDirty = computed(() =>
   githubForm.clientId !== (data.value?.github?.clientId ?? '')
   || githubForm.scopes !== (data.value?.github?.scopes ?? DEFAULT_SCOPES.Github)
@@ -307,6 +312,7 @@ async function onSave(): Promise<void> {
       forgejo: providerPatch(forgejoForm, true),
       gitea: providerPatch(giteaForm, true),
       codeberg: providerPatch(codebergForm),
+      publicUrl: publicUrl.value.trim() || null,
     })
     oidcClientSecret.value = ''
     githubForm.clientSecret = ''
@@ -748,38 +754,35 @@ async function onTestOidc(): Promise<void> {
             </div>
           </section>
 
-          <!-- Section 4: Public exposure (read-only env-driven) -->
+          <!-- Section 4: Public exposure -->
           <section v-if="activeTab === 'exposure'" id="exposure" role="tabpanel">
             <header class="mb-4">
-              <h2 class="text-base font-semibold text-slate-100">{{ t('screen.settings.section_exposure.title') }}</h2>
+              <h2 class="flex items-center gap-2 text-base font-semibold text-slate-100">
+                <span>{{ t('screen.settings.section_exposure.title') }}</span>
+                <span
+                  v-if="exposureDirty"
+                  class="h-2 w-2 rounded-full bg-amber-400"
+                  :aria-label="t('screen.settings.unsaved_dot_label')"
+                />
+              </h2>
               <p class="mt-1 text-sm text-slate-400">{{ t('screen.settings.section_exposure.description') }}</p>
             </header>
 
-            <dl class="space-y-2 rounded-md border border-slate-800 bg-slate-950/40 p-4 text-sm">
-              <div class="flex items-center justify-between gap-3">
-                <dt class="text-slate-400">{{ t('screen.settings.section_exposure.public_label') }}</dt>
-                <dd class="font-mono text-xs text-slate-300">{{ runtime?.environment ?? t('screen.settings.section_exposure.value_unset') }}</dd>
-              </div>
-              <div class="flex items-center justify-between gap-3">
-                <dt class="text-slate-400">{{ t('screen.settings.section_exposure.require_https_label') }}</dt>
-                <dd class="font-mono text-xs text-slate-300">{{ t('screen.settings.section_exposure.value_unset') }}</dd>
-              </div>
-              <div class="flex items-center justify-between gap-3">
-                <dt class="text-slate-400">{{ t('screen.settings.section_exposure.cookie_domain_label') }}</dt>
-                <dd class="font-mono text-xs text-slate-300">{{ t('screen.settings.section_exposure.value_unset') }}</dd>
-              </div>
-            </dl>
-            <p class="mt-3 text-xs">
-              <a
-                href="https://github.com/NoMercyLabs/shield/blob/master/docs/exposure.md"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex items-center gap-1 text-blue-400 transition-colors hover:text-blue-300"
-              >
-                <ExternalLink class="h-3 w-3" />
-                {{ t('screen.settings.section_exposure.docs_link') }}
-              </a>
-            </p>
+            <div class="space-y-3">
+              <label class="block">
+                <span class="block text-sm text-slate-200">{{ t('screen.settings.section_exposure.public_url_label') }}</span>
+                <span class="mt-0.5 block text-xs text-slate-500">{{ t('screen.settings.section_exposure.public_url_hint') }}</span>
+                <input
+                  v-model="publicUrl"
+                  type="url"
+                  inputmode="url"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="https://shield.example.com"
+                  class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                />
+              </label>
+            </div>
           </section>
 
           <!-- Section 5: API -->

@@ -25,6 +25,9 @@ public sealed class SettingsController : ControllerBase
         // Mirrors AppSettingKeys.OAuthRedirectBase ("oauth.redirectBase") — kept in sync so
         // BuildResponse + Update read/write the same row that OAuthController consumes.
         public const string OAuthRedirectBase = "oauth.redirectBase";
+
+        // Mirrors AppSettingKeys.PublicUrl. Persisted in the same encrypted AppSettings row.
+        public const string PublicUrl = "app.publicUrl";
     }
 
     // Toggles that flip middleware/OpenApi pipeline at boot; runtime change requires restart.
@@ -79,6 +82,7 @@ public sealed class SettingsController : ControllerBase
         updated[Keys.AlertSeverityFloor] = request.AlertSeverityFloor.ToString();
         updated[Keys.RetentionDays] = request.RetentionDays.ToString(CultureInfo.InvariantCulture);
         updated[Keys.OAuthRedirectBase] = request.OAuthRedirectBase ?? "";
+        updated[Keys.PublicUrl] = request.PublicUrl ?? "";
 
         // Only overwrite the secret when caller supplies a non-empty value; otherwise preserve it.
         if (!string.IsNullOrEmpty(request.OidcClientSecret))
@@ -427,6 +431,7 @@ public sealed class SettingsController : ControllerBase
         );
 
         string? redirectBase = ReadString(stored, Keys.OAuthRedirectBase);
+        string? publicUrl = ReadString(stored, Keys.PublicUrl);
 
         return new(
             openApi,
@@ -444,7 +449,8 @@ public sealed class SettingsController : ControllerBase
             forgejo,
             gitea,
             codeberg,
-            OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase
+            OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase,
+            PublicUrl: string.IsNullOrEmpty(publicUrl) ? null : publicUrl
         );
     }
 

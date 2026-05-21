@@ -680,6 +680,7 @@ export interface Settings {
   forgejo?: OAuthProviderConfig | null
   gitea?: OAuthProviderConfig | null
   codeberg?: OAuthProviderConfig | null
+  publicUrl: string | null
 }
 
 export interface SettingsUpdate {
@@ -699,6 +700,7 @@ export interface SettingsUpdate {
   forgejo?: OAuthProviderConfigPatch | null
   gitea?: OAuthProviderConfigPatch | null
   codeberg?: OAuthProviderConfigPatch | null
+  publicUrl?: string | null
 }
 
 export interface SettingsUpdateResponse {

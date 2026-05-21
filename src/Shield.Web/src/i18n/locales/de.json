@@ -375,12 +375,9 @@
       },
       "section_exposure": {
         "title": "Oeffentliche Exposition",
-        "description": "Schreibgeschuetzt — diese Werte stammen aus Umgebungsvariablen, die beim Start gesetzt werden. Bearbeite deine Compose-Datei, um sie zu aendern.",
-        "public_label": "Shield:Public",
-        "require_https_label": "HTTPS erforderlich",
-        "cookie_domain_label": "Cookie-Domain",
-        "value_unset": "nicht gesetzt",
-        "docs_link": "Exposition konfigurieren"
+        "description": "Wie Shield die Aussenwelt erreicht. Die oeffentliche URL steuert den Browser-Aufruf des Launchers und perspektivisch jeden Callback oder jede E-Mail, die auf diese Instanz verweist.",
+        "public_url_label": "Oeffentliche URL",
+        "public_url_hint": "Vollstaendige URL, auf der Operatoren landen (z.B. https://shield.example.com). Leer lassen, um auf die lokal gebundene Adresse zurueckzufallen."
       },
       "section_api": {
         "title": "API",

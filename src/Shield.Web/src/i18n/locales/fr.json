@@ -375,12 +375,9 @@
       },
       "section_exposure": {
         "title": "Exposition publique",
-        "description": "Lecture seule — ces valeurs proviennent de variables d'environnement définies au démarrage. Modifiez votre fichier compose pour les changer.",
-        "public_label": "Shield:Public",
-        "require_https_label": "Exiger HTTPS",
-        "cookie_domain_label": "Domaine du cookie",
-        "value_unset": "non défini",
-        "docs_link": "Comment configurer l'exposition"
+        "description": "Comment Shield atteint le monde extérieur. L'URL publique pilote l'ouverture du navigateur depuis le launcher et, a terme, chaque callback ou e-mail qui doit pointer vers cette instance.",
+        "public_url_label": "URL publique",
+        "public_url_hint": "URL complète sur laquelle atterrissent les opérateurs (par ex. https://shield.example.com). Laissez vide pour revenir a l'adresse locale liée."
       },
       "section_api": {
         "title": "API",

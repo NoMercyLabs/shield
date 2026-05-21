@@ -13,6 +13,11 @@ public static class AppSettingKeys
 
     public const string OnboardingDismissed = "onboarding.dismissed";
 
+    // Public-facing URL operators land on when accessing Shield from outside the host. Used
+    // by the launcher to open the browser at the right URL after Kestrel binds; also the
+    // canonical place to derive cookie scope + OAuth redirect when neither is set explicitly.
+    public const string PublicUrl = "app.publicUrl";
+
     // Feed cadence overrides — KEV/EPSS feed syncs read these directly (24h default each).
     public const string KevCadenceHours = "feeds.kev.cadence_hours";
     public const string EpssCadenceHours = "feeds.epss.cadence_hours";

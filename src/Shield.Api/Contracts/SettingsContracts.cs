@@ -16,7 +16,8 @@ public sealed record SettingsResponse(
     OAuthProviderConfigResponse Forgejo,
     OAuthProviderConfigResponse Gitea,
     OAuthProviderConfigResponse Codeberg,
-    string? OAuthRedirectBase = null
+    string? OAuthRedirectBase = null,
+    string? PublicUrl = null
 );
 
 // Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is
@@ -49,7 +50,10 @@ public sealed record UpdateSettingsRequest(
     // Override for the base URL Shield uses when constructing redirect_uri for OAuth code
     // flows. Falls back to `{Request.Scheme}://{Request.Host}` when null — set explicitly
     // when running behind a proxy/tunnel where the auto-detected scheme is wrong.
-    string? OAuthRedirectBase = null
+    string? OAuthRedirectBase = null,
+    // Public URL the launcher opens after Kestrel binds. Empty/null falls back to the local
+    // bound address rewritten to localhost — the right default for laptops with no proxy.
+    string? PublicUrl = null
 );
 
 // ClientSecret semantics: null = leave existing, "" = clear, non-empty = overwrite.

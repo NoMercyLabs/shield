@@ -23,9 +23,9 @@ if "%Shield__Db__Feeds%"=="" set Shield__Db__Feeds=Data Source=%~dp0data\feeds.d
 if "%Shield__Auth__DataProtectionKeysPath%"=="" set Shield__Auth__DataProtectionKeysPath=%~dp0data\keys
 if "%SHIELD_PORT%"=="" set SHIELD_PORT=8842
 
-REM One-click launch opens the browser AFTER Kestrel is listening. The host owns this;
-REM the launcher just opts in. To skip browser open, set Shield__Launcher__OpenBrowser=false
-REM in data\secrets.cmd. To open on a public/proxied URL, set Shield__Launcher__Url there.
+REM One-click launch opens the browser AFTER Kestrel is listening. The host owns the URL
+REM via the Public URL field in Settings → Public exposure (DB-backed). This flag only
+REM opts the launcher in; everything else is configured in the dashboard.
 if "%Shield__Launcher__OpenBrowser%"=="" set Shield__Launcher__OpenBrowser=true
 
 REM Quiet the EF Core / framework debug spam that ships with Development env defaults so
