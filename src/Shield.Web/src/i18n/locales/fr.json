@@ -410,34 +410,21 @@
       }
     },
     "webhooks": {
-      "title": "Webhooks",
-      "subtitle": "Configurez les fournisseurs de sources de code pour qu'ils envoient des évènements (commits, pull requests, exécutions de workflow) à Shield. Les récepteurs sont activés au fur et a mesure de leur livraison ; vous pouvez enregistrer l'URL dès maintenant et rejouer les livraisons plus tard depuis l'UI du fournisseur une fois actives.",
+      "title": "Secret de webhook",
+      "subtitle": "Générez le secret partagé que vous collez dans la configuration du webhook d'un fournisseur. La même valeur fonctionne pour chaque fournisseur pris en charge — GitHub, Gitea, GitLab, Forgejo.",
       "secret": {
         "title": "Générer un secret de webhook",
-        "desc": "Une valeur hexadécimale aléatoire de 64 caractères. Collez-la dans la configuration du webhook du fournisseur et dans votre fichier de secrets Shield. La valeur est générée dans votre navigateur — Shield ne la voit qu'au moment ou vous l'enregistrez.",
+        "desc": "Une valeur hexadécimale aléatoire de 64 caractères. La valeur est générée dans votre navigateur — Shield ne la voit qu'au moment ou vous l'enregistrez.",
         "generate_btn": "Générer le secret",
         "regenerate_btn": "Régénérer",
         "local_note": "Enregistrez cette valeur maintenant. Fermer cette vue la supprime.",
-        "aria_value": "Secret de webhook généré",
+        "field_label": "Secret de webhook",
+        "show_aria": "Afficher le secret",
+        "hide_aria": "Masquer le secret",
         "copy_aria": "Copier le secret de webhook dans le presse-papiers"
       },
-      "providers": {
-        "title": "Endpoints des fournisseurs",
-        "desc": "Utilisez l'une de ces URLs comme destination du payload du webhook. Chaque fournisseur attend son propre secret dans la variable d'environnement indiquée."
-      },
-      "provider": {
-        "url_label": "URL du payload",
-        "content_type_label": "Type de contenu",
-        "secret_env_label": "Variable d'env du secret",
-        "events_label": "Évènements",
-        "events_value": "Tout envoyer — Shield reçoit chaque évènement brut et ne projette que ce qu'il gère.",
-        "docs_link": "Doc du fournisseur",
-        "status_pending": "Récepteur en attente",
-        "copy_url_aria": "Copier l'URL du webhook {provider} dans le presse-papiers"
-      },
       "toast": {
-        "secret_copied": "Secret de webhook copié.",
-        "url_copied": "URL du webhook copiée."
+        "copied": "Secret de webhook copié."
       },
       "copy_failed": "Impossible de copier dans le presse-papiers."
     },

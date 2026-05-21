@@ -410,34 +410,21 @@
       }
     },
     "webhooks": {
-      "title": "Webhooks",
-      "subtitle": "Configura los proveedores de código fuente para que envíen eventos (commits, pull requests, ejecuciones de workflow) a Shield. Los receptores se activan a medida que los publicamos; puedes registrar la URL ahora y reproducir entregas más tarde desde la UI del proveedor cuando estén activos.",
+      "title": "Secret de webhook",
+      "subtitle": "Genera el secret compartido que pegas en la configuración del webhook de un proveedor. El mismo valor funciona para cada proveedor soportado — GitHub, Gitea, GitLab, Forgejo.",
       "secret": {
         "title": "Generar un secret de webhook",
-        "desc": "Un valor hexadecimal aleatorio de 64 caracteres. Pégalo en la configuración del webhook del proveedor y en tu archivo de secrets de Shield. El valor se genera en tu navegador — Shield no lo ve hasta que lo guardes.",
+        "desc": "Un valor hexadecimal aleatorio de 64 caracteres. El valor se genera en tu navegador — Shield no lo ve hasta que lo guardes.",
         "generate_btn": "Generar secret",
         "regenerate_btn": "Regenerar",
         "local_note": "Guarda este valor ahora. Al cerrar esta vista se descarta.",
-        "aria_value": "Secret de webhook generado",
+        "field_label": "Secret de webhook",
+        "show_aria": "Mostrar secret",
+        "hide_aria": "Ocultar secret",
         "copy_aria": "Copiar secret de webhook al portapapeles"
       },
-      "providers": {
-        "title": "Endpoints de proveedores",
-        "desc": "Usa una de estas URLs como destino del payload del webhook. Cada proveedor espera su propio secret en la variable de entorno mostrada."
-      },
-      "provider": {
-        "url_label": "URL del payload",
-        "content_type_label": "Tipo de contenido",
-        "secret_env_label": "Variable de entorno del secret",
-        "events_label": "Eventos",
-        "events_value": "Envía todo — Shield recibe cada evento crudo y proyecta solo lo que maneja.",
-        "docs_link": "Docs del proveedor",
-        "status_pending": "Receptor pendiente",
-        "copy_url_aria": "Copiar URL del webhook de {provider} al portapapeles"
-      },
       "toast": {
-        "secret_copied": "Secret de webhook copiado.",
-        "url_copied": "URL de webhook copiada."
+        "copied": "Secret de webhook copiado."
       },
       "copy_failed": "No se pudo copiar al portapapeles."
     },

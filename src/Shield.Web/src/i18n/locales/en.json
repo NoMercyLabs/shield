@@ -404,34 +404,21 @@
       }
     },
     "webhooks": {
-      "title": "Webhooks",
-      "subtitle": "Configure code-source providers to push events (commits, pull requests, workflow runs) to Shield. Receivers go live as we ship them; you can register the URL now and replay deliveries from the provider's UI once they're active.",
+      "title": "Webhook secret",
+      "subtitle": "Generate the shared secret you paste into a provider's webhook setup. Same value works for every supported provider — GitHub, Gitea, GitLab, Forgejo.",
       "secret": {
         "title": "Generate a webhook secret",
-        "desc": "A random 64-character hex value. Paste it into the provider's webhook config and into your Shield secrets file. The value is generated in your browser — Shield never sees it until you save it.",
+        "desc": "A random 64-character hex value. The value is generated in your browser — Shield never sees it until you save it.",
         "generate_btn": "Generate secret",
         "regenerate_btn": "Regenerate",
         "local_note": "Save this value now. Closing this view discards it.",
-        "aria_value": "Generated webhook secret",
+        "field_label": "Webhook secret",
+        "show_aria": "Show secret",
+        "hide_aria": "Hide secret",
         "copy_aria": "Copy webhook secret to clipboard"
       },
-      "providers": {
-        "title": "Provider endpoints",
-        "desc": "Use one of these URLs as the webhook payload destination. Each provider expects its own secret in the environment variable shown."
-      },
-      "provider": {
-        "url_label": "Payload URL",
-        "content_type_label": "Content type",
-        "secret_env_label": "Secret env var",
-        "events_label": "Events",
-        "events_value": "Send everything — Shield receives all events raw and projects only what it handles.",
-        "docs_link": "Provider docs",
-        "status_pending": "Receiver pending",
-        "copy_url_aria": "Copy {provider} webhook URL to clipboard"
-      },
       "toast": {
-        "secret_copied": "Webhook secret copied.",
-        "url_copied": "Webhook URL copied."
+        "copied": "Webhook secret copied."
       },
       "copy_failed": "Could not copy to clipboard."
     },
