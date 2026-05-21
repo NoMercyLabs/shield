@@ -407,21 +407,50 @@
       }
     },
     "webhooks": {
-      "title": "Secret de webhook",
-      "subtitle": "Générez le secret partagé que vous collez dans la configuration du webhook d'un fournisseur. La même valeur fonctionne pour chaque fournisseur pris en charge — GitHub, Gitea, GitLab, Forgejo.",
-      "secret": {
-        "title": "Générer un secret de webhook",
-        "desc": "Une valeur hexadécimale aléatoire de 64 caractères. La valeur est générée dans votre navigateur — Shield ne la voit qu'au moment ou vous l'enregistrez.",
-        "generate_btn": "Générer le secret",
-        "regenerate_btn": "Régénérer",
-        "local_note": "Enregistrez cette valeur maintenant. Fermer cette vue la supprime.",
-        "field_label": "Secret de webhook",
+      "title": "Webhooks",
+      "subtitle": "Enregistrez les endpoints entrants vers lesquels les fournisseurs (GitHub, Gitea, GitLab, Forgejo) livrent leurs évènements. Shield génère un secret aléatoire par endpoint et le stocke chiffré ; la valeur en clair n'est affichée qu'a la création et jamais ensuite.",
+      "create_btn": "Nouveau webhook",
+      "list_aria": "Endpoints de webhook enregistrés",
+      "empty": "Aucun webhook enregistré pour l'instant.",
+      "created_at": "Créé {date}",
+      "last_delivery": "dernière livraison {date}",
+      "copy_url_aria": "Copier l'URL du webhook pour {label}",
+      "delete_aria": "Supprimer le webhook {label}",
+      "confirm_delete": "Supprimer le webhook « {label} » ? Tout fournisseur configuré pour livrer ici échouera désormais a la vérification de signature.",
+      "provider": {
+        "github": "GitHub",
+        "gitea": "Gitea",
+        "gitlab": "GitLab",
+        "forgejo": "Forgejo"
+      },
+      "create": {
+        "title": "Nouveau webhook",
+        "provider_label": "Fournisseur",
+        "label_label": "Étiquette",
+        "label_placeholder": "GitHub : NoMercyLabs org",
+        "label_hint": "Un nom court pour vous — visible dans la liste et le journal d'audit.",
+        "submit_btn": "Créer"
+      },
+      "reveal": {
+        "title": "Webhook créé",
+        "warning": "Enregistrez le secret maintenant. Shield ne l'affichera plus — seule la forme chiffrée est conservée.",
+        "url_label": "URL du payload (a coller dans la configuration du webhook du fournisseur)",
+        "secret_label": "Secret",
+        "secret_field_aria": "Secret de webhook généré",
         "show_aria": "Afficher le secret",
         "hide_aria": "Masquer le secret",
-        "copy_aria": "Copier le secret de webhook dans le presse-papiers"
+        "copy_url_aria": "Copier l'URL du payload",
+        "copy_secret_aria": "Copier le secret"
       },
       "toast": {
-        "copied": "Secret de webhook copié."
+        "url_copied": "URL du webhook copiée.",
+        "secret_copied": "Secret copié.",
+        "deleted": "Webhook supprimé."
+      },
+      "error": {
+        "label_required": "L'étiquette est requise.",
+        "create_failed": "Impossible de créer le webhook.",
+        "delete_failed": "Impossible de supprimer le webhook."
       },
       "copy_failed": "Impossible de copier dans le presse-papiers."
     },

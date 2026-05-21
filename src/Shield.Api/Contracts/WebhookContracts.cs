@@ -96,3 +96,22 @@ public sealed record DependabotFirstPatched(
 public sealed record WebhookSecretsRequest(string? GithubSecret, string? DependabotSecret);
 
 public sealed record WebhookSecretsResponse(bool GithubSecretSet, bool DependabotSecretSet);
+
+// Registered inbound webhook endpoint surfaced to the dashboard. The plaintext secret is
+// only ever returned on create (CreateWebhookEndpointResponse.Secret); list and detail
+// responses redact it entirely.
+public sealed record WebhookEndpointResponse(
+    Guid Id,
+    OAuthProvider Provider,
+    string Label,
+    string InboundUrl,
+    DateTime CreatedAt,
+    DateTime? LastDeliveryAt,
+    string? LastDeliveryStatus
+);
+
+public sealed record CreateWebhookEndpointRequest(OAuthProvider Provider, string Label);
+
+// Secret is the 64-char hex Shield generated server-side. Shown once; the row stores only
+// the IDataProtector-encrypted form afterwards.
+public sealed record CreateWebhookEndpointResponse(WebhookEndpointResponse Endpoint, string Secret);

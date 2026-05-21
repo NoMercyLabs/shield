@@ -401,21 +401,50 @@
       }
     },
     "webhooks": {
-      "title": "Webhook secret",
-      "subtitle": "Generate the shared secret you paste into a provider's webhook setup. Same value works for every supported provider — GitHub, Gitea, GitLab, Forgejo.",
-      "secret": {
-        "title": "Generate a webhook secret",
-        "desc": "A random 64-character hex value. The value is generated in your browser — Shield never sees it until you save it.",
-        "generate_btn": "Generate secret",
-        "regenerate_btn": "Regenerate",
-        "local_note": "Save this value now. Closing this view discards it.",
-        "field_label": "Webhook secret",
+      "title": "Webhooks",
+      "subtitle": "Register inbound endpoints that providers (GitHub, Gitea, GitLab, Forgejo) deliver events to. Shield generates a random secret per endpoint and stores it encrypted; the cleartext value is shown once at creation time and never again.",
+      "create_btn": "New webhook",
+      "list_aria": "Registered webhook endpoints",
+      "empty": "No webhooks registered yet.",
+      "created_at": "Created {date}",
+      "last_delivery": "last delivery {date}",
+      "copy_url_aria": "Copy webhook URL for {label}",
+      "delete_aria": "Delete webhook {label}",
+      "confirm_delete": "Delete the webhook \"{label}\"? Any provider configured to deliver here will start failing signature verification.",
+      "provider": {
+        "github": "GitHub",
+        "gitea": "Gitea",
+        "gitlab": "GitLab",
+        "forgejo": "Forgejo"
+      },
+      "create": {
+        "title": "New webhook",
+        "provider_label": "Provider",
+        "label_label": "Label",
+        "label_placeholder": "GitHub: NoMercyLabs org",
+        "label_hint": "A short name for you — shown in the list and audit log.",
+        "submit_btn": "Create"
+      },
+      "reveal": {
+        "title": "Webhook created",
+        "warning": "Save the secret now. Shield never shows it again — only the encrypted form is stored.",
+        "url_label": "Payload URL (paste into the provider's webhook config)",
+        "secret_label": "Secret",
+        "secret_field_aria": "Generated webhook secret",
         "show_aria": "Show secret",
         "hide_aria": "Hide secret",
-        "copy_aria": "Copy webhook secret to clipboard"
+        "copy_url_aria": "Copy payload URL",
+        "copy_secret_aria": "Copy secret"
       },
       "toast": {
-        "copied": "Webhook secret copied."
+        "url_copied": "Webhook URL copied.",
+        "secret_copied": "Secret copied.",
+        "deleted": "Webhook deleted."
+      },
+      "error": {
+        "label_required": "Label is required.",
+        "create_failed": "Could not create the webhook.",
+        "delete_failed": "Could not delete the webhook."
       },
       "copy_failed": "Could not copy to clipboard."
     },

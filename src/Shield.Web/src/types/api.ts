@@ -555,6 +555,38 @@ export type OAuthProviderName =
   | 'Gitea'
   | 'Codeberg'
 
+export const OAuthProvider = {
+  Github: 0,
+  Slack: 1,
+  Google: 2,
+  Gitlab: 3,
+  Bitbucket: 4,
+  Forgejo: 5,
+  Gitea: 6,
+  Codeberg: 7,
+} as const
+export type OAuthProvider = (typeof OAuthProvider)[keyof typeof OAuthProvider]
+
+export interface WebhookEndpoint {
+  id: string
+  provider: OAuthProvider
+  label: string
+  inboundUrl: string
+  createdAt: string
+  lastDeliveryAt: string | null
+  lastDeliveryStatus: string | null
+}
+
+export interface CreateWebhookEndpointRequest {
+  provider: OAuthProvider
+  label: string
+}
+
+export interface CreateWebhookEndpointResponse {
+  endpoint: WebhookEndpoint
+  secret: string
+}
+
 export interface OAuthStartResponse {
   authorizationUrl: string
 }

@@ -405,21 +405,50 @@
       }
     },
     "webhooks": {
-      "title": "Webhook-Secret",
-      "subtitle": "Erzeuge das gemeinsame Geheimnis, das du in die Webhook-Konfiguration eines Providers einfuegst. Derselbe Wert funktioniert fuer jeden unterstuetzten Provider — GitHub, Gitea, GitLab, Forgejo.",
-      "secret": {
-        "title": "Webhook-Secret erzeugen",
-        "desc": "Ein zufaelliger 64-stelliger Hex-Wert. Der Wert wird im Browser erzeugt — Shield sieht ihn erst, wenn du ihn selbst speicherst.",
-        "generate_btn": "Secret erzeugen",
-        "regenerate_btn": "Neu erzeugen",
-        "local_note": "Speichere diesen Wert jetzt. Beim Verlassen der Seite ist er verloren.",
-        "field_label": "Webhook-Secret",
+      "title": "Webhooks",
+      "subtitle": "Registriere eingehende Endpoints, an die Provider (GitHub, Gitea, GitLab, Forgejo) ihre Ereignisse senden. Shield erzeugt pro Endpoint ein zufaelliges Secret und speichert es verschluesselt; der Klartextwert wird einmalig bei der Erstellung angezeigt und danach nie wieder.",
+      "create_btn": "Neuer Webhook",
+      "list_aria": "Registrierte Webhook-Endpoints",
+      "empty": "Noch keine Webhooks registriert.",
+      "created_at": "Erstellt {date}",
+      "last_delivery": "letzte Zustellung {date}",
+      "copy_url_aria": "Webhook-URL fuer {label} kopieren",
+      "delete_aria": "Webhook {label} loeschen",
+      "confirm_delete": "Webhook \"{label}\" loeschen? Jeder Provider, der hierhin liefert, schlaegt ab sofort bei der Signaturpruefung fehl.",
+      "provider": {
+        "github": "GitHub",
+        "gitea": "Gitea",
+        "gitlab": "GitLab",
+        "forgejo": "Forgejo"
+      },
+      "create": {
+        "title": "Neuer Webhook",
+        "provider_label": "Provider",
+        "label_label": "Bezeichnung",
+        "label_placeholder": "GitHub: NoMercyLabs org",
+        "label_hint": "Ein kurzer Name fuer dich — sichtbar in Liste und Audit-Log.",
+        "submit_btn": "Erstellen"
+      },
+      "reveal": {
+        "title": "Webhook erstellt",
+        "warning": "Speichere das Secret jetzt. Shield zeigt es nie wieder an — nur die verschluesselte Form wird vorgehalten.",
+        "url_label": "Payload-URL (in die Webhook-Konfiguration des Providers einfuegen)",
+        "secret_label": "Secret",
+        "secret_field_aria": "Erzeugtes Webhook-Secret",
         "show_aria": "Secret anzeigen",
         "hide_aria": "Secret verbergen",
-        "copy_aria": "Webhook-Secret in die Zwischenablage kopieren"
+        "copy_url_aria": "Payload-URL kopieren",
+        "copy_secret_aria": "Secret kopieren"
       },
       "toast": {
-        "copied": "Webhook-Secret kopiert."
+        "url_copied": "Webhook-URL kopiert.",
+        "secret_copied": "Secret kopiert.",
+        "deleted": "Webhook geloescht."
+      },
+      "error": {
+        "label_required": "Bezeichnung ist erforderlich.",
+        "create_failed": "Webhook konnte nicht erstellt werden.",
+        "delete_failed": "Webhook konnte nicht geloescht werden."
       },
       "copy_failed": "Kopieren in die Zwischenablage fehlgeschlagen."
     },
