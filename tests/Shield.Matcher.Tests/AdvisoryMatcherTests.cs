@@ -145,6 +145,52 @@ public class AdvisoryMatcherTests
     }
 
     [Fact]
+    public void MatchReanchorsInventoryItemIdToCurrentSnapshotItem()
+    {
+        // When a finding survives across snapshots (still vulnerable but version may have
+        // shifted in-range), the existing finding must point at the CURRENT snapshot's item
+        // so UI joins surface the live version instead of the historical anchor.
+        AdvisoryMatcher matcher = BuildMatcher();
+        InventorySnapshot snapshot = Snapshot();
+
+        InventoryItem oldItem = Item(101, Ecosystem.Npm, "lodash", "4.17.18");
+        Advisory advisory = Advisory(
+            Ecosystem.Npm,
+            "lodash",
+            "GHSA-reanchor",
+            """[ { "events": [ { "introduced": "0" }, { "fixed": "4.17.21" } ] } ]"""
+        );
+
+        DateTime firstRun = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        Finding firstFinding = matcher
+            .Match(snapshot, [oldItem], [advisory], [], firstRun)
+            .Single();
+        firstFinding.InventoryItemId.Should().Be(101);
+        firstFinding.Notes.Should().Contain("4.17.18");
+
+        // Next snapshot: same package, still in vulnerable range, but bumped to 4.17.20 and a
+        // brand-new InventoryItem row (different Id).
+        InventoryItem newItem = Item(202, Ecosystem.Npm, "lodash", "4.17.20");
+        DateTime secondRun = firstRun.AddDays(1);
+        IReadOnlyList<Finding> second = matcher.Match(
+            snapshot,
+            [newItem],
+            [advisory],
+            [firstFinding],
+            secondRun
+        );
+
+        second.Should().HaveCount(1);
+        second[0].Id.Should().Be(firstFinding.Id, "same dedup key, same finding row");
+        second[0]
+            .InventoryItemId.Should()
+            .Be(202, "anchor must move to the current snapshot's item");
+        second[0].Notes.Should().Contain("4.17.20", "Notes must reflect the current version");
+        second[0].FirstSeenAt.Should().Be(firstRun, "FirstSeenAt is the historical anchor");
+        second[0].LastSeenAt.Should().Be(secondRun);
+    }
+
+    [Fact]
     public void MatchDedupKeyMatchesDedupKeyCompute()
     {
         AdvisoryMatcher matcher = BuildMatcher();

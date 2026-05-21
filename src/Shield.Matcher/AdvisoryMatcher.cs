@@ -83,7 +83,13 @@ public sealed class AdvisoryMatcher
 
                 if (existingByKey.TryGetValue(dedupKey, out Finding? existing))
                 {
+                    // Re-anchor to the CURRENT snapshot's item so UI joins surface the live
+                    // version instead of whatever was in the first snapshot that matched.
+                    // FirstSeenAt is the historical anchor; InventoryItemId tracks present state.
                     existing.LastSeenAt = nowUtc;
+                    existing.InventoryItemId = item.Id;
+                    existing.Severity = advisory.Severity;
+                    existing.Notes = $"{item.Name}@{item.Version} → {advisory.ExternalId}";
                     results.Add(existing);
                 }
                 else
