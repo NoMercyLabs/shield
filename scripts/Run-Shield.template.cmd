@@ -23,6 +23,11 @@ if "%Shield__Db__Feeds%"=="" set Shield__Db__Feeds=Data Source=%~dp0data\feeds.d
 if "%Shield__Auth__DataProtectionKeysPath%"=="" set Shield__Auth__DataProtectionKeysPath=%~dp0data\keys
 if "%SHIELD_PORT%"=="" set SHIELD_PORT=8842
 
+REM URL the launcher opens in the browser. Defaults to localhost on SHIELD_PORT — override
+REM in data\secrets.cmd when Shield sits behind a reverse proxy and you want the launcher
+REM to land you on the public URL instead (e.g. SHIELD_LAUNCH_URL=https://shield.example.com).
+if "%SHIELD_LAUNCH_URL%"=="" set SHIELD_LAUNCH_URL=http://localhost:%SHIELD_PORT%
+
 REM Quiet the EF Core / framework debug spam that ships with Development env defaults so
 REM the console stays readable. Override per-category if you need to diagnose a specific
 REM subsystem (e.g. set Logging__LogLevel__Shield=Debug before running).
@@ -38,10 +43,10 @@ REM the user lands on; the listener accepts every IP that resolves to this host.
 set ASPNETCORE_URLS=http://+:%SHIELD_PORT%
 
 echo [Shield] Listening on %ASPNETCORE_URLS%
-echo [Shield] Browser opens: http://localhost:%SHIELD_PORT%
+echo [Shield] Browser opens: %SHIELD_LAUNCH_URL%
 echo [Shield] Press Ctrl+C to stop.
 echo.
-start "" http://localhost:%SHIELD_PORT%
+start "" %SHIELD_LAUNCH_URL%
 Shield.exe
 
 popd
