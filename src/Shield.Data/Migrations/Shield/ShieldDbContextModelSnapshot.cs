@@ -1193,6 +1193,53 @@ namespace Shield.Data.Migrations.Shield
                     b.ToTable("WebhookEndpoints", (string)null);
                 });
 
+            modelBuilder.Entity("Shield.Core.Domain.WebhookEnvelope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeliveryId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeadersJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SignatureValid")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAt");
+
+                    b.HasIndex("EndpointId", "ReceivedAt");
+
+                    b.ToTable("WebhookEnvelopes", (string)null);
+                });
+
             modelBuilder.Entity("Shield.Data.Identity.ShieldRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1395,6 +1442,15 @@ namespace Shield.Data.Migrations.Shield
                     b.HasOne("Shield.Core.Domain.Source", null)
                         .WithMany()
                         .HasForeignKey("SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Shield.Core.Domain.WebhookEnvelope", b =>
+                {
+                    b.HasOne("Shield.Core.Domain.WebhookEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("EndpointId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -379,6 +379,17 @@
         "public_url_label": "URL publique",
         "public_url_hint": "URL complète sur laquelle atterrissent les opérateurs (par ex. https://shield.example.com). Laissez vide pour revenir a l'adresse locale liée."
       },
+      "section_feeds": {
+        "title": "Feeds",
+        "description": "Identifiants que Shield utilise pour interroger les feeds d'avis. Une intégration OAuth GitHub connectée (Code-host OAuth) est préférée ; ce PAT est le repli opérateur quand aucun utilisateur GitHub n'est connecté ou n'a relié son compte.",
+        "ghsa_pat_label": "Jeton d'accès personnel GHSA",
+        "ghsa_pat_hint": "PAT GitHub optionnel pour le feed GraphQL GHSA. Le quota non authentifié est de 60 req/h ; tout jeton le porte a 5000/h. Aucune portée n'est requise pour les données d'avis publics.",
+        "ghsa_pat_placeholder": "Collez un jeton pour le définir",
+        "ghsa_pat_current": "Stocké : {masked}",
+        "ghsa_pat_clear": "Supprimer le jeton stocké",
+        "ghsa_pat_cancel_clear": "Annuler la suppression",
+        "ghsa_pat_clear_pending": "L'enregistrement supprimera le jeton stocké."
+      },
       "section_api": {
         "title": "API",
         "description": "Surface REST + OpenAPI utilisée par la CLI, les intégrations et l'interface web.",
@@ -416,6 +427,15 @@
       "last_delivery": "dernière livraison {date}",
       "copy_url_aria": "Copier l'URL du webhook pour {label}",
       "delete_aria": "Supprimer le webhook {label}",
+      "deliveries_btn": "Livraisons",
+      "deliveries_aria": "Afficher les livraisons récentes pour {label}",
+      "deliveries": {
+        "title": "Livraisons récentes — {label}",
+        "subtitle": "50 dernières livraisons entrantes. Actualise toutes les 10s tant que la fenêtre est ouverte.",
+        "empty": "Aucune livraison reçue pour l'instant.",
+        "ok": "Signature valide",
+        "failed": "Signature invalide"
+      },
       "confirm_delete": "Supprimer le webhook « {label} » ? Tout fournisseur configuré pour livrer ici échouera désormais a la vérification de signature.",
       "provider": {
         "github": "GitHub",

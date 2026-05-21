@@ -17,7 +17,8 @@ public sealed record SettingsResponse(
     OAuthProviderConfigResponse Gitea,
     OAuthProviderConfigResponse Codeberg,
     string? OAuthRedirectBase = null,
-    string? PublicUrl = null
+    string? PublicUrl = null,
+    string? GhsaPatMasked = null
 );
 
 // Configured is true iff both ClientId and ClientSecret are set; ClientSecretMasked is
@@ -53,7 +54,11 @@ public sealed record UpdateSettingsRequest(
     string? OAuthRedirectBase = null,
     // Public URL the launcher opens after Kestrel binds. Empty/null falls back to the local
     // bound address rewritten to localhost — the right default for laptops with no proxy.
-    string? PublicUrl = null
+    string? PublicUrl = null,
+    // PreserveGhsaPat = true means "leave whatever is stored alone"; otherwise the provided
+    // GhsaPat value (including null/empty) overwrites the row.
+    string? GhsaPat = null,
+    bool PreserveGhsaPat = true
 );
 
 // ClientSecret semantics: null = leave existing, "" = clear, non-empty = overwrite.

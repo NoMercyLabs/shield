@@ -40,6 +40,13 @@ public interface IOAuthTokenStore
         string subject,
         CancellationToken ct = default
     );
+
+    // Returns any usable token for the provider, in priority order: connect-flow row first
+    // (the explicit "Connect GitHub" integration), then the most recently updated signin row
+    // (a logged-in user). Used by feed syncs that need a bearer for public read APIs and
+    // don't care whose identity issued it. Returns null when no row exists or every row
+    // fails to decrypt.
+    Task<OAuthTokenSnapshot?> GetAnyAsync(OAuthProvider provider, CancellationToken ct = default);
 }
 
 public sealed record OAuthTokenSnapshot(
@@ -111,6 +118,50 @@ public sealed class OAuthTokenStore : IOAuthTokenStore
             row.AccountId,
             row.Extra
         );
+    }
+
+    public async Task<OAuthTokenSnapshot?> GetAnyAsync(
+        OAuthProvider provider,
+        CancellationToken ct = default
+    )
+    {
+        OAuthTokenSnapshot? connect = await GetAsync(provider, ct);
+        if (connect is not null)
+            return connect;
+
+        await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        ShieldDbContext db = scope.ServiceProvider.GetRequiredService<ShieldDbContext>();
+        List<IntegrationToken> candidates = await db
+            .IntegrationTokens.AsNoTracking()
+            .Where(token => token.Provider == provider && token.Subject != "")
+            .OrderByDescending(token => token.UpdatedAt)
+            .ToListAsync(ct);
+
+        foreach (IntegrationToken row in candidates)
+        {
+            try
+            {
+                string accessToken = _protector.Unprotect(row.AccessTokenEncrypted);
+                string? refreshToken = string.IsNullOrEmpty(row.RefreshTokenEncrypted)
+                    ? null
+                    : _protector.Unprotect(row.RefreshTokenEncrypted);
+                return new(
+                    row.Provider,
+                    accessToken,
+                    refreshToken,
+                    row.ExpiresAt,
+                    row.Scopes,
+                    row.AccountLogin,
+                    row.AccountId,
+                    row.Extra
+                );
+            }
+            catch
+            {
+                // Key rotated for this row — try the next candidate.
+            }
+        }
+        return null;
     }
 
     public Task SaveAsync(OAuthTokenSnapshot snapshot, CancellationToken ct = default) =>

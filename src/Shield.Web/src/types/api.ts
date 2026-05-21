@@ -587,6 +587,17 @@ export interface CreateWebhookEndpointResponse {
   secret: string
 }
 
+export interface WebhookEnvelope {
+  id: string
+  endpointId: string
+  provider: OAuthProvider
+  eventType: string | null
+  deliveryId: string | null
+  signatureValid: boolean
+  reason: string | null
+  receivedAt: string
+}
+
 export interface OAuthStartResponse {
   authorizationUrl: string
 }
@@ -713,6 +724,7 @@ export interface Settings {
   gitea?: OAuthProviderConfig | null
   codeberg?: OAuthProviderConfig | null
   publicUrl: string | null
+  ghsaPatMasked: string | null
 }
 
 export interface SettingsUpdate {
@@ -733,6 +745,8 @@ export interface SettingsUpdate {
   gitea?: OAuthProviderConfigPatch | null
   codeberg?: OAuthProviderConfigPatch | null
   publicUrl?: string | null
+  ghsaPat?: string | null
+  preserveGhsaPat?: boolean
 }
 
 export interface SettingsUpdateResponse {

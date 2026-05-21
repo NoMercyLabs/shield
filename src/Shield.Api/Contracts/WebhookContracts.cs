@@ -115,3 +115,14 @@ public sealed record CreateWebhookEndpointRequest(OAuthProvider Provider, string
 // Secret is the 64-char hex Shield generated server-side. Shown once; the row stores only
 // the IDataProtector-encrypted form afterwards.
 public sealed record CreateWebhookEndpointResponse(WebhookEndpointResponse Endpoint, string Secret);
+
+public sealed record WebhookEnvelopeResponse(
+    Guid Id,
+    Guid EndpointId,
+    OAuthProvider Provider,
+    string? EventType,
+    string? DeliveryId,
+    bool SignatureValid,
+    string? Reason,
+    DateTime ReceivedAt
+);

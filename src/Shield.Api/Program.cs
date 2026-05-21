@@ -956,23 +956,30 @@ using (IServiceScope cpmScope = app.Services.CreateScope())
 // Boot banner so operators see the chosen posture immediately in logs.
 ProductionSafetyGate.LogPostureBanner(app.Logger, configuration, app.Environment);
 
-// GHSA cadence sanity check — warn once at boot if running unauthenticated with a short
-// cadence that will exhaust the 60 req/hr GitHub unauthenticated GraphQL quota quickly.
-string? ghsaPat = configuration["Shield:Feeds:Ghsa:Pat"];
+// GHSA cadence sanity check — ask the live token source whether anything (PAT, OAuth
+// connect-flow, signed-in user) can produce a bearer for the GHSA HttpClient. If nothing
+// can AND the cadence is aggressive, warn that the 60 req/hr unauthenticated quota will
+// burn through. Note: a logged-in GitHub user is enough — no separate PAT required.
 string? ghsaCadenceRaw = configuration["Shield:Feeds:Ghsa:Cadence"];
 if (
-    string.IsNullOrWhiteSpace(ghsaPat)
-    && TimeSpan.TryParse(ghsaCadenceRaw, out TimeSpan ghsaCadence)
+    TimeSpan.TryParse(ghsaCadenceRaw, out TimeSpan ghsaCadence)
     && ghsaCadence < TimeSpan.FromMinutes(30)
 )
 {
-    app.Logger.LogWarning(
-        "GHSA cadence is {Cadence} but no API key is configured; "
-            + "unauthenticated quota is 60 req/hr. "
-            + "Either set Shield:Feeds:Ghsa:Pat to a GitHub personal access token "
-            + "(read:packages scope is sufficient) or raise the cadence to 00:30:00 or longer.",
-        ghsaCadence
-    );
+    await using AsyncServiceScope ghsaScope = app.Services.CreateAsyncScope();
+    IGhsaAuthTokenSource ghsaTokens =
+        ghsaScope.ServiceProvider.GetRequiredService<IGhsaAuthTokenSource>();
+    string? resolvedToken = await ghsaTokens.GetTokenAsync();
+    if (string.IsNullOrWhiteSpace(resolvedToken))
+    {
+        app.Logger.LogWarning(
+            "GHSA cadence is {Cadence} but no token is available (no PAT, no connected GitHub "
+                + "OAuth, no signed-in GitHub user); unauthenticated quota is 60 req/hr. "
+                + "Connect GitHub via Settings → Code-host OAuth, sign in via GitHub, or raise "
+                + "the cadence to 00:30:00 or longer.",
+            ghsaCadence
+        );
+    }
 }
 
 // CF-Connecting-IP / CF-Visitor unwrap runs first so RemoteIpAddress + Request.Scheme

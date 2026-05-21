@@ -1,18 +1,21 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Shield.Api.Controllers;
 
 // Inbound delivery endpoint for endpoints registered via WebhookEndpointsController.
-// Verifies the provider-specific signature scheme, records the delivery, returns 200.
-// The receive-all-raw-then-project pipeline lands in a follow-up — for now this only
-// proves the signature and lights up LastDeliveryAt so the admin sees deliveries arriving.
+// Verifies the provider-specific signature scheme, persists a raw WebhookEnvelope row so
+// future detectors can backfill from history, and returns 200. Projection / detection /
+// gating land on top of the persisted envelopes in a follow-up.
 [ApiController]
 [Route("api/webhooks/in")]
 [AllowAnonymous]
 public sealed class InboundWebhooksController : ControllerBase
 {
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
     private readonly ShieldDbContext _db;
     private readonly IDataProtector _protector;
     private readonly ILogger<InboundWebhooksController> _logger;
@@ -31,17 +34,24 @@ public sealed class InboundWebhooksController : ControllerBase
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Deliver(Guid id, CancellationToken ct)
     {
-        WebhookEndpoint? row = await _db.WebhookEndpoints.FirstOrDefaultAsync(
-            endpoint => endpoint.Id == id,
+        WebhookEndpoint? endpoint = await _db.WebhookEndpoints.FirstOrDefaultAsync(
+            row => row.Id == id,
             ct
         );
-        if (row is null)
+        if (endpoint is null)
             return NotFound(new { error = "Unknown webhook endpoint." });
 
+        Request.EnableBuffering();
+        using MemoryStream buffer = new();
+        await Request.Body.CopyToAsync(buffer, ct);
+        byte[] payload = buffer.ToArray();
+
         string secret;
+        bool secretOk;
         try
         {
-            secret = _protector.Unprotect(row.SecretEncrypted);
+            secret = _protector.Unprotect(endpoint.SecretEncrypted);
+            secretOk = true;
         }
         catch
         {
@@ -49,25 +59,36 @@ public sealed class InboundWebhooksController : ControllerBase
                 "Webhook secret for endpoint {Id} could not be decrypted (DataProtection key rotated?)",
                 id
             );
-            return await RecordAsync(row, ok: false, "secret-undecryptable", ct);
+            secret = string.Empty;
+            secretOk = false;
         }
 
-        Request.EnableBuffering();
-        using MemoryStream buffer = new();
-        await Request.Body.CopyToAsync(buffer, ct);
-        byte[] payload = buffer.ToArray();
+        (bool ok, string reason) = secretOk
+            ? VerifySignature(endpoint.Provider, payload, secret)
+            : (false, "secret-undecryptable");
 
-        (bool ok, string reason) = VerifySignature(row.Provider, payload, secret);
+        WebhookEnvelope envelope = new()
+        {
+            Id = Guid.NewGuid(),
+            EndpointId = endpoint.Id,
+            Provider = endpoint.Provider,
+            EventType = ExtractEventType(endpoint.Provider),
+            DeliveryId = ExtractDeliveryId(endpoint.Provider),
+            HeadersJson = CaptureHeadersJson(endpoint.Provider),
+            PayloadJson = Encoding.UTF8.GetString(payload),
+            SignatureValid = ok,
+            Reason = ok ? null : reason,
+            ReceivedAt = DateTime.UtcNow,
+        };
+        _db.WebhookEnvelopes.Add(envelope);
+
+        endpoint.LastDeliveryAt = envelope.ReceivedAt;
+        endpoint.LastDeliveryStatus = ok ? envelope.EventType ?? "ok" : reason;
+        await _db.SaveChangesAsync(ct);
+
         if (!ok)
-            return await RecordAsync(
-                row,
-                ok: false,
-                reason,
-                ct,
-                status: StatusCodes.Status401Unauthorized
-            );
-
-        return await RecordAsync(row, ok: true, "delivered", ct);
+            return StatusCode(StatusCodes.Status401Unauthorized, new { error = reason });
+        return Ok(new { received = true, eventType = envelope.EventType });
     }
 
     private (bool Ok, string Reason) VerifySignature(
@@ -95,6 +116,70 @@ public sealed class InboundWebhooksController : ControllerBase
             ),
             _ => (false, "unsupported-provider"),
         };
+
+    private string? ExtractEventType(OAuthProvider provider) =>
+        provider switch
+        {
+            OAuthProvider.Github => Request.Headers["X-GitHub-Event"].FirstOrDefault(),
+            OAuthProvider.Gitea or OAuthProvider.Forgejo => Request
+                .Headers["X-Gitea-Event"]
+                .FirstOrDefault(),
+            OAuthProvider.Gitlab => Request.Headers["X-Gitlab-Event"].FirstOrDefault(),
+            _ => null,
+        };
+
+    private string? ExtractDeliveryId(OAuthProvider provider) =>
+        provider switch
+        {
+            OAuthProvider.Github => Request.Headers["X-GitHub-Delivery"].FirstOrDefault(),
+            OAuthProvider.Gitea or OAuthProvider.Forgejo => Request
+                .Headers["X-Gitea-Delivery"]
+                .FirstOrDefault(),
+            OAuthProvider.Gitlab => Request.Headers["X-Gitlab-Event-UUID"].FirstOrDefault(),
+            _ => null,
+        };
+
+    private string CaptureHeadersJson(OAuthProvider provider)
+    {
+        // Allow-list per provider — we deliberately don't capture every header (cookies,
+        // auth, proxy-injected) to keep the envelope free of incidental sensitive data.
+        string[] allow = provider switch
+        {
+            OAuthProvider.Github =>
+            [
+                "X-GitHub-Event",
+                "X-GitHub-Delivery",
+                "X-GitHub-Hook-ID",
+                "X-GitHub-Hook-Installation-Target-Type",
+                "X-GitHub-Hook-Installation-Target-ID",
+                "User-Agent",
+            ],
+            OAuthProvider.Gitea or OAuthProvider.Forgejo =>
+            [
+                "X-Gitea-Event",
+                "X-Gitea-Delivery",
+                "X-Gitea-Event-Type",
+                "User-Agent",
+            ],
+            OAuthProvider.Gitlab =>
+            [
+                "X-Gitlab-Event",
+                "X-Gitlab-Event-UUID",
+                "X-Gitlab-Instance",
+                "User-Agent",
+            ],
+            _ => ["User-Agent"],
+        };
+
+        Dictionary<string, string> captured = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string name in allow)
+        {
+            string? value = Request.Headers[name].FirstOrDefault();
+            if (!string.IsNullOrEmpty(value))
+                captured[name] = value;
+        }
+        return JsonSerializer.Serialize(captured, JsonOpts);
+    }
 
     private static (bool Ok, string Reason) VerifyHmacHex(
         string? header,
@@ -143,19 +228,5 @@ public sealed class InboundWebhooksController : ControllerBase
         return CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes)
             ? (true, "ok")
             : (false, "token-mismatch");
-    }
-
-    private async Task<IActionResult> RecordAsync(
-        WebhookEndpoint row,
-        bool ok,
-        string reason,
-        CancellationToken ct,
-        int status = StatusCodes.Status200OK
-    )
-    {
-        row.LastDeliveryAt = DateTime.UtcNow;
-        row.LastDeliveryStatus = ok ? "ok" : reason;
-        await _db.SaveChangesAsync(ct);
-        return ok ? Ok(new { received = true }) : StatusCode(status, new { error = reason });
     }
 }

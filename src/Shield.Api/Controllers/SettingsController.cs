@@ -28,6 +28,11 @@ public sealed class SettingsController : ControllerBase
 
         // Mirrors AppSettingKeys.PublicUrl. Persisted in the same encrypted AppSettings row.
         public const string PublicUrl = "app.publicUrl";
+
+        // Mirrors AppSettingKeys.GhsaPat. Operator-set fallback PAT for the GHSA feed when no
+        // GitHub OAuth integration is connected. Same preserve-on-null semantics as the OIDC
+        // client secret.
+        public const string GhsaPat = "feeds.ghsa.pat";
     }
 
     // Toggles that flip middleware/OpenApi pipeline at boot; runtime change requires restart.
@@ -87,6 +92,10 @@ public sealed class SettingsController : ControllerBase
         // Only overwrite the secret when caller supplies a non-empty value; otherwise preserve it.
         if (!string.IsNullOrEmpty(request.OidcClientSecret))
             updated[Keys.OidcClientSecret] = request.OidcClientSecret;
+
+        // GHSA PAT preserve-on-null: only touch the row when the caller explicitly opts in.
+        if (!request.PreserveGhsaPat)
+            updated[Keys.GhsaPat] = request.GhsaPat ?? "";
 
         ApplyProviderPatch(
             updated,
@@ -432,6 +441,8 @@ public sealed class SettingsController : ControllerBase
 
         string? redirectBase = ReadString(stored, Keys.OAuthRedirectBase);
         string? publicUrl = ReadString(stored, Keys.PublicUrl);
+        string? ghsaPat = ReadString(stored, Keys.GhsaPat);
+        string? ghsaPatMasked = string.IsNullOrEmpty(ghsaPat) ? null : MaskProviderSecret(ghsaPat);
 
         return new(
             openApi,
@@ -450,7 +461,8 @@ public sealed class SettingsController : ControllerBase
             gitea,
             codeberg,
             OAuthRedirectBase: string.IsNullOrEmpty(redirectBase) ? null : redirectBase,
-            PublicUrl: string.IsNullOrEmpty(publicUrl) ? null : publicUrl
+            PublicUrl: string.IsNullOrEmpty(publicUrl) ? null : publicUrl,
+            GhsaPatMasked: ghsaPatMasked
         );
     }
 

@@ -375,6 +375,17 @@
         "public_url_label": "Publieke URL",
         "public_url_hint": "Volledige URL waar operators op landen (bijv. https://shield.example.com). Leeg laten valt terug op het lokale bindadres."
       },
+      "section_feeds": {
+        "title": "Feeds",
+        "description": "Credentials waarmee Shield met advisory-feeds praat. Een verbonden GitHub OAuth-integratie (Code-host OAuth) heeft de voorkeur; deze PAT is de operator-fallback als er geen GitHub-gebruiker is aangemeld of verbonden.",
+        "ghsa_pat_label": "GHSA personal access token",
+        "ghsa_pat_hint": "Optionele GitHub-PAT voor de GHSA GraphQL-feed. Niet-geauthenticeerde quota is 60 req/uur; elk token verhoogt dit naar 5000/uur. Voor publieke advisory-data zijn geen scopes nodig.",
+        "ghsa_pat_placeholder": "Plak een token om in te stellen",
+        "ghsa_pat_current": "Opgeslagen: {masked}",
+        "ghsa_pat_clear": "Opgeslagen token verwijderen",
+        "ghsa_pat_cancel_clear": "Verwijderen annuleren",
+        "ghsa_pat_clear_pending": "Bij opslaan wordt het opgeslagen token verwijderd."
+      },
       "section_api": {
         "title": "API",
         "description": "REST + OpenAPI-oppervlak gebruikt door de CLI, integraties en de webinterface.",
@@ -412,6 +423,15 @@
       "last_delivery": "laatste levering {date}",
       "copy_url_aria": "Kopieer webhook-URL voor {label}",
       "delete_aria": "Webhook {label} verwijderen",
+      "deliveries_btn": "Leveringen",
+      "deliveries_aria": "Recente leveringen voor {label} tonen",
+      "deliveries": {
+        "title": "Recente leveringen — {label}",
+        "subtitle": "Laatste 50 inkomende leveringen. Vernieuwt elke 10s zolang het venster open is.",
+        "empty": "Nog geen leveringen ontvangen.",
+        "ok": "Signature geldig",
+        "failed": "Signature ongeldig"
+      },
       "confirm_delete": "Webhook \"{label}\" verwijderen? Elke provider die hier naartoe stuurt zal vanaf nu falen op signature-verificatie.",
       "provider": {
         "github": "GitHub",

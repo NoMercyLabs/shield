@@ -375,6 +375,17 @@
         "public_url_label": "Public URL",
         "public_url_hint": "Full URL operators land on (e.g. https://shield.example.com). Leave empty to fall back to the local bound address."
       },
+      "section_feeds": {
+        "title": "Feeds",
+        "description": "Credentials Shield uses to talk to advisory feeds. A connected GitHub OAuth integration (Code-host OAuth) is preferred; this PAT is the operator-set fallback when no GitHub user has signed in or connected.",
+        "ghsa_pat_label": "GHSA personal access token",
+        "ghsa_pat_hint": "Optional GitHub PAT for the GHSA GraphQL feed. Unauthenticated quota is 60 req/hr; any token raises it to 5000/hr. No scopes required for public advisory data.",
+        "ghsa_pat_placeholder": "Paste a token to set",
+        "ghsa_pat_current": "Stored: {masked}",
+        "ghsa_pat_clear": "Clear stored token",
+        "ghsa_pat_cancel_clear": "Cancel clear",
+        "ghsa_pat_clear_pending": "Saving will remove the stored token."
+      },
       "section_api": {
         "title": "API",
         "description": "REST + OpenAPI surface used by the CLI, integrations and the web UI.",
@@ -410,6 +421,15 @@
       "last_delivery": "last delivery {date}",
       "copy_url_aria": "Copy webhook URL for {label}",
       "delete_aria": "Delete webhook {label}",
+      "deliveries_btn": "Deliveries",
+      "deliveries_aria": "Show recent deliveries for {label}",
+      "deliveries": {
+        "title": "Recent deliveries — {label}",
+        "subtitle": "Last 50 inbound deliveries. Refreshes every 10s while open.",
+        "empty": "No deliveries received yet.",
+        "ok": "Signature valid",
+        "failed": "Signature failed"
+      },
       "confirm_delete": "Delete the webhook \"{label}\"? Any provider configured to deliver here will start failing signature verification.",
       "provider": {
         "github": "GitHub",

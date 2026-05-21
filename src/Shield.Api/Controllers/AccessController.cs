@@ -19,13 +19,15 @@ public sealed class AccessController : ControllerBase
     private readonly RoleManager<ShieldRole> _roleManager;
     private readonly IInviteEmailSender _emailSender;
     private readonly IAuditLogger _audit;
+    private readonly IAppSettingsService _appSettings;
 
     public AccessController(
         ShieldDbContext db,
         UserManager<ShieldUser> userManager,
         RoleManager<ShieldRole> roleManager,
         IInviteEmailSender emailSender,
-        IAuditLogger audit
+        IAuditLogger audit,
+        IAppSettingsService appSettings
     )
     {
         _db = db;
@@ -33,6 +35,7 @@ public sealed class AccessController : ControllerBase
         _roleManager = roleManager;
         _emailSender = emailSender;
         _audit = audit;
+        _appSettings = appSettings;
     }
 
     // -------------------- users --------------------
@@ -268,7 +271,7 @@ public sealed class AccessController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         string inviterLogin = await ResolveInviterLoginAsync(actor, ct);
-        string acceptUrl = BuildAcceptUrl(invite.Token);
+        string acceptUrl = await BuildAcceptUrlAsync(invite.Token, ct);
         InviteEmailResult emailResult = await _emailSender.SendAsync(
             invite,
             acceptUrl,
@@ -410,7 +413,7 @@ public sealed class AccessController : ControllerBase
 
         List<SourceGroup> groups = await ResolveGroupsAsync(invite.SourceGroupIdsCsv, ct);
         string inviterLogin = await ResolveInviterLoginAsync(invite.CreatedBy, ct);
-        string acceptUrl = BuildAcceptUrl(invite.Token);
+        string acceptUrl = await BuildAcceptUrlAsync(invite.Token, ct);
         InviteEmailResult emailResult = await _emailSender.SendAsync(
             invite,
             acceptUrl,
@@ -529,14 +532,16 @@ public sealed class AccessController : ControllerBase
         return user.UserName ?? user.Email ?? "an administrator";
     }
 
-    private string BuildAcceptUrl(string token)
+    private async Task<string> BuildAcceptUrlAsync(string token, CancellationToken ct)
     {
-        // Prefer the configured cookie domain when present (production deploys behind Caddy /
-        // Cloudflare set this so emails land with the public URL); fall back to the inbound
-        // request when running on localhost.
-        string scheme = Request.Scheme;
-        string host = Request.Host.Value ?? "localhost";
-        return $"{scheme}://{host}/accept-invite?token={Uri.EscapeDataString(token)}";
+        // Prefer the persisted Public URL (Settings → Public exposure) so invite emails sent
+        // from a localhost session still resolve to the dashboard-configured public host. Falls
+        // back to the inbound request when nothing is set yet.
+        string? publicUrl = await _appSettings.GetStringAsync(AppSettingKeys.PublicUrl, ct);
+        string baseUrl = string.IsNullOrWhiteSpace(publicUrl)
+            ? $"{Request.Scheme}://{Request.Host.Value ?? "localhost"}"
+            : publicUrl.TrimEnd('/');
+        return $"{baseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
     }
 
     private static IReadOnlyList<int> ParseGroupIds(string csv)

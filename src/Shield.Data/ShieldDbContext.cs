@@ -35,6 +35,7 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
     public DbSet<IpReputation> IpReputations => Set<IpReputation>();
     public DbSet<PackageUpdate> PackageUpdates => Set<PackageUpdate>();
     public DbSet<WebhookEndpoint> WebhookEndpoints => Set<WebhookEndpoint>();
+    public DbSet<WebhookEnvelope> WebhookEnvelopes => Set<WebhookEnvelope>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -64,5 +65,6 @@ public class ShieldDbContext : IdentityDbContext<ShieldUser, ShieldRole, Guid>
         builder.ApplyConfiguration(new Configurations.IpReputationConfiguration());
         builder.ApplyConfiguration(new Configurations.PackageUpdateConfiguration());
         builder.ApplyConfiguration(new Configurations.WebhookEndpointConfiguration());
+        builder.ApplyConfiguration(new Configurations.WebhookEnvelopeConfiguration());
     }
 }

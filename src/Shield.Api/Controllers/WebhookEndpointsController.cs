@@ -16,16 +16,19 @@ public sealed class WebhookEndpointsController : ControllerBase
     private readonly ShieldDbContext _db;
     private readonly IDataProtector _protector;
     private readonly IAppSettingsService _appSettings;
+    private readonly IAuditLogger _audit;
 
     public WebhookEndpointsController(
         ShieldDbContext db,
         IDataProtectionProvider protectionProvider,
-        IAppSettingsService appSettings
+        IAppSettingsService appSettings,
+        IAuditLogger audit
     )
     {
         _db = db;
         _protector = protectionProvider.CreateProtector("shield.webhooks");
         _appSettings = appSettings;
+        _audit = audit;
     }
 
     [HttpGet]
@@ -68,8 +71,48 @@ public sealed class WebhookEndpointsController : ControllerBase
         _db.WebhookEndpoints.Add(row);
         await _db.SaveChangesAsync(ct);
 
+        await _audit.RecordAsync(
+            "webhooks.endpoint.create",
+            "WebhookEndpoint",
+            row.Id.ToString(),
+            new { provider = row.Provider.ToString(), label = row.Label },
+            ct
+        );
+
         string baseUrl = await ResolveBaseUrlAsync(ct);
         return Ok(new CreateWebhookEndpointResponse(Project(row, baseUrl), secret));
+    }
+
+    [HttpGet("{id:guid}/envelopes")]
+    public async Task<ActionResult<IReadOnlyList<WebhookEnvelopeResponse>>> Envelopes(
+        Guid id,
+        CancellationToken ct
+    )
+    {
+        bool exists = await _db.WebhookEndpoints.AnyAsync(endpoint => endpoint.Id == id, ct);
+        if (!exists)
+            return NotFound();
+
+        List<WebhookEnvelope> rows = await _db
+            .WebhookEnvelopes.AsNoTracking()
+            .Where(envelope => envelope.EndpointId == id)
+            .OrderByDescending(envelope => envelope.ReceivedAt)
+            .Take(50)
+            .ToListAsync(ct);
+
+        return Ok(
+            rows.Select(envelope => new WebhookEnvelopeResponse(
+                    envelope.Id,
+                    envelope.EndpointId,
+                    envelope.Provider,
+                    envelope.EventType,
+                    envelope.DeliveryId,
+                    envelope.SignatureValid,
+                    envelope.Reason,
+                    envelope.ReceivedAt
+                ))
+                .ToList()
+        );
     }
 
     [HttpDelete("{id:guid}")]
@@ -84,6 +127,15 @@ public sealed class WebhookEndpointsController : ControllerBase
             return NotFound();
         _db.WebhookEndpoints.Remove(row);
         await _db.SaveChangesAsync(ct);
+
+        await _audit.RecordAsync(
+            "webhooks.endpoint.delete",
+            "WebhookEndpoint",
+            row.Id.ToString(),
+            new { provider = row.Provider.ToString(), label = row.Label },
+            ct
+        );
+
         return NoContent();
     }
 

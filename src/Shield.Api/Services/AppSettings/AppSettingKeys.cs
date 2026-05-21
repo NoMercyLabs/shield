@@ -22,6 +22,10 @@ public static class AppSettingKeys
     public const string KevCadenceHours = "feeds.kev.cadence_hours";
     public const string EpssCadenceHours = "feeds.epss.cadence_hours";
 
+    // GitHub PAT for the GHSA GraphQL feed. Operator-set fallback when no GitHub OAuth has
+    // been connected; encrypted at rest via IDataProtector("shield.settings").
+    public const string GhsaPat = "feeds.ghsa.pat";
+
     public const string OAuthRedirectBase = "oauth.redirectBase";
     public const string GithubOAuthClientId = "oauth.github.clientId";
     public const string GithubOAuthClientSecret = "oauth.github.clientSecret";

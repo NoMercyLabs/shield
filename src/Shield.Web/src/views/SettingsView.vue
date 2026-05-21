@@ -36,6 +36,9 @@ const oidcSecretMasked = ref<string | null>(null)
 const alertSeverityFloor = ref<SeverityName>('Low')
 const retentionDays = ref(90)
 const publicUrl = ref('')
+const ghsaPatInput = ref('')
+const ghsaPatMasked = ref<string | null>(null)
+const ghsaPatClear = ref(false)
 
 // Dirty tracking — compared against the last loaded snapshot. The snapshot resets after
 // every successful save so the section dots clear together with the toast.
@@ -125,6 +128,9 @@ watch(data, (next) => {
   // first save is a single click. Server-side is the source of truth — saved value wins on
   // every subsequent load.
   publicUrl.value = next.publicUrl ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  ghsaPatInput.value = ''
+  ghsaPatMasked.value = next.ghsaPatMasked
+  ghsaPatClear.value = false
 
   githubForm.clientId = next.github?.clientId ?? ''
   githubForm.scopes = next.github?.scopes ?? DEFAULT_SCOPES.Github
@@ -200,6 +206,12 @@ const alertsDirty = computed(() =>
 )
 const apiDirty = computed(() => openApiEnabled.value !== snapshot.value.openApiEnabled)
 const exposureDirty = computed(() => publicUrl.value !== snapshot.value.publicUrl)
+const feedsDirty = computed(() => ghsaPatInput.value.length > 0 || ghsaPatClear.value)
+
+function toggleGhsaPatClear(): void {
+  ghsaPatClear.value = !ghsaPatClear.value
+  if (ghsaPatClear.value) ghsaPatInput.value = ''
+}
 const oauthDirty = computed(() =>
   githubForm.clientId !== (data.value?.github?.clientId ?? '')
   || githubForm.scopes !== (data.value?.github?.scopes ?? DEFAULT_SCOPES.Github)
@@ -251,7 +263,8 @@ const sections: SectionDef[] = [
   { id: 'access', titleKey: 'screen.settings.section_access.title', descriptionKey: 'screen.settings.section_access.description', dirty: () => accessDirty.value },
   { id: 'oauth', titleKey: 'screen.settings.section_oauth.title', descriptionKey: 'screen.settings.section_oauth.description', dirty: () => oauthDirty.value },
   { id: 'alerts', titleKey: 'screen.settings.section_alerts.title', descriptionKey: 'screen.settings.section_alerts.description', dirty: () => alertsDirty.value },
-  { id: 'exposure', titleKey: 'screen.settings.section_exposure.title', descriptionKey: 'screen.settings.section_exposure.description', dirty: () => false },
+  { id: 'exposure', titleKey: 'screen.settings.section_exposure.title', descriptionKey: 'screen.settings.section_exposure.description', dirty: () => exposureDirty.value },
+  { id: 'feeds', titleKey: 'screen.settings.section_feeds.title', descriptionKey: 'screen.settings.section_feeds.description', dirty: () => feedsDirty.value },
   { id: 'api', titleKey: 'screen.settings.section_api.title', descriptionKey: 'screen.settings.section_api.description', dirty: () => apiDirty.value },
   { id: 'auto-fix', titleKey: 'screen.settings.section_auto_fix.title', descriptionKey: 'screen.settings.section_auto_fix.description', dirty: () => false },
 ]
@@ -316,6 +329,8 @@ async function onSave(): Promise<void> {
       gitea: providerPatch(giteaForm, true),
       codeberg: providerPatch(codebergForm),
       publicUrl: publicUrl.value.trim() || null,
+      ghsaPat: ghsaPatClear.value ? '' : (ghsaPatInput.value || null),
+      preserveGhsaPat: !ghsaPatClear.value && ghsaPatInput.value.length === 0,
     })
     oidcClientSecret.value = ''
     githubForm.clientSecret = ''
@@ -784,6 +799,49 @@ async function onTestOidc(): Promise<void> {
                   placeholder="https://shield.example.com"
                   class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
+              </label>
+            </div>
+          </section>
+
+          <!-- Section 4b: Feeds -->
+          <section v-if="activeTab === 'feeds'" id="feeds" role="tabpanel">
+            <header class="mb-4">
+              <h2 class="flex items-center gap-2 text-base font-semibold text-slate-100">
+                <span>{{ t('screen.settings.section_feeds.title') }}</span>
+                <span
+                  v-if="feedsDirty"
+                  class="h-2 w-2 rounded-full bg-amber-400"
+                  :aria-label="t('screen.settings.unsaved_dot_label')"
+                />
+              </h2>
+              <p class="mt-1 text-sm text-slate-400">{{ t('screen.settings.section_feeds.description') }}</p>
+            </header>
+
+            <div class="space-y-3">
+              <label class="block">
+                <span class="block text-sm text-slate-200">{{ t('screen.settings.section_feeds.ghsa_pat_label') }}</span>
+                <span class="mt-0.5 block text-xs text-slate-500">{{ t('screen.settings.section_feeds.ghsa_pat_hint') }}</span>
+                <input
+                  v-model="ghsaPatInput"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  :placeholder="ghsaPatMasked ?? t('screen.settings.section_feeds.ghsa_pat_placeholder')"
+                  class="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
+                />
+                <div v-if="ghsaPatMasked" class="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                  <span>{{ t('screen.settings.section_feeds.ghsa_pat_current', { masked: ghsaPatMasked }) }}</span>
+                  <button
+                    type="button"
+                    class="text-red-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline"
+                    @click="toggleGhsaPatClear"
+                  >
+                    {{ ghsaPatClear ? t('screen.settings.section_feeds.ghsa_pat_cancel_clear') : t('screen.settings.section_feeds.ghsa_pat_clear') }}
+                  </button>
+                </div>
+                <p v-if="ghsaPatClear" class="mt-1 text-xs text-amber-300">
+                  {{ t('screen.settings.section_feeds.ghsa_pat_clear_pending') }}
+                </p>
               </label>
             </div>
           </section>

@@ -379,6 +379,17 @@
         "public_url_label": "Oeffentliche URL",
         "public_url_hint": "Vollstaendige URL, auf der Operatoren landen (z.B. https://shield.example.com). Leer lassen, um auf die lokal gebundene Adresse zurueckzufallen."
       },
+      "section_feeds": {
+        "title": "Feeds",
+        "description": "Anmeldedaten, mit denen Shield Advisory-Feeds anspricht. Eine verbundene GitHub-OAuth-Integration (Code-host OAuth) ist bevorzugt; dieser PAT ist der Operator-Fallback, wenn kein GitHub-Nutzer angemeldet oder verbunden ist.",
+        "ghsa_pat_label": "GHSA Personal Access Token",
+        "ghsa_pat_hint": "Optionaler GitHub-PAT fuer den GHSA-GraphQL-Feed. Unauthentifiziertes Kontingent ist 60 req/h; jedes Token hebt es auf 5000/h. Fuer oeffentliche Advisory-Daten sind keine Scopes erforderlich.",
+        "ghsa_pat_placeholder": "Token zum Setzen einfuegen",
+        "ghsa_pat_current": "Gespeichert: {masked}",
+        "ghsa_pat_clear": "Gespeichertes Token entfernen",
+        "ghsa_pat_cancel_clear": "Entfernen abbrechen",
+        "ghsa_pat_clear_pending": "Beim Speichern wird das hinterlegte Token entfernt."
+      },
       "section_api": {
         "title": "API",
         "description": "REST + OpenAPI-Oberflaeche, die von der CLI, Integrationen und der Web-UI verwendet wird.",
@@ -414,6 +425,15 @@
       "last_delivery": "letzte Zustellung {date}",
       "copy_url_aria": "Webhook-URL fuer {label} kopieren",
       "delete_aria": "Webhook {label} loeschen",
+      "deliveries_btn": "Zustellungen",
+      "deliveries_aria": "Letzte Zustellungen fuer {label} anzeigen",
+      "deliveries": {
+        "title": "Letzte Zustellungen — {label}",
+        "subtitle": "Die letzten 50 eingehenden Zustellungen. Aktualisiert sich alle 10s, solange das Fenster offen ist.",
+        "empty": "Noch keine Zustellungen empfangen.",
+        "ok": "Signatur gueltig",
+        "failed": "Signatur ungueltig"
+      },
       "confirm_delete": "Webhook \"{label}\" loeschen? Jeder Provider, der hierhin liefert, schlaegt ab sofort bei der Signaturpruefung fehl.",
       "provider": {
         "github": "GitHub",

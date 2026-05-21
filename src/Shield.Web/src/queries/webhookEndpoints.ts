@@ -1,3 +1,4 @@
+import { computed, type Ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 
 import { api } from '@/lib/api'
@@ -5,6 +6,7 @@ import type {
   CreateWebhookEndpointRequest,
   CreateWebhookEndpointResponse,
   WebhookEndpoint,
+  WebhookEnvelope,
 } from '@/types/api'
 
 export const useWebhookEndpointsQuery = () => useQuery({
@@ -32,6 +34,18 @@ export const useCreateWebhookEndpointMutation = () => {
     },
   })
 }
+
+export const useWebhookEnvelopesQuery = (endpointId: Ref<string | null>) => useQuery({
+  queryKey: computed(() => ['webhook-endpoints', endpointId.value, 'envelopes'] as const),
+  queryFn: async (): Promise<WebhookEnvelope[]> => {
+    const id = endpointId.value
+    if (!id) return []
+    const { data } = await api.get<WebhookEnvelope[]>(`/webhook-endpoints/${id}/envelopes`)
+    return data
+  },
+  enabled: computed(() => endpointId.value !== null),
+  refetchInterval: computed(() => (endpointId.value ? 10_000 : false)),
+})
 
 export const useDeleteWebhookEndpointMutation = () => {
   const queryClient = useQueryClient()

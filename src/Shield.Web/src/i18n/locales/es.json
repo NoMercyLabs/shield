@@ -379,6 +379,17 @@
         "public_url_label": "URL pública",
         "public_url_hint": "URL completa donde aterrizan los operadores (p. ej. https://shield.example.com). Déjala vacía para volver a la dirección local enlazada."
       },
+      "section_feeds": {
+        "title": "Feeds",
+        "description": "Credenciales que Shield usa para hablar con los feeds de avisos. Se prefiere una integración OAuth de GitHub conectada (Code-host OAuth); este PAT es la alternativa para el operador cuando ningún usuario de GitHub ha iniciado sesión o conectado.",
+        "ghsa_pat_label": "Token de acceso personal para GHSA",
+        "ghsa_pat_hint": "PAT opcional de GitHub para el feed GraphQL de GHSA. La cuota sin autenticar es 60 req/h; cualquier token la sube a 5000/h. Los datos públicos de avisos no requieren ningún scope.",
+        "ghsa_pat_placeholder": "Pega un token para establecerlo",
+        "ghsa_pat_current": "Almacenado: {masked}",
+        "ghsa_pat_clear": "Eliminar token almacenado",
+        "ghsa_pat_cancel_clear": "Cancelar eliminación",
+        "ghsa_pat_clear_pending": "Al guardar se eliminará el token almacenado."
+      },
       "section_api": {
         "title": "API",
         "description": "Superficie REST + OpenAPI usada por la CLI, integraciones y la interfaz web.",
@@ -416,6 +427,15 @@
       "last_delivery": "última entrega {date}",
       "copy_url_aria": "Copiar URL del webhook de {label}",
       "delete_aria": "Eliminar webhook {label}",
+      "deliveries_btn": "Entregas",
+      "deliveries_aria": "Mostrar entregas recientes de {label}",
+      "deliveries": {
+        "title": "Entregas recientes — {label}",
+        "subtitle": "Últimas 50 entregas entrantes. Se refresca cada 10s mientras está abierto.",
+        "empty": "Sin entregas recibidas todavía.",
+        "ok": "Firma válida",
+        "failed": "Firma fallida"
+      },
       "confirm_delete": "¿Eliminar el webhook \"{label}\"? Cualquier proveedor configurado para entregar aquí empezará a fallar en la verificación de firma.",
       "provider": {
         "github": "GitHub",

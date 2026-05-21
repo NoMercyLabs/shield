@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-vue-next'
+import { Activity, Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-vue-next'
 
 import {
   useCreateWebhookEndpointMutation,
   useDeleteWebhookEndpointMutation,
   useWebhookEndpointsQuery,
+  useWebhookEnvelopesQuery,
 } from '@/queries/webhookEndpoints'
 import { useToasts } from '@/stores/toast'
 import { OAuthProvider, type WebhookEndpoint } from '@/types/api'
@@ -24,6 +25,21 @@ const SUPPORTED_PROVIDERS: { value: OAuthProvider, labelKey: string }[] = [
   { value: OAuthProvider.Gitlab, labelKey: 'screen.webhooks.provider.gitlab' },
   { value: OAuthProvider.Forgejo, labelKey: 'screen.webhooks.provider.forgejo' },
 ]
+
+const deliveriesFor = ref<string | null>(null)
+const deliveries = useWebhookEnvelopesQuery(deliveriesFor)
+
+function openDeliveries(endpoint: WebhookEndpoint): void {
+  deliveriesFor.value = endpoint.id
+}
+
+function closeDeliveries(): void {
+  deliveriesFor.value = null
+}
+
+const deliveriesEndpoint = computed(() =>
+  list.data.value?.find(endpoint => endpoint.id === deliveriesFor.value) ?? null,
+)
 
 const showCreate = ref(false)
 const form = ref<{ provider: OAuthProvider, label: string }>({
@@ -155,18 +171,91 @@ function providerLabel(value: OAuthProvider): string {
               </template>
             </p>
           </div>
-          <button
-            type="button"
-            class="inline-flex shrink-0 items-center gap-1 rounded border border-red-700 px-2 py-1 text-xs text-red-300 hover:bg-red-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-            :aria-label="t('screen.webhooks.delete_aria', { label: endpoint.label })"
-            @click="onDelete(endpoint)"
-          >
-            <Trash2 class="h-3 w-3" aria-hidden="true" />
-            {{ t('action.delete') }}
-          </button>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              :aria-label="t('screen.webhooks.deliveries_aria', { label: endpoint.label })"
+              @click="openDeliveries(endpoint)"
+            >
+              <Activity class="h-3 w-3" aria-hidden="true" />
+              {{ t('screen.webhooks.deliveries_btn') }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded border border-red-700 px-2 py-1 text-xs text-red-300 hover:bg-red-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+              :aria-label="t('screen.webhooks.delete_aria', { label: endpoint.label })"
+              @click="onDelete(endpoint)"
+            >
+              <Trash2 class="h-3 w-3" aria-hidden="true" />
+              {{ t('action.delete') }}
+            </button>
+          </div>
         </div>
       </article>
     </section>
+
+    <div
+      v-if="deliveriesFor && deliveriesEndpoint"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="webhook-deliveries-title"
+      @click.self="closeDeliveries"
+    >
+      <div class="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-lg border border-slate-700 bg-slate-900 shadow-xl">
+        <header class="border-b border-slate-800 p-4">
+          <h2 id="webhook-deliveries-title" class="text-lg font-semibold">
+            {{ t('screen.webhooks.deliveries.title', { label: deliveriesEndpoint.label }) }}
+          </h2>
+          <p class="mt-0.5 text-xs text-slate-500">{{ t('screen.webhooks.deliveries.subtitle') }}</p>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4">
+          <p v-if="deliveries.isLoading.value" class="text-sm text-slate-400">{{ t('state.loading') }}</p>
+          <p v-else-if="!deliveries.data.value || deliveries.data.value.length === 0" class="text-sm text-slate-400">
+            {{ t('screen.webhooks.deliveries.empty') }}
+          </p>
+          <ul v-else class="space-y-2" role="list">
+            <li
+              v-for="envelope in deliveries.data.value"
+              :key="envelope.id"
+              class="rounded border border-slate-800 bg-slate-950/40 p-3"
+            >
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex h-2 w-2 rounded-full"
+                    :class="envelope.signatureValid ? 'bg-emerald-400' : 'bg-red-400'"
+                    :aria-label="envelope.signatureValid ? t('screen.webhooks.deliveries.ok') : t('screen.webhooks.deliveries.failed')"
+                  />
+                  <code class="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-slate-200">
+                    {{ envelope.eventType ?? '—' }}
+                  </code>
+                  <span v-if="!envelope.signatureValid && envelope.reason" class="text-red-300">
+                    {{ envelope.reason }}
+                  </span>
+                </div>
+                <span class="text-slate-500">{{ new Date(envelope.receivedAt).toLocaleString() }}</span>
+              </div>
+              <p v-if="envelope.deliveryId" class="mt-1 font-mono text-[10px] text-slate-600">
+                {{ envelope.deliveryId }}
+              </p>
+            </li>
+          </ul>
+        </div>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-800 p-4">
+          <button
+            type="button"
+            class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            @click="closeDeliveries"
+          >
+            {{ t('action.close') }}
+          </button>
+        </footer>
+      </div>
+    </div>
 
     <section
       v-else
