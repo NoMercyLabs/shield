@@ -121,7 +121,10 @@ watch(data, (next) => {
   oidcSecretMasked.value = next.oidcClientSecretMasked
   alertSeverityFloor.value = (enumName('Severity', next.alertSeverityFloor) || 'Low') as SeverityName
   retentionDays.value = next.retentionDays
-  publicUrl.value = next.publicUrl ?? ''
+  // Pre-fill the public URL from the origin the admin is currently on when unset, so the
+  // first save is a single click. Server-side is the source of truth — saved value wins on
+  // every subsequent load.
+  publicUrl.value = next.publicUrl ?? (typeof window !== 'undefined' ? window.location.origin : '')
 
   githubForm.clientId = next.github?.clientId ?? ''
   githubForm.scopes = next.github?.scopes ?? DEFAULT_SCOPES.Github
