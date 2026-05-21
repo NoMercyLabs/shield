@@ -161,6 +161,13 @@ builder.Services.AddSingleton<MatchQueue>();
 builder.Services.AddSingleton<FeedRefreshQueue>();
 builder.Services.AddScoped<IPersistentScanQueue, PersistentScanQueue>();
 
+// Inbound webhook fan-out handlers — registered via the IInboundWebhookHandler set so new
+// projectors land alongside without touching the receiver.
+builder.Services.AddScoped<
+    Shield.Api.Services.Webhooks.IInboundWebhookHandler,
+    Shield.Api.Services.Webhooks.PullRequestClosedRescanHandler
+>();
+
 // Background workers.
 builder.Services.AddHostedService<SourceScanWorker>();
 builder.Services.AddHostedService<ScanQueueWorker>();

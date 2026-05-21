@@ -170,6 +170,20 @@ export interface BulkApplyRequest {
   force?: boolean
   allowMajorBumps?: boolean
   confirmProduction?: boolean
+  acknowledgeDependabotConflict?: boolean
+}
+
+export interface DependabotPrSummary {
+  number: number
+  title: string
+  htmlUrl: string
+  createdAt: string
+}
+
+export interface DependabotConflictError {
+  error: 'dependabot_conflict'
+  message: string
+  openPrs: DependabotPrSummary[]
 }
 
 export interface BulkApplyEntry {

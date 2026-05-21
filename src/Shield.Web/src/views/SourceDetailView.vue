@@ -23,7 +23,7 @@ import { useToasts } from '@/stores/toast'
 import { formatDate } from '@/lib/format'
 import { repoUrl } from '@/lib/repo-url'
 import { AnomalyFlags, SourceType } from '@/types/api'
-import type { BulkApplyResponse, InventoryDiffEntry } from '@/types/api'
+import type { BulkApplyResponse, DependabotPrSummary, InventoryDiffEntry } from '@/types/api'
 
 const SHOW_FLAT_KEY = 'shield.inventory.show-flat'
 const showFlat = ref<boolean>(localStorage.getItem(SHOW_FLAT_KEY) === '1')
@@ -86,6 +86,9 @@ async function onDryRunBulkApply(): Promise<void> {
   }
 }
 
+const dependabotConflict = ref<DependabotPrSummary[] | null>(null)
+const acknowledgeDependabotConflict = ref(false)
+
 async function onConfirmBulkApply(force: boolean = false): Promise<void> {
   bulkApplying.value = true
   try {
@@ -96,10 +99,13 @@ async function onConfirmBulkApply(force: boolean = false): Promise<void> {
         force,
         allowMajorBumps: allowMajorBumps.value,
         confirmProduction: confirmProduction.value,
+        acknowledgeDependabotConflict: acknowledgeDependabotConflict.value,
       },
     })
     showBulkApplyModal.value = false
     bulkPreviewResult.value = null
+    dependabotConflict.value = null
+    acknowledgeDependabotConflict.value = false
     if (result.pullRequestUrl) {
       push(
         'success',
@@ -112,11 +118,16 @@ async function onConfirmBulkApply(force: boolean = false): Promise<void> {
     }
   }
   catch (error: unknown) {
-    // 429 cooldown: surface the wall-clock + offer a force retry instead of a generic error.
-    const status = (error as { response?: { status?: number, data?: { error?: string, retryAfter?: string } } })?.response?.status
-    const code = (error as { response?: { data?: { error?: string } } })?.response?.data?.error
-    if (status === 429 && code === 'bulk_cooldown') {
-      const retryAfter = (error as { response?: { data?: { retryAfter?: string } } }).response?.data?.retryAfter
+    const errResponse = (error as { response?: { status?: number, data?: { error?: string, retryAfter?: string, openPrs?: DependabotPrSummary[] } } })?.response
+    const status = errResponse?.status
+    const code = errResponse?.data?.error
+
+    if (status === 409 && code === 'dependabot_conflict') {
+      dependabotConflict.value = errResponse!.data!.openPrs ?? []
+      acknowledgeDependabotConflict.value = false
+    }
+    else if (status === 429 && code === 'bulk_cooldown') {
+      const retryAfter = errResponse?.data?.retryAfter
       const when = retryAfter ? new Date(retryAfter).toLocaleString() : '?'
       push('error', t('source_detail.bulk_apply_cooldown_error', { when }))
     }
@@ -127,6 +138,17 @@ async function onConfirmBulkApply(force: boolean = false): Promise<void> {
   finally {
     bulkApplying.value = false
   }
+}
+
+function dismissDependabotConflict(): void {
+  dependabotConflict.value = null
+  acknowledgeDependabotConflict.value = false
+}
+
+async function proceedDespiteDependabotConflict(): Promise<void> {
+  acknowledgeDependabotConflict.value = true
+  dependabotConflict.value = null
+  await onConfirmBulkApply(false)
 }
 
 async function onForceBulkApply(): Promise<void> {
@@ -891,6 +913,65 @@ function badgesFor(entry: InventoryDiffEntry): AnomalyBadge[] {
               </button>
             </div>
           </footer>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="dependabotConflict"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dependabot-conflict-title"
+        @click.self="dismissDependabotConflict"
+      >
+        <div class="w-full max-w-lg rounded-lg border border-amber-700 bg-slate-900 p-6 shadow-xl">
+          <h2 id="dependabot-conflict-title" class="text-lg font-semibold text-amber-200">
+            {{ t('source_detail.dependabot_conflict.title') }}
+          </h2>
+          <p class="mt-2 text-sm text-slate-300">
+            {{ t('source_detail.dependabot_conflict.body', { count: dependabotConflict.length }) }}
+          </p>
+          <ul class="mt-3 max-h-60 space-y-1.5 overflow-y-auto rounded border border-slate-800 bg-slate-950/40 p-3 text-sm" role="list">
+            <li
+              v-for="pr in dependabotConflict"
+              :key="pr.number"
+              class="flex items-baseline justify-between gap-2"
+            >
+              <a
+                :href="pr.htmlUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-blue-300 hover:text-blue-200 hover:underline focus-visible:outline-none focus-visible:underline"
+              >
+                #{{ pr.number }} {{ pr.title }}
+              </a>
+              <span class="shrink-0 font-mono text-[10px] text-slate-500">
+                {{ new Date(pr.createdAt).toLocaleDateString() }}
+              </span>
+            </li>
+          </ul>
+          <p class="mt-3 text-xs text-slate-400">
+            {{ t('source_detail.dependabot_conflict.hint') }}
+          </p>
+          <div class="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              @click="dismissDependabotConflict"
+            >
+              {{ t('source_detail.dependabot_conflict.cancel_btn') }}
+            </button>
+            <button
+              type="button"
+              :disabled="bulkApplying"
+              class="rounded border border-amber-700 bg-amber-900/40 px-3 py-1.5 text-sm font-medium text-amber-200 hover:bg-amber-900/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-50"
+              @click="proceedDespiteDependabotConflict"
+            >
+              {{ t('source_detail.dependabot_conflict.proceed_btn') }}
+            </button>
+          </div>
         </div>
       </div>
     </Teleport>

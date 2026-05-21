@@ -1016,6 +1016,13 @@
     "bulk_apply_cooldown_notice": "Er is recent een bulk toegepast. De volgende handmatige run wordt ontgrendeld om {when}, maar de server laat deze toch door als er nieuwe bevindingen zijn sinds de laatste run.",
     "bulk_apply_cooldown_error": "Bulk toepassen wachttijd tot {when}. Gebruik \"Forceren\" om te overschrijven.",
     "bulk_apply_force_btn": "Forceren",
+    "dependabot_conflict": {
+      "title": "Dependabot heeft al openstaande PR('s)",
+      "body": "De bulk-apply-PR van Shield zou botsen met {count} openstaande Dependabot-PR('s) in deze repo. Eerst Dependabot afhandelen is meestal de juiste keuze — Shield kan de overblijvende findings herevalueren bij de volgende scan.",
+      "hint": "Toch doorgaan veroorzaakt waarschijnlijk merge-conflicten en dubbele dependency-bumps.",
+      "cancel_btn": "Annuleren",
+      "proceed_btn": "Toch doorgaan"
+    },
     "field_min_package_age": "Minimum pakketleeftijd (uren)",
     "field_min_package_age_hint": "Waarschuwt wanneer een voorgestelde fix-versie jonger is dan dit. Advisory-fixes worden alsnog toegepast. 0 schakelt de waarschuwing uit. Standaard 48.",
     "bulk_apply_pr_opened_short": "Pull request geopend.",

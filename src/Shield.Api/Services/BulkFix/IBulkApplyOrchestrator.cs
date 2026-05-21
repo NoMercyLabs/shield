@@ -18,7 +18,8 @@ public sealed record BulkApplyDispatchResult(
     BulkApplyResponse? Response = null,
     string? ErrorCode = null,
     string? ErrorMessage = null,
-    DateTime? RetryAfter = null
+    DateTime? RetryAfter = null,
+    IReadOnlyList<DependabotPrSummary>? DependabotOpenPrs = null
 );
 
 public enum BulkApplyOutcome
@@ -28,4 +29,5 @@ public enum BulkApplyOutcome
     UnsupportedType = 2,
     ProductionConfirmationRequired = 3,
     Cooldown = 4,
+    DependabotConflictAcknowledgeRequired = 5,
 }

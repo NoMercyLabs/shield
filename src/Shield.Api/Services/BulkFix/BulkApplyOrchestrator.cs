@@ -13,6 +13,7 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
     private readonly INotificationPublisher _notifications;
     private readonly ISecurityEventLogger _securityLog;
     private readonly IAdminAudienceProvider _adminAudience;
+    private readonly IDependabotPrLookup _dependabotPrLookup;
 
     public BulkApplyOrchestrator(
         ShieldDbContext db,
@@ -21,7 +22,8 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
         IAuditLogger audit,
         INotificationPublisher notifications,
         ISecurityEventLogger securityLog,
-        IAdminAudienceProvider adminAudience
+        IAdminAudienceProvider adminAudience,
+        IDependabotPrLookup dependabotPrLookup
     )
     {
         _db = db;
@@ -31,6 +33,7 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
         _notifications = notifications;
         _securityLog = securityLog;
         _adminAudience = adminAudience;
+        _dependabotPrLookup = dependabotPrLookup;
     }
 
     public async Task<BulkApplyDispatchResult> ApplyAsync(
@@ -56,6 +59,25 @@ public sealed class BulkApplyOrchestrator : IBulkApplyOrchestrator
                 ErrorCode: "production_source_confirmation_required",
                 ErrorMessage: "Source is marked production. Re-submit with confirmProduction: true to proceed."
             );
+
+        // Be a good neighbour with Dependabot: if there's already an open Dependabot PR in
+        // the repo, Shield's bulk PR would either merge-conflict against it or duplicate the
+        // bump. Block until the operator explicitly acknowledges.
+        if (!request.DryRun && !request.AcknowledgeDependabotConflict)
+        {
+            IReadOnlyList<DependabotPrSummary> openPrs = await _dependabotPrLookup.ListOpenAsync(
+                source.Name,
+                ct
+            );
+            if (openPrs.Count > 0)
+                return new(
+                    BulkApplyOutcome.DependabotConflictAcknowledgeRequired,
+                    ErrorCode: "dependabot_conflict",
+                    ErrorMessage: $"Dependabot has {openPrs.Count} open PR(s) for this repo. "
+                        + "Re-submit with acknowledgeDependabotConflict: true to proceed anyway.",
+                    DependabotOpenPrs: openPrs
+                );
+        }
 
         // 24h manual cooldown — gates spam clicks, NOT the scheduler. Escape hatches:
         //   1. force=true — admin override

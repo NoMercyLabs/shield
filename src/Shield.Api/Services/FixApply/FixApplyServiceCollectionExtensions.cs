@@ -29,6 +29,10 @@ public static class FixApplyServiceCollectionExtensions
         services.AddScoped<IBulkApplyOrchestrator, BulkApplyOrchestrator>();
         services.AddScoped<IRepoPullRequestOpener, GithubPullRequestOpener>();
         services.AddScoped<IRepoSourceFs, GithubRepoSourceFs>();
+
+        // Dependabot conflict lookup uses a typed HttpClient with no DefaultRequestHeaders —
+        // we set Authorization per call against the live OAuth bearer at request time.
+        services.AddHttpClient<IDependabotPrLookup, GithubDependabotPrLookup>();
         return services;
     }
 }

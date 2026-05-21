@@ -1054,6 +1054,13 @@
     "bulk_apply_cooldown_notice": "A bulk apply was opened recently. The next manual apply unlocks at {when}, but the server will still let this through if there are open findings newer than the last apply.",
     "bulk_apply_cooldown_error": "Bulk apply on cooldown until {when}. Use \"Force\" to override.",
     "bulk_apply_force_btn": "Force override",
+    "dependabot_conflict": {
+      "title": "Dependabot already has open PR(s)",
+      "body": "Shield's bulk-apply PR would conflict with {count} open Dependabot PR(s) in this repo. Resolving Dependabot's PRs first is usually the right move — Shield's PR can re-evaluate the remaining findings on the next scan.",
+      "hint": "Proceeding anyway will likely cause merge conflicts and duplicate dependency bumps.",
+      "cancel_btn": "Cancel",
+      "proceed_btn": "Continue anyway"
+    },
     "field_min_package_age": "Minimum package age (hours)",
     "field_min_package_age_hint": "Warns when a suggested fix version is younger than this. Advisory-listed fixes ship anyway. 0 disables the warning. Default 48.",
     "bulk_apply_pr_opened_short": "Pull request opened.",

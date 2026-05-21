@@ -1068,6 +1068,13 @@
     "bulk_apply_cooldown_notice": "Une application en masse a ete ouverte recemment. La prochaine execution manuelle se debloque a {when}, mais le serveur laissera passer si de nouvelles decouvertes sont apparues depuis.",
     "bulk_apply_cooldown_error": "Application en masse en pause jusqu'a {when}. Utilisez « Forcer » pour outrepasser.",
     "bulk_apply_force_btn": "Forcer",
+    "dependabot_conflict": {
+      "title": "Dependabot a déja des PR ouvertes",
+      "body": "La PR d'application en masse de Shield entrerait en conflit avec {count} PR ouverte(s) de Dependabot dans ce dépôt. Résoudre d'abord les PR de Dependabot est généralement le bon choix — Shield peut réévaluer les résultats restants au prochain scan.",
+      "hint": "Continuer malgré tout entraînera probablement des conflits de merge et des bumps de dépendances en double.",
+      "cancel_btn": "Annuler",
+      "proceed_btn": "Continuer quand même"
+    },
     "field_min_package_age": "Age minimal du paquet (heures)",
     "field_min_package_age_hint": "Avertit lorsqu'une version corrective suggeree est plus recente que cela. Les correctifs d'avis sont expedies quand meme. 0 desactive l'avertissement. Par defaut 48.",
     "bulk_apply_pr_opened_short": "Pull request ouverte.",

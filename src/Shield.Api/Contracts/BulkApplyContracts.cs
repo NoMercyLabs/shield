@@ -7,7 +7,12 @@ public sealed record BulkApplyRequest(
     int? MaxPackages = null,
     bool Force = false,
     bool AllowMajorBumps = false,
-    bool ConfirmProduction = false
+    bool ConfirmProduction = false,
+    // Acknowledge that Dependabot already has open PRs in the same repo and proceed
+    // anyway. The orchestrator returns DependabotConflictAcknowledgeRequired (409) the
+    // first time around; the SPA re-submits with this set to true after the user clicks
+    // "Continue anyway" in the conflict modal.
+    bool AcknowledgeDependabotConflict = false
 );
 
 public sealed record SetAutoFixModeRequest(AutoFixMode AutoFixMode);

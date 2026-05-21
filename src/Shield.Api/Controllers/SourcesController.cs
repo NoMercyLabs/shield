@@ -522,6 +522,15 @@ public sealed class SourcesController : ControllerBase
                 StatusCodes.Status409Conflict,
                 new { error = result.ErrorCode, message = result.ErrorMessage }
             ),
+            BulkApplyOutcome.DependabotConflictAcknowledgeRequired => StatusCode(
+                StatusCodes.Status409Conflict,
+                new
+                {
+                    error = result.ErrorCode,
+                    message = result.ErrorMessage,
+                    openPrs = result.DependabotOpenPrs,
+                }
+            ),
             BulkApplyOutcome.Cooldown => StatusCode(
                 StatusCodes.Status429TooManyRequests,
                 new

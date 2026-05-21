@@ -1066,6 +1066,13 @@
     "bulk_apply_cooldown_notice": "Vor kurzem wurde bereits ein Bulk-Apply geoeffnet. Der naechste manuelle Lauf wird um {when} freigegeben, der Server laesst diesen aber durch, wenn seitdem neue Funde dazugekommen sind.",
     "bulk_apply_cooldown_error": "Bulk-Apply in Wartezeit bis {when}. \"Erzwingen\" zum Ueberschreiben verwenden.",
     "bulk_apply_force_btn": "Erzwingen",
+    "dependabot_conflict": {
+      "title": "Dependabot hat bereits offene PR(s)",
+      "body": "Der Bulk-Apply-PR von Shield wuerde mit {count} offenen Dependabot-PR(s) in diesem Repo kollidieren. Zuerst die Dependabot-PRs aufzuloesen ist meist die richtige Wahl — Shield kann die verbleibenden Findings beim naechsten Scan neu bewerten.",
+      "hint": "Trotzdem fortzufahren fuehrt wahrscheinlich zu Merge-Konflikten und doppelten Dependency-Bumps.",
+      "cancel_btn": "Abbrechen",
+      "proceed_btn": "Trotzdem fortfahren"
+    },
     "field_min_package_age": "Mindestalter des Pakets (Stunden)",
     "field_min_package_age_hint": "Warnt, wenn eine vorgeschlagene Fix-Version juenger als dieser Wert ist. Advisory-Fixes werden trotzdem ausgeliefert. 0 deaktiviert die Warnung. Standard 48.",
     "bulk_apply_pr_opened_short": "Pull Request geoeffnet.",

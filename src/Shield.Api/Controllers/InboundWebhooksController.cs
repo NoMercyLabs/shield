@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
+using Shield.Api.Services.Webhooks;
 
 namespace Shield.Api.Controllers;
 
@@ -18,16 +19,19 @@ public sealed class InboundWebhooksController : ControllerBase
 
     private readonly ShieldDbContext _db;
     private readonly IDataProtector _protector;
+    private readonly IEnumerable<IInboundWebhookHandler> _handlers;
     private readonly ILogger<InboundWebhooksController> _logger;
 
     public InboundWebhooksController(
         ShieldDbContext db,
         IDataProtectionProvider protectionProvider,
+        IEnumerable<IInboundWebhookHandler> handlers,
         ILogger<InboundWebhooksController> logger
     )
     {
         _db = db;
         _protector = protectionProvider.CreateProtector("shield.webhooks");
+        _handlers = handlers;
         _logger = logger;
     }
 
@@ -88,6 +92,32 @@ public sealed class InboundWebhooksController : ControllerBase
 
         if (!ok)
             return StatusCode(StatusCodes.Status401Unauthorized, new { error = reason });
+
+        // Fan-out to registered handlers. Best-effort — a thrown handler must not silence
+        // the rest, and must not affect the 200 we owe the provider.
+        InboundWebhookContext handlerContext = new(
+            endpoint.Provider,
+            endpoint.Id,
+            envelope.EventType,
+            payload
+        );
+        foreach (IInboundWebhookHandler handler in _handlers)
+        {
+            try
+            {
+                await handler.HandleAsync(handlerContext, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Inbound webhook handler {Handler} threw for endpoint {Id}",
+                    handler.GetType().Name,
+                    endpoint.Id
+                );
+            }
+        }
+
         return Ok(new { received = true, eventType = envelope.EventType });
     }
 
