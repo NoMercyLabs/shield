@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -1171,6 +1174,41 @@ app.MapFallback(async context =>
 
     context.Response.StatusCode = StatusCodes.Status404NotFound;
 });
+
+if (configuration.GetValue("Shield:Launcher:OpenBrowser", false))
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        try
+        {
+            string? launchUrl = configuration["Shield:Launcher:Url"];
+            if (string.IsNullOrWhiteSpace(launchUrl))
+            {
+                IServerAddressesFeature? addresses = app
+                    .Services.GetRequiredService<IServer>()
+                    .Features.Get<IServerAddressesFeature>();
+                string? bound = addresses?.Addresses.FirstOrDefault(addr =>
+                    addr.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || addr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                );
+                if (string.IsNullOrWhiteSpace(bound))
+                    return;
+                launchUrl = bound
+                    .Replace("://+", "://localhost")
+                    .Replace("://*", "://localhost")
+                    .Replace("://0.0.0.0", "://localhost")
+                    .Replace("://[::]", "://localhost");
+            }
+
+            app.Logger.LogInformation("Opening browser at {Url}", launchUrl);
+            Process.Start(new ProcessStartInfo { FileName = launchUrl, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "Could not open browser; open the URL manually.");
+        }
+    });
+}
 
 app.Run();
 
