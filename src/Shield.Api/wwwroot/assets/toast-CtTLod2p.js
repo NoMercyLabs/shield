@@ -1,0 +1,1 @@
+import{g as e,vn as t}from"./runtime-core.esm-bundler-DkwsBn2-.js";var n=t([]),r=1,i=()=>({items:e(()=>n.value),push:(e,t,i)=>{let a=r++;n.value.push({id:a,kind:e,message:t,action:i}),setTimeout(()=>{n.value=n.value.filter(e=>e.id!==a)},i?8e3:4e3)},dismiss:e=>{n.value=n.value.filter(t=>t.id!==e)}});export{i as t};
