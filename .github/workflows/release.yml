@@ -24,7 +24,7 @@ jobs:
     # Multi-arch builds are slow on GitHub-hosted; use the beast.
     runs-on: [self-hosted, beast-unit]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # workflow_dispatch passes the tag via input; tag pushes use GITHUB_REF_NAME.
@@ -78,10 +78,10 @@ jobs:
           echo "path=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Setup Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login GHCR
         uses: docker/login-action@v3
@@ -110,7 +110,7 @@ jobs:
 
       - name: Build & push image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -153,7 +153,7 @@ jobs:
           # GHCR supports it; the || true guard prevents a referrers race from failing the release.
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: Shield ${{ steps.ver.outputs.tag }}

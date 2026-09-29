@@ -1,0 +1,1 @@
+import{N as e}from"./index-C5C3bRFP.js";var t=e(`ChevronRightIcon`,[[`path`,{d:`m9 18 6-6-6-6`,key:`mthhwq`}]]);export{t};
